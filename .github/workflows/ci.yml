@@ -19,8 +19,8 @@ jobs:
     - name: Install GTK
       run: sudo apt-get install libgtk-3-dev
     - name: Build
-      run: cargo build --verbose
+      run: cargo build --manifest-path=project/Cargo.toml --verbose
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test --manifest-path=project/Cargo.toml --verbose
     - name: Run clippy
-      run: cargo clippy --all-targets --all-features
+      run: cargo clippy --manifest-path=project/Cargo.toml --all-targets --all-features
