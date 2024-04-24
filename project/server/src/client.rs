@@ -28,8 +28,8 @@ fn client_run(address: &str, stream: &mut dyn Read) -> std::io::Result<()> {
 
     for line in reader.lines().map_while(Result::ok) {
         println!("Enviando: {:?}", line);
-        socket.write(line.as_bytes())?;
-        socket.write("\n".as_bytes())?;
+        let _ = socket.write(line.as_bytes());
+        let _ = socket.write("\n".as_bytes());
     }
     Ok(())
 }
