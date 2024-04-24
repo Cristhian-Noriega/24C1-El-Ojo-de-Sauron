@@ -23,15 +23,13 @@ fn main() -> Result<(), ()> {
 fn server_run(address: &str) -> std::io::Result<()> {
     let listener = TcpListener::bind(address)?;
 
-    for stream in listener.incoming() {
-        if let Ok(mut stream) = stream {
-            let address = stream.peer_addr().unwrap().to_string();
-            println!("Nueva conexión: {:?}", address);
+    for mut stream in listener.incoming().flatten() {
+        let address = stream.peer_addr().unwrap().to_string();
+        println!("Nueva conexión: {:?}", address);
 
-            thread::spawn(move || {
-                handle_client(&mut stream, &address).unwrap();
-            });
-        }
+        thread::spawn(move || {
+            handle_client(&mut stream, &address).unwrap();
+        });
     }
 
     Ok(())
