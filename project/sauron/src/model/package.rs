@@ -8,14 +8,14 @@ pub struct Package {
     pub payload: Vec<u8>,
 }
 
-impl Package{
+impl Package {
     pub fn build_connect(client_id: &[u8]) -> Result<Self, std::io::Error> {
         let fixed_header = FixedHeader {
             control_packet_type: Connect,
             flags: Flags {
                 retain: false,
                 dup: false,
-                qos: Qos::AtMostOnce
+                qos: Qos::AtMostOnce,
             },
             remaining_length: (10 + client_id.len()) as u8,
         };
@@ -24,25 +24,25 @@ impl Package{
             packet_identifier_msb: 0x0,
             packet_identifier_lsb: 0x04,
             content: vec![
-                'M' as u8,
-                'Q' as u8,
-                'T' as u8,
-                'T' as u8,
+                'M' as u8, 'Q' as u8, 'T' as u8, 'T' as u8,
                 0x04, // Protocol level (4 == 3.1.1)
                 0x02, // Flags: Clean session
-                0x0, // Keep Alive MSB
-                10, // Keep Alive LSB
-            ]
+                0x0,  // Keep Alive MSB
+                10,   // Keep Alive LSB
+            ],
         };
 
         let payload: Vec<u8> = vec![];
         payload.extend_from_slice(client_id);
-    
 
-        Ok(Package{fixed_header, variable_header, payload})
+        Ok(Package {
+            fixed_header,
+            variable_header,
+            payload,
+        })
     }
 
-    pub fn convert(self) -> Vec<u8>{
+    pub fn convert(self) -> Vec<u8> {
 
         // Convierte la struct Package en un Vector de binarios que se pueda transmitir
 
@@ -51,7 +51,7 @@ impl Package{
         //     // Fixed Header
         //     0x10, // 1- CONNECT header (DONE)
         //     10,  // 2- Remaining length (DONE)
-    
+
         //     // Variable Header
         //     0x0, // 1- Length MSB (0)
         //     0x04, // 2- Length LSB (4)
@@ -67,5 +67,4 @@ impl Package{
 
         // return connect_message
     }
-
 }
