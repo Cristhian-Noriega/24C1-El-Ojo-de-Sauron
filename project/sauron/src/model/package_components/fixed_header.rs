@@ -38,7 +38,7 @@ impl FixedHeader {
         };
 
         let fixed_header_binary = vec![
-            packet_type_value,
+            packet_type_value, // + flags
             0 as u8,
         ];
 
