@@ -1,38 +1,50 @@
-use crate::FixedHeader;
-use crate::VariableHeader;
+use crate::model::package_components::{
+    fixed_header::FixedHeader,
+    fixed_header_components::{
+        control_packet_type::ControlPacketType::Connect, flags::Flags, qos::QoS,
+    },
+    variable_header::VariableHeader,
+};
 use std::io::{Error, ErrorKind};
 
+// siento que esto no debería estar aquí
+const PACKET_IDENTIFIER_MSB: u8 = 0x00;
+const PACKET_IDENTIFIER_LSB: u8 = 0x04;
+const PROTOCOL_LEVEL: u8 = 0x04;
+const CLEAN_SESSION: u8 = 0x02;
+const KEEP_ALIVE_MSB: u8 = 10;
+const KEEP_ALIVE_LSB: u8 = 10;
+
 pub struct Package {
-    pub fixed_header: FixedHeader,
-    pub variable_header: VariableHeader,
-    pub payload: Vec<u8>,
+    fixed_header: FixedHeader,
+    variable_header: VariableHeader,
+    payload: Vec<u8>,
 }
 
 impl Package {
     pub fn build_connect(client_id: &[u8]) -> Result<Self, std::io::Error> {
-        let fixed_header = FixedHeader {
-            control_packet_type: Connect,
-            flags: Flags {
-                retain: false,
-                dup: false,
-                qos: Qos::AtMostOnce,
-            },
-            remaining_length: (10 + client_id.len()) as u8,
-        };
+        let fixed_header = FixedHeader::new(
+            Connect,
+            Flags::new(false, false, QoS::AtMostOnce),
+            (10 + client_id.len()) as u8,
+        );
 
-        let variable_header = VariableHeader {
-            packet_identifier_msb: 0x0,
-            packet_identifier_lsb: 0x04,
-            content: vec![
-                'M' as u8, 'Q' as u8, 'T' as u8, 'T' as u8,
-                0x04, // Protocol level (4 == 3.1.1)
-                0x02, // Flags: Clean session
-                0x0,  // Keep Alive MSB
-                10,   // Keep Alive LSB
+        let variable_header = VariableHeader::new(
+            PACKET_IDENTIFIER_MSB,
+            PACKET_IDENTIFIER_LSB,
+            vec![
+                'M' as u8,
+                'Q' as u8,
+                'T' as u8,
+                'T' as u8,
+                PROTOCOL_LEVEL,
+                CLEAN_SESSION,
+                KEEP_ALIVE_MSB,
+                KEEP_ALIVE_LSB,
             ],
-        };
+        );
 
-        let payload: Vec<u8> = vec![];
+        let mut payload: Vec<u8> = vec![];
         payload.extend_from_slice(client_id);
 
         Ok(Package {
@@ -43,7 +55,7 @@ impl Package {
     }
 
     pub fn convert(self) -> Vec<u8> {
-
+        todo!()
         // Convierte la struct Package en un Vector de binarios que se pueda transmitir
 
         // Ejemplo

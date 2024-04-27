@@ -1,4 +1,4 @@
-pub enum Qos {
+pub enum QoS {
     AtMostOnce,
     AtLeastOnce,
     ExactlyOnce,
