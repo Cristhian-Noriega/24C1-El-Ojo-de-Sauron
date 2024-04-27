@@ -4,5 +4,6 @@ members = [
     "server",
     "drone",
     "sauron", 
-    "camera-system", "monitor",
+    "camera-system", 
+    "monitor",
 ]

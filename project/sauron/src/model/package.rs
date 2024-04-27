@@ -55,28 +55,16 @@ impl Package {
     }
 
     pub fn convert(self) -> Vec<u8> {
-        todo!()
-        // Convierte la struct Package en un Vector de binarios que se pueda transmitir
+        let mut message: Vec<u8> = vec![];
+        let fixed_header_binary = self.fixed_header.convert_to_binary();
+        //let variable_header_binary = self.variable_header.convert_to_binary();
 
-        // Ejemplo
-        // let mut connect_message = vec![
-        //     // Fixed Header
-        //     0x10, // 1- CONNECT header (DONE)
-        //     10,  // 2- Remaining length (DONE)
+        message.extend(fixed_header_binary);
+        // message.extend(variable_header_binary);
+        message.extend(self.payload);
 
-        //     // Variable Header
-        //     0x0, // 1- Length MSB (0)
-        //     0x04, // 2- Length LSB (4)
-        //     'M' as u8, // 3
-        //     'Q' as u8, // 4
-        //     'T' as u8, // 5
-        //     'T' as u8, // 6
-        //     0x04, // 7- Protocol level (4 == 3.1.1)
-        //     0x02, // 8- Flags: Clean session
-        //     0x0, // 9- Keep Alive MSB
-        //     10, // 10- Keep Alive LSB
-        // ];
+        // Modificar message[1] con la nueva longitud del mensaje
 
-        // return connect_message
+        return message
     }
 }
