@@ -24,6 +24,39 @@ pub struct Package {
 }
 
 impl Package {
+    // TODO: Porque client_id ?? no me parece un gran nombre
+    pub fn build_connect(client_id: &[u8]) -> Result<Self, Error> {
+        let fixed_header = FixedHeader::new(
+            Connect,
+            Flags::new(false, false, QoS::AtMostOnce),
+            (10 + client_id.len()) as u8,
+        );
+
+        let variable_header = VariableHeader::new(
+            PACKET_IDENTIFIER_MSB,
+            PACKET_IDENTIFIER_LSB,
+            vec![
+                b'M',
+                b'Q',
+                b'T',
+                b'T',
+                PROTOCOL_LEVEL,
+                CLEAN_SESSION,
+                KEEP_ALIVE_MSB,
+                KEEP_ALIVE_LSB,
+            ],
+        );
+
+        let mut payload: Vec<u8> = vec![];
+        payload.extend_from_slice(client_id);
+
+        Ok(Package {
+            fixed_header,
+            variable_header,
+            payload,
+        })
+    }
+
     pub fn into_bytes(self) -> Vec<u8> {
         let mut package_bytes: Vec<u8> = vec![];
 
