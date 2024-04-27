@@ -39,7 +39,7 @@ impl FixedHeader {
 
         let fixed_header_binary = vec![
             packet_type_value,
-            10 as u8,
+            0 as u8,
         ];
 
         return fixed_header_binary

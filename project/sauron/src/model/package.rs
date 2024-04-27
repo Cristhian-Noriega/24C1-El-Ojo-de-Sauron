@@ -63,7 +63,8 @@ impl Package {
         // message.extend(variable_header_binary);
         message.extend(self.payload);
 
-        // Modificar message[1] con la nueva longitud del mensaje
+        //let remaining_length = variable_header_binary.len() + payload.len();
+        //message[1] = remaining_length as u8;
 
         return message
     }
