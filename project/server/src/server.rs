@@ -16,20 +16,33 @@ fn main() -> Result<(), ()> {
     }
 
     let address = "127.0.0.1:".to_owned() + &argv[1];
-    server_run(&address).unwrap();
+    if let Err(err) = server_run(&address) {
+        println!("Error al ejecutar el servidor: {:?}", err);
+        return Err(());
+    }
+
     Ok(())
 }
 
 fn server_run(address: &str) -> std::io::Result<()> {
     let listener = TcpListener::bind(address)?;
 
-    for mut stream in listener.incoming().flatten() {
-        let address = stream.peer_addr().unwrap().to_string();
-        println!("Nueva conexión: {:?}", address);
+    for stream_result in listener.incoming() {
+        match stream_result {
+            Ok(mut stream) => {
+                let address = stream.peer_addr()?.to_string();
+                println!("Nueva conexión: {:?}", address);
 
-        thread::spawn(move || {
-            handle_client(&mut stream, &address).unwrap();
-        });
+                thread::spawn(move || {
+                    if let Err(err) = handle_client(&mut stream, &address) {
+                        println!("Error al manejar el cliente: {:?}", err);
+                    }
+                });
+            }
+            Err(err) => {
+                println!("Error al aceptar la conexión: {:?}", err);
+            }
+        }
     }
 
     Ok(())

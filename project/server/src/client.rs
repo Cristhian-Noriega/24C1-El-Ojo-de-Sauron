@@ -18,8 +18,13 @@ fn main() -> Result<(), ()> {
     let address = argv[1].clone() + ":" + &argv[2];
     println!("Conectándome a {:?}", address);
 
-    client_run(&address, &mut stdin()).unwrap();
-    Ok(())
+    match client_run(&address, &mut stdin()) {
+        Ok(_) => Ok(()),
+        Err(e) => {
+            println!("Error: {:?}", e);
+            Err(())
+        }
+    }
 }
 
 fn client_run(address: &str, stream: &mut dyn Read) -> std::io::Result<()> {
