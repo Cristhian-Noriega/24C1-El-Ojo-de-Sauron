@@ -7,7 +7,7 @@ struct TopicFilter {
     topic: String,
 }
 
-impl SubscribePayload {
+impl UnsubscribePayload {
     pub fn new(topic_filters: Vec<TopicFilter>) -> Self {
         Self {
             topic_filters,
