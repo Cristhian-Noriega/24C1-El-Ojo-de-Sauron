@@ -1,4 +1,3 @@
-
 struct ConnectPayload {
     client_id: u8,
     will_topic: u8,
@@ -7,9 +6,14 @@ struct ConnectPayload {
     password: Option<u8>,
 }
 
-
 impl ConnectPayload {
-    pub fn new(client_id: u8, will_topic: u8, will_message: u8, username: u8, password: u8) -> Self {
+    pub fn new(
+        client_id: u8,
+        will_topic: u8,
+        will_message: u8,
+        username: u8,
+        password: u8,
+    ) -> Self {
         Self {
             client_id,
             will_topic,

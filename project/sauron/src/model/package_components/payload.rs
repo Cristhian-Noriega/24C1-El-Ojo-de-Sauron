@@ -1,5 +1,3 @@
-
-
 enum Payload {
     ConnectPayload,
     PublishPayload,

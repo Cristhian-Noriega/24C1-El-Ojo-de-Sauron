@@ -12,4 +12,17 @@ impl VariableHeader {
             content,
         }
     }
+
+    pub fn into_bytes(self) -> Vec<u8> {
+        let mut variable_header_bytes =
+            vec![self.packet_identifier_msb, self.packet_identifier_lsb];
+
+        variable_header_bytes.extend(self.content);
+
+        variable_header_bytes
+    }
+
+    pub fn from_bytes() -> Self {
+        todo!();
+    }
 }

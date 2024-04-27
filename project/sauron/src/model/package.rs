@@ -1,11 +1,13 @@
-use crate::model::package_components::{
-    fixed_header::FixedHeader,
-    fixed_header_components::{
-        control_packet_type::ControlPacketType::Connect, flags::Flags, qos::QoS,
+use crate::{
+    errors::error::Error,
+    model::package_components::{
+        fixed_header::FixedHeader,
+        fixed_header_components::{
+            control_packet_type::ControlPacketType::Connect, flags::Flags, qos::QoS,
+        },
+        variable_header::VariableHeader,
     },
-    variable_header::VariableHeader,
 };
-use std::io::{Error, ErrorKind};
 
 // siento que esto no debería estar aquí
 const PACKET_IDENTIFIER_MSB: u8 = 0x00;
@@ -22,7 +24,7 @@ pub struct Package {
 }
 
 impl Package {
-    pub fn build_connect(client_id: &[u8]) -> Result<Self, std::io::Error> {
+    pub fn build_connect(client_id: &[u8]) -> Result<Self, Error> {
         let fixed_header = FixedHeader::new(
             Connect,
             Flags::new(false, false, QoS::AtMostOnce),
@@ -33,10 +35,10 @@ impl Package {
             PACKET_IDENTIFIER_MSB,
             PACKET_IDENTIFIER_LSB,
             vec![
-                'M' as u8,
-                'Q' as u8,
-                'T' as u8,
-                'T' as u8,
+                b'M',
+                b'Q',
+                b'T',
+                b'T',
                 PROTOCOL_LEVEL,
                 CLEAN_SESSION,
                 KEEP_ALIVE_MSB,
@@ -54,18 +56,22 @@ impl Package {
         })
     }
 
-    pub fn convert(self) -> Vec<u8> {
-        let mut message: Vec<u8> = vec![];
-        let fixed_header_binary = self.fixed_header.convert_to_binary();
-        //let variable_header_binary = self.variable_header.convert_to_binary();
+    pub fn into_bytes(self) -> Vec<u8> {
+        let mut package_bytes: Vec<u8> = vec![];
+        let fixed_header_bytes = self.fixed_header.into_bytes();
+        let variable_header_bytes = self.variable_header.into_bytes();
 
-        message.extend(fixed_header_binary);
-        // message.extend(variable_header_binary);
-        message.extend(self.payload);
+        package_bytes.extend(fixed_header_bytes);
+        package_bytes.extend(variable_header_bytes);
+        package_bytes.extend(self.payload);
 
-        //let remaining_length = variable_header_binary.len() + payload.len();
+        //let remaining_length = variable_header_bytes.len() + payload.len();
         //message[1] = remaining_length as u8;
 
-        return message
+        package_bytes
+    }
+
+    pub fn from_bytes() -> Self {
+        todo!()
     }
 }
