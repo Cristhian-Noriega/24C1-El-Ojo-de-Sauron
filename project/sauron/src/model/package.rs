@@ -7,15 +7,10 @@ use crate::{
         },
         variable_header::VariableHeader,
     },
+    model::constants::{
+        PACKET_IDENTIFIER_MSB, PACKET_IDENTIFIER_LSB, PROTOCOL_LEVEL, CLEAN_SESSION, KEEP_ALIVE_MSB, KEEP_ALIVE_LSB,
+    },
 };
-
-// siento que esto no debería estar aquí
-const PACKET_IDENTIFIER_MSB: u8 = 0x00;
-const PACKET_IDENTIFIER_LSB: u8 = 0x04;
-const PROTOCOL_LEVEL: u8 = 0x04;
-const CLEAN_SESSION: u8 = 0x02;
-const KEEP_ALIVE_MSB: u8 = 10;
-const KEEP_ALIVE_LSB: u8 = 10;
 
 pub struct Package {
     fixed_header: FixedHeader,
