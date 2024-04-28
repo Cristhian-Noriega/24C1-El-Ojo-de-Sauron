@@ -1,25 +1,51 @@
-struct ConnectPayload {
-    client_id: u8,
-    will_topic: u8,
-    will_message: u8,
-    username: Option<u8>,
-    password: Option<u8>,
+pub struct ConnectPayload {
+    client_id: Vec<u8>,
+    will_topic: Option<Vec<u8>>,
+    will_message: Option<Vec<u8>>,
+    username: Option<Vec<u8>>,
+    password: Option<Vec<u8>>,
 }
 
 impl ConnectPayload {
     pub fn new(
-        client_id: u8,
-        will_topic: u8,
-        will_message: u8,
-        username: u8,
-        password: u8,
+        client_id: Vec<u8>,
+        will_topic: Option<Vec<u8>>,
+        will_message: Option<Vec<u8>>,
+        username: Option<Vec<u8>>,
+        password: Option<Vec<u8>>,
     ) -> Self {
         Self {
             client_id,
             will_topic,
             will_message,
-            username: Some(username),
-            password: Some(password),
+            username,
+            password,
         }
+    }
+
+    pub fn from_bytes(bytes: Vec<u8>, n: usize) -> Self {
+        todo!()
+    }
+
+    pub fn into_bytes(self) -> Vec<u8> {
+        let mut payload_bytes = vec![self.client_id];
+
+        if let Some(will_topic) = self.will_topic {
+            payload_bytes.extend(will_topic);
+        }
+
+        if let Some(will_message) = self.will_message {
+            payload_bytes.extend(will_message);
+        }
+
+        if let Some(username) = self.username {
+            payload_bytes.extend(username);
+        }
+
+        if let Some(password) = self.password {
+            payload_bytes.extend(password);
+        }
+
+        payload_bytes
     }
 }
