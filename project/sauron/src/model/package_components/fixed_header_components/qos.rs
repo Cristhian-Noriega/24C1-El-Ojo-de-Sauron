@@ -7,7 +7,7 @@ pub enum QoS {
 }
 
 impl QoS {
-    pub fn into_u8(self) -> u8 {
+    pub fn into_byte(self) -> u8 {
         match self {
             QoS::AtMostOnce => 0x00,
             QoS::AtLeastOnce => 0x01,
@@ -15,12 +15,12 @@ impl QoS {
         }
     }
 
-    pub fn from_u8(value: u8) -> Result<Self, Error> {
-        match value {
+    pub fn from_byte(byte: u8) -> Result<Self, Error> {
+        match byte {
             0x00 => Ok(QoS::AtMostOnce),
             0x01 => Ok(QoS::AtLeastOnce),
             0x02 => Ok(QoS::ExactlyOnce),
-            _ => panic!("Invalid QoS value"),
+            _ => Err(Error::new(format!("Invalid QoS: {}", byte))),
         }
     }
 }

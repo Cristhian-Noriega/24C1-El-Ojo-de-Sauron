@@ -1,3 +1,5 @@
+use std::io::Read;
+
 use crate::{
     errors::error::Error,
     model::package_components::{
@@ -6,13 +8,12 @@ use crate::{
 };
 
 use super::package_components::{
-    fixed_header::FIXED_HEADER_LENGTH, fixed_header_components::{
-        control_packet_type::ControlPacketType,
-        qos::QoS,
-    }, payload_components::connect_payload::ConnectPayload, variable_header_components::{
+    fixed_header_components::{control_packet_type::ControlPacketType, qos::QoS},
+    payload_components::connect_payload::ConnectPayload,
+    variable_header_components::{
         contents::connect_variable_header::ConnectVariableHeader,
         variable_header_content::VariableHeaderContent,
-    }
+    },
 };
 
 pub struct Package {
@@ -67,37 +68,20 @@ impl Package {
         package_bytes
     }
 
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
-        //no estoy seguro cuantos minimos bytes poner
-        if bytes.len() < FIXED_HEADER_LENGTH {
-            return Err(Error::new(format!(
-                "El package no cumple con el tamaño esperado"
-            )));
-        }
-
-        //parseo de fixed header
-
-        let fixed_header = FixedHeader::from_bytes(&bytes[0..2])?; //el fixed header ocupa 2 bytes
+    pub fn from_bytes(stream: &mut dyn Read) -> Result<Self, Error> {
+        let fixed_header = FixedHeader::from_bytes(stream)?;
         let remaining_lenght = fixed_header.get_remaining_length();
+        let control_packet_type = fixed_header.get_control_packet_type();
 
-        if bytes.len() < FIXED_HEADER_LENGTH + remaining_lenght {
-            return Err(Error::new(format!("El package no cumple con el tamaño esperado")));
-        }
+        let variable_header = VariableHeader::from_bytes(stream, control_packet_type)?;
+        remaining_lenght -= variable_header.get_length();
 
-        //parseo de variable header
-        let variable_header_start = FIXED_HEADER_LENGTH;
-        let variable_header_end = variable_header_start + remaining_lenght;
-        let variable_header  = VariableHeader::from_bytes(&bytes[variable_header_start, variable_header_start])?;
-
-        //parseo de payload
-        let payload_start  = variable_header_end;
-        let payload = bytes[payload_start..].to_vec();
+        let payload = Payload::from_bytes(stream, control_packet_type, remaining_lenght)?;
 
         Ok(Package {
             fixed_header,
-            Some(variable_header),
-            Some(payload),
+            variable_header: Some(variable_header),
+            payload: Some(payload),
         })
-
     }
 }

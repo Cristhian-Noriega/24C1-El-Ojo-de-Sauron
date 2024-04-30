@@ -1,6 +1,9 @@
-use super::payload_components::connect_payload::ConnectPayload;
+use super::{
+    fixed_header_components::control_packet_type::ControlPacketType,
+    payload_components::connect_payload::ConnectPayload,
+};
 use crate::errors::error::Error;
-use std::convert::TryFrom;
+use std::io::Read;
 
 pub enum Payload {
     Connect(ConnectPayload),
@@ -11,21 +14,16 @@ pub enum Payload {
 }
 
 impl Payload {
-    pub fn from_bytes(bytes: Vec<u8>) -> Result<Self, Error> {
-        if bytes.is_empty() {
-            return Err(Error::InvalidPayload);
-        }
-
-        match bytes[0] {
-            // Connect payload
-            0x10 => {
-                let connect_payload = ConnectPayload::try_from(bytes)?;
-                Ok(Payload::Connect(connect_payload))
+    pub fn from_bytes(
+        bytes: &mut dyn Read,
+        control_packet_type: ControlPacketType,
+        remaining_length: usize,
+    ) -> Result<Self, Error> {
+        match control_packet_type {
+            ControlPacketType::Connect => {
+                let connect = ConnectPayload::from_bytes(bytes, remaining_length)?;
+                Ok(Payload::Connect(connect))
             }
-            // Publish payload
-            0x30 => {}
-
-            _ => Err(Error::InvalidPayload),
         }
     }
 

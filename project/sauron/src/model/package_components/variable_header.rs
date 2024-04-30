@@ -1,6 +1,11 @@
+use std::io::Read;
+
 use crate::errors::error::Error;
 
-use super::variable_header_components::variable_header_content::VariableHeaderContent;
+use super::{
+    fixed_header_components::control_packet_type::ControlPacketType,
+    variable_header_components::variable_header_content::VariableHeaderContent,
+};
 
 pub struct VariableHeader {
     packet_identifier_msb: u8,
@@ -32,11 +37,13 @@ impl VariableHeader {
         variable_header_bytes
     }
 
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
-        let packet_identifier_msb = bytes[0];
-        let packet_identifier_lsb = bytes[1];
-        //para el content habria que usar el enum ?
-        let content = bytes[2..];
+    pub fn from_bytes(
+        stream: &mut dyn Read,
+        control_packet_type: ControlPacketType,
+    ) -> Result<Self, Error> {
+        let packet_identifier_msb = stream.next()?;
+        let packet_identifier_lsb = stream.next()?;
+        let content = VariableHeaderContent::from_bytes(stream, control_packet_type)?;
 
         Ok(VariableHeader::new(
             packet_identifier_msb,

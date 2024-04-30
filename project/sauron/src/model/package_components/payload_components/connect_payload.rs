@@ -1,4 +1,6 @@
-use crate::model::package_components::variable_header_components::contents::connect_variable_header::ConnectVariableHeader;
+use std::io::Read;
+
+use crate::errors::error::Error;
 
 pub struct ConnectPayload {
     client_id: Vec<u8>,
@@ -25,41 +27,14 @@ impl ConnectPayload {
         }
     }
 
-    //pruebo pasandole cualquier tipo que implemente Read para mayor flexibilidad
-    pub fn from_bytes(bytes: &mut R, flags: ConnectVariableHeader) -> Self {
-        let client_id = read_string(bytes)?;
-        let will_topic = if flags.will_flag {
-            Some(read_string(bytes)?)
-        } else {
-            None
-        };
-        let will_message = if flags.will_flag {
-            Some(read_string(bytes)?)
-        } else {
-            None
-        };
-        let username = if flags.username_flag {
-            Some(read_string(bytes)?)
-        } else {
-            None
-        };
-        let password = if flags.password_flag {
-            Some(read_string(bytes)?)
-        } else {
-            None
-        };
-
-        Ok(ConnectPayload {
-            client_id,
-            will_topic,
-            will_message,
-            username,
-            password,
-        })
+    pub fn from_bytes(bytes: &mut dyn Read, remaining_length: usize) -> Result<Self, Error> {
+        todo!()
     }
 
     pub fn into_bytes(self) -> Vec<u8> {
-        let mut payload_bytes = vec![self.client_id];
+        let mut payload_bytes = vec![];
+
+        payload_bytes.extend(self.client_id);
 
         if let Some(will_topic) = self.will_topic {
             payload_bytes.extend(will_topic);
@@ -81,10 +56,10 @@ impl ConnectPayload {
     }
 }
 
-fn read_string<R: Read>(bytes: &mut R) -> Result<Vec<u8>, Error> {
-    let length = bytes.read_u16::<BigEndian>()?;
-    let mut string = vec![0; length as usize];
-    bytes.read_exact(&mut string)?;
+// fn read_string<R: Read>(bytes: &mut R) -> Result<Vec<u8>, Error> {
+//     let length = bytes.read_u16::<BigEndian>()?;
+//     let mut string = vec![0; length as usize];
+//     bytes.read_exact(&mut string)?;
 
-    Ok(string)
-}
+//     Ok(string)
+// }

@@ -1,3 +1,5 @@
+use std::io::Read;
+
 use crate::{
     errors::error::Error,
     model::package_components::fixed_header_components::control_packet_type::ControlPacketType,
@@ -27,8 +29,8 @@ impl FixedHeader {
     }
 
     pub fn into_bytes(self) -> Vec<u8> {
-        let packet_type_bytes = self.control_packet_type.into_u8();
-        let flags_bytes = self.flags.into_u8();
+        let packet_type_bytes = self.control_packet_type.into_byte();
+        let flags_bytes = self.flags.into_byte();
 
         let fixed_header_bytes = vec![
             packet_type_bytes << 4 | flags_bytes,
@@ -38,13 +40,16 @@ impl FixedHeader {
         fixed_header_bytes
     }
 
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
-        let first_byte = bytes[0];
+    pub fn from_bytes(stream: &mut dyn Read) -> Result<Self, Error> {
+        let mut first_byte = [0; 1];
 
-        let control_packet_type = ControlPacketType::from_u8(first_byte)?;
-        let flags = FixedHeaderFlags::from_u8(first_byte)?;
+        //tengo que implementar un par de cosas en error para usar el ?
+        stream.read_exact(&mut first_byte)?;
 
-        let remaining_length = bytes[1] as usize;
+        let control_packet_type = ControlPacketType::from_byte(first_byte)?;
+        let flags = FixedHeaderFlags::from_byte(first_byte, control_packet_type)?;
+
+        let remaining_length = stream.next()?;
 
         Ok(Self {
             control_packet_type,

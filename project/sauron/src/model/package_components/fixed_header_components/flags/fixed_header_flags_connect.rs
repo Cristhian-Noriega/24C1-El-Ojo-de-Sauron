@@ -11,7 +11,7 @@ impl FixedHeaderFlagsConnect {
         Self { retain, dup, qos }
     }
 
-    pub fn into_u8(self) -> u8 {
+    pub fn into_byte(self) -> u8 {
         let mut flags: u8 = 0x00;
 
         if self.retain {
@@ -22,15 +22,15 @@ impl FixedHeaderFlagsConnect {
             flags |= 0x01 << 3;
         }
 
-        flags |= self.qos.into_u8() << 1;
+        flags |= self.qos.into_byte() << 1;
 
         flags
     }
 
-    pub fn from_byte(value: u8) -> Result<Self, Error> {
-        let retain = (value & 0x01) == 0x01;
-        let dup = (value & 0x08) == 0x08;
-        let qos = QoS::from_u8((value & 0x06) >> 1)?;
+    pub fn from_byte(byte: u8) -> Result<Self, Error> {
+        let retain = (byte & 0x01) != 0;
+        let dup = (byte & 0x08) != 0;
+        let qos = QoS::from_byte((byte & 0x06) >> 1)?;
 
         Ok(Self { retain, dup, qos })
     }

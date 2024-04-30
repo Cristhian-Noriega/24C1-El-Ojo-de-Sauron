@@ -17,7 +17,7 @@ pub enum ControlPacketType {
 }
 
 impl ControlPacketType {
-    pub fn into_u8(self) -> u8 {
+    pub fn into_byte(self) -> u8 {
         match self {
             ControlPacketType::Connect => 0x01,
             // ControlPacketType::ConnAck => 0x02,
@@ -36,7 +36,7 @@ impl ControlPacketType {
         }
     }
 
-    pub fn from_u8(value: u8) -> Result<Self, Error> {
+    pub fn from_byte(value: u8) -> Result<Self, Error> {
         match value {
             0x01 => Ok(ControlPacketType::Connect),
             // 0x02 => Ok(ControlPacketType::ConnAck),

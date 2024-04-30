@@ -1,8 +1,10 @@
-use crate::model::package_components::fixed_header_components::qos::QoS;
+use std::io::Read;
+
+use crate::{errors::error::Error, model::package_components::fixed_header_components::qos::QoS};
 
 const PROTOCOL_NAME: Vec<u8> = vec![b'M', b'Q', b'T', b'T'];
 const PROTOCOL_LEVEL: u8 = 0x04;
-const CONNECT_LENGTH: u8 = 8;
+const CONNECT_LENGTH: usize = 8;
 
 pub struct ConnectVariableHeader {
     username: bool,
@@ -42,7 +44,7 @@ impl ConnectVariableHeader {
         let flags_byte = (self.username as u8) << 7
             | (self.password as u8) << 6
             | (self.will_retain as u8) << 5
-            | (self.will_qos.into_u8() << 3)
+            | (self.will_qos.into_byte() << 3)
             | (self.will as u8) << 2
             | (self.clean_session as u8) << 1;
 
@@ -61,7 +63,7 @@ impl ConnectVariableHeader {
         CONNECT_LENGTH
     }
 
-    pub fn from_bytes() -> Self {
+    pub fn from_bytes(stream: &mut dyn Read) -> Result<Self, Error> {
         todo!()
     }
 }
