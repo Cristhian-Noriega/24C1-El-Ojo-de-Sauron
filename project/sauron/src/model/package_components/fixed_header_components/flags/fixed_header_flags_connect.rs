@@ -1,12 +1,12 @@
 use crate::{errors::error::Error, model::package_components::fixed_header_components::qos::QoS};
 
-pub struct Flags {
+pub struct FixedHeaderFlagsConnect {
     retain: bool,
     dup: bool,
     qos: QoS,
 }
 
-impl Flags {
+impl FixedHeaderFlagsConnect {
     pub fn new(retain: bool, dup: bool, qos: QoS) -> Self {
         Self { retain, dup, qos }
     }
@@ -27,7 +27,7 @@ impl Flags {
         flags
     }
 
-    pub fn from_u8(value: u8) -> Result<Self, Error> {
+    pub fn from_byte(value: u8) -> Result<Self, Error> {
         let retain = (value & 0x01) == 0x01;
         let dup = (value & 0x08) == 0x08;
         let qos = QoS::from_u8((value & 0x06) >> 1)?;

@@ -1,22 +1,22 @@
 use crate::{
     errors::error::Error,
-    model::package_components::fixed_header_components::{
-        control_packet_type::ControlPacketType, flags::Flags,
-    },
+    model::package_components::fixed_header_components::control_packet_type::ControlPacketType,
 };
+
+use super::fixed_header_components::fixed_header_flags::FixedHeaderFlags;
 
 pub const FIXED_HEADER_LENGTH: usize = 2;
 
 pub struct FixedHeader {
     control_packet_type: ControlPacketType,
-    flags: Flags,
+    flags: FixedHeaderFlags,
     remaining_length: usize,
 }
 
 impl FixedHeader {
     pub fn new(
         control_packet_type: ControlPacketType,
-        flags: Flags,
+        flags: FixedHeaderFlags,
         remaining_length: usize,
     ) -> Self {
         Self {
@@ -42,7 +42,7 @@ impl FixedHeader {
         let first_byte = bytes[0];
 
         let control_packet_type = ControlPacketType::from_u8(first_byte)?;
-        let flags = Flags::from_u8(first_byte)?;
+        let flags = FixedHeaderFlags::from_u8(first_byte)?;
 
         let remaining_length = bytes[1] as usize;
 

@@ -81,7 +81,6 @@ impl ConnectPayload {
     }
 }
 
-
 fn read_string<R: Read>(bytes: &mut R) -> Result<Vec<u8>, Error> {
     let length = bytes.read_u16::<BigEndian>()?;
     let mut string = vec![0; length as usize];

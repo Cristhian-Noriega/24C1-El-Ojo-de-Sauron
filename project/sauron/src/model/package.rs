@@ -8,7 +8,6 @@ use crate::{
 use super::package_components::{
     fixed_header::FIXED_HEADER_LENGTH, fixed_header_components::{
         control_packet_type::ControlPacketType,
-        flags::Flags,
         qos::QoS,
     }, payload_components::connect_payload::ConnectPayload, variable_header_components::{
         contents::connect_variable_header::ConnectVariableHeader,
@@ -87,7 +86,7 @@ impl Package {
 
         //parseo de variable header
         let variable_header_start = FIXED_HEADER_LENGTH;
-        let variable_header_end = variable_header_start + remaining_lenght
+        let variable_header_end = variable_header_start + remaining_lenght;
         let variable_header  = VariableHeader::from_bytes(&bytes[variable_header_start, variable_header_start])?;
 
         //parseo de payload

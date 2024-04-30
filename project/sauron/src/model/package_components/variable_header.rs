@@ -1,3 +1,5 @@
+use crate::errors::error::Error;
+
 use super::variable_header_components::variable_header_content::VariableHeaderContent;
 
 pub struct VariableHeader {
@@ -33,12 +35,13 @@ impl VariableHeader {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
         let packet_identifier_msb = bytes[0];
         let packet_identifier_lsb = bytes[1];
-        //para el content habria que usar el enum ? 
-        let content = bytes[2..]
+        //para el content habria que usar el enum ?
+        let content = bytes[2..];
 
         Ok(VariableHeader::new(
             packet_identifier_msb,
             packet_identifier_lsb,
+            content,
         ))
     }
 

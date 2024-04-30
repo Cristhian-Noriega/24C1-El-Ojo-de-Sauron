@@ -1,4 +1,5 @@
 use super::payload_components::connect_payload::ConnectPayload;
+use crate::errors::error::Error;
 use std::convert::TryFrom;
 
 pub enum Payload {
@@ -22,14 +23,10 @@ impl Payload {
                 Ok(Payload::Connect(connect_payload))
             }
             // Publish payload
-            0x30 => {
-                
+            0x30 => {}
+
             _ => Err(Error::InvalidPayload),
         }
-    }
-
-}
-        todo!()
     }
 
     pub fn get_length(self) -> usize {
