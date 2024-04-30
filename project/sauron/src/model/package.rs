@@ -7,9 +7,12 @@ use crate::{
     },
 };
 
-use super::package_components::{
-    payload_components::connect_payload::{ConnectPayload, CLIENT_ID_LENGTH},
-    variable_header_components::contents::connect_variable_header_content::ConnectVariableHeaderContent,
+use super::{
+    encoded_strings::EncodedString,
+    package_components::{
+        payload_components::connect_payload::ConnectPayload,
+        variable_header_components::contents::connect_variable_header_content::ConnectVariableHeaderContent,
+    },
 };
 
 pub struct Package {
@@ -20,7 +23,7 @@ pub struct Package {
 
 impl Package {
     pub fn build_connect(
-        client_id: [u8; CLIENT_ID_LENGTH],
+        client_id: EncodedString,
         variable_header_content: ConnectVariableHeaderContent,
         payload_content: ConnectPayload,
     ) -> Result<Self, Error> {
@@ -68,17 +71,17 @@ impl Package {
 
     pub fn from_bytes(stream: &mut dyn Read) -> Result<Self, Error> {
         let fixed_header = FixedHeader::from_bytes(stream)?;
-        let mut remaining_lenght = fixed_header.get_remaining_length();
+        let mut remaining_length = fixed_header.get_remaining_length();
         let control_packet_type = fixed_header.get_control_packet_type();
 
         let variable_header = VariableHeader::from_bytes(stream, control_packet_type)?;
-        remaining_lenght -= variable_header.get_length();
+        remaining_length -= variable_header.get_length();
         let variable_header_content = variable_header.get_content();
 
         let payload = Payload::from_bytes(
             stream,
             control_packet_type,
-            remaining_lenght,
+            remaining_length,
             variable_header_content,
         )?;
 

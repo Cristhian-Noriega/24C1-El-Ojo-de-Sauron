@@ -93,6 +93,28 @@ impl ConnectPayload {
 
         // payload_bytes
     }
+
+    pub fn get_length(&self) -> usize {
+        let mut length = self.client_id.get_length();
+
+        if let Some(will_topic) = &self.will_topic {
+            length += will_topic.get_length();
+        }
+
+        if let Some(will_message) = &self.will_message {
+            length += will_message.get_length();
+        }
+
+        if let Some(username) = &self.username {
+            length += username.get_length();
+        }
+
+        if let Some(password) = &self.password {
+            length += password.get_length();
+        }
+
+        length
+    }
 }
 
 // fn read_string<R: Read>(bytes: &mut R) -> Result<Vec<u8>, Error> {

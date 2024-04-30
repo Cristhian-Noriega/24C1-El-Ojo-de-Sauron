@@ -35,6 +35,8 @@ impl Payload {
     }
 
     pub fn get_length(&self) -> usize {
-        todo!()
+        match self {
+            Payload::Connect(connect) => connect.get_length(),
+        }
     }
 }
