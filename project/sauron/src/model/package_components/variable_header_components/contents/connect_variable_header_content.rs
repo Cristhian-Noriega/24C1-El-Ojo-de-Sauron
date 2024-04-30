@@ -41,7 +41,7 @@ impl ConnectVariableHeaderContent {
         }
     }
 
-    pub fn into_bytes(self) -> Vec<u8> {
+    pub fn into_bytes(&self) -> Vec<u8> {
         let flags_byte = (self.username as u8) << 7
             | (self.password as u8) << 6
             | (self.will_retain as u8) << 5
