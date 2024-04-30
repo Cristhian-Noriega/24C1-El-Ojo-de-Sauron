@@ -7,14 +7,6 @@ use crate::{
         package_components::variable_header_components::contents::connect_variable_header_content::ConnectVariableHeaderContent,
     },
 };
-
-// TODO: hay que pasar a encoded strings (1.5.3)
-pub const CLIENT_ID_LENGTH: usize = 23;
-const WILL_TOPIC_LENGTH: usize = 2;
-const WILL_MESSAGE_LENGTH: usize = 2;
-const USERNAME_LENGTH: usize = 2;
-const PASSWORD_LENGTH: usize = 2;
-
 pub struct ConnectPayload {
     client_id: EncodedString,
     will_topic: Option<EncodedString>,
