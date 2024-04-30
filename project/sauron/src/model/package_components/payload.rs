@@ -1,16 +1,13 @@
 use super::{
     fixed_header_components::control_packet_type::ControlPacketType,
     payload_components::connect_payload::ConnectPayload,
+    variable_header_components::variable_header_content::{self, VariableHeaderContent},
 };
 use crate::errors::error::Error;
 use std::io::Read;
 
 pub enum Payload {
     Connect(ConnectPayload),
-    // Publish(Publish),
-    // Subscribe(Subscribe),
-    // SubAck(SubAck),
-    // Unsubscribe(Unsubscribe),
 }
 
 impl Payload {
@@ -22,10 +19,16 @@ impl Payload {
         stream: &mut dyn Read,
         control_packet_type: &ControlPacketType,
         remaining_length: usize,
+        variable_header_content: &VariableHeaderContent,
     ) -> Result<Self, Error> {
+        let variable_header_content = match variable_header_content {
+            variable_header_content::VariableHeaderContent::Connect(connect) => connect,
+        };
+
         match control_packet_type {
             ControlPacketType::Connect => {
-                let connect = ConnectPayload::from_bytes(stream, remaining_length)?;
+                let connect =
+                    ConnectPayload::from_bytes(stream, remaining_length, variable_header_content)?;
                 Ok(Payload::Connect(connect))
             }
         }

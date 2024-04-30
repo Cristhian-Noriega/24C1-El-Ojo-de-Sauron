@@ -101,4 +101,16 @@ impl ConnectVariableHeaderContent {
             keep_alive_lsb,
         })
     }
+
+    pub fn has_will(&self) -> bool {
+        self.will
+    }
+
+    pub fn has_username(&self) -> bool {
+        self.username
+    }
+
+    pub fn has_password(&self) -> bool {
+        self.password
+    }
 }

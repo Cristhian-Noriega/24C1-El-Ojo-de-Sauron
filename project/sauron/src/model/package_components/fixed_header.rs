@@ -46,8 +46,8 @@ impl FixedHeader {
 
         let first_byte = buffer[0];
 
-        let control_packet_type = ControlPacketType::from_byte(first_byte)?;
-        let flags = FixedHeaderFlags::from_byte(first_byte, control_packet_type)?;
+        let control_packet_type: ControlPacketType = ControlPacketType::from_byte(first_byte)?;
+        let flags = FixedHeaderFlags::from_byte(first_byte, &control_packet_type)?;
 
         stream.read_exact(&mut buffer)?;
         let remaining_length = buffer[1] as usize;

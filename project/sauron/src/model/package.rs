@@ -8,7 +8,7 @@ use crate::{
 };
 
 use super::package_components::{
-    payload_components::connect_payload::ConnectPayload,
+    payload_components::connect_payload::{ConnectPayload, CLIENT_ID_LENGTH},
     variable_header_components::contents::connect_variable_header_content::ConnectVariableHeaderContent,
 };
 
@@ -20,7 +20,7 @@ pub struct Package {
 
 impl Package {
     pub fn build_connect(
-        client_id: Vec<u8>,
+        client_id: [u8; CLIENT_ID_LENGTH],
         variable_header_content: ConnectVariableHeaderContent,
         payload_content: ConnectPayload,
     ) -> Result<Self, Error> {
@@ -47,22 +47,23 @@ impl Package {
     }
 
     pub fn into_bytes(&self) -> Vec<u8> {
-        let mut package_bytes: Vec<u8> = vec![];
+        todo!()
+        // let mut package_bytes: Vec<u8> = vec![];
 
-        let fixed_header_bytes = self.fixed_header.into_bytes();
-        package_bytes.extend(fixed_header_bytes);
+        // let fixed_header_bytes = self.fixed_header.into_bytes();
+        // package_bytes.extend(fixed_header_bytes);
 
-        if let Some(variable_header) = self.variable_header {
-            let variable_header_bytes = variable_header.into_bytes();
-            package_bytes.extend(variable_header_bytes);
-        }
+        // if let Some(variable_header) = self.variable_header {
+        //     let variable_header_bytes = variable_header.into_bytes();
+        //     package_bytes.extend(variable_header_bytes);
+        // }
 
-        if let Some(payload) = self.payload {
-            let payload_bytes = payload.into_bytes();
-            package_bytes.extend(payload_bytes);
-        }
+        // if let Some(payload) = self.payload {
+        //     let payload_bytes = payload.into_bytes();
+        //     package_bytes.extend(payload_bytes);
+        // }
 
-        package_bytes
+        // package_bytes
     }
 
     pub fn from_bytes(stream: &mut dyn Read) -> Result<Self, Error> {
@@ -72,8 +73,14 @@ impl Package {
 
         let variable_header = VariableHeader::from_bytes(stream, control_packet_type)?;
         remaining_lenght -= variable_header.get_length();
+        let variable_header_content = variable_header.get_content();
 
-        let payload = Payload::from_bytes(stream, control_packet_type, remaining_lenght)?;
+        let payload = Payload::from_bytes(
+            stream,
+            control_packet_type,
+            remaining_lenght,
+            variable_header_content,
+        )?;
 
         Ok(Package {
             fixed_header,

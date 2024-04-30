@@ -61,4 +61,8 @@ impl VariableHeader {
     pub fn get_length(&self) -> usize {
         FIXED_VARIABLE_HEADER_LENGTH + self.content.get_length()
     }
+
+    pub fn get_content(&self) -> &VariableHeaderContent {
+        &self.content
+    }
 }
