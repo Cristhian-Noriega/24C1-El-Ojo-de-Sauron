@@ -7,7 +7,7 @@ pub enum QoS {
 }
 
 impl QoS {
-    pub fn into_byte(self) -> u8 {
+    pub fn into_byte(&self) -> u8 {
         match self {
             QoS::AtMostOnce => 0x00,
             QoS::AtLeastOnce => 0x01,

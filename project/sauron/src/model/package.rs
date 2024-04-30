@@ -8,12 +8,8 @@ use crate::{
 };
 
 use super::package_components::{
-    fixed_header_components::{control_packet_type::ControlPacketType, qos::QoS},
     payload_components::connect_payload::ConnectPayload,
-    variable_header_components::{
-        contents::connect_variable_header::ConnectVariableHeader,
-        variable_header_content::VariableHeaderContent,
-    },
+    variable_header_components::contents::connect_variable_header_content::ConnectVariableHeaderContent,
 };
 
 pub struct Package {
@@ -25,31 +21,32 @@ pub struct Package {
 impl Package {
     pub fn build_connect(
         client_id: Vec<u8>,
-        variable_header_content: ConnectVariableHeader,
+        variable_header_content: ConnectVariableHeaderContent,
         payload_content: ConnectPayload,
     ) -> Result<Self, Error> {
-        let payload = Payload::Connect(payload_content);
-        let variable_header = VariableHeader::new(
-            0,
-            0,
-            VariableHeaderContent::Connect(variable_header_content),
-        );
+        // let payload = Payload::Connect(payload_content);
+        // let variable_header = VariableHeader::new(
+        //     0,
+        //     0,
+        //     VariableHeaderContent::Connect(variable_header_content),
+        // );
 
-        let remaining_len = payload.get_length() + variable_header.get_length();
-        let flags = Flags::new(false, false, QoS::AtMostOnce);
+        // let remaining_len = payload.get_length() + variable_header.get_length();
+        // let flags = Flags::new(false, false, QoS::AtMostOnce);
 
-        let fixed_header = FixedHeader::new(ControlPacketType::Connect, flags, remaining_len);
+        // let fixed_header = FixedHeader::new(ControlPacketType::Connect, flags, remaining_len);
 
-        let package = Package {
-            fixed_header,
-            variable_header: Some(variable_header),
-            payload: Some(payload),
-        };
+        // let package = Package {
+        //     fixed_header,
+        //     variable_header: Some(variable_header),
+        //     payload: Some(payload),
+        // };
 
-        Ok(package)
+        // Ok(package)
+        todo!()
     }
 
-    pub fn into_bytes(self) -> Vec<u8> {
+    pub fn into_bytes(&self) -> Vec<u8> {
         let mut package_bytes: Vec<u8> = vec![];
 
         let fixed_header_bytes = self.fixed_header.into_bytes();
@@ -70,7 +67,7 @@ impl Package {
 
     pub fn from_bytes(stream: &mut dyn Read) -> Result<Self, Error> {
         let fixed_header = FixedHeader::from_bytes(stream)?;
-        let remaining_lenght = fixed_header.get_remaining_length();
+        let mut remaining_lenght = fixed_header.get_remaining_length();
         let control_packet_type = fixed_header.get_control_packet_type();
 
         let variable_header = VariableHeader::from_bytes(stream, control_packet_type)?;

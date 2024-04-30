@@ -31,7 +31,7 @@ impl ConnectPayload {
         todo!()
     }
 
-    pub fn into_bytes(self) -> Vec<u8> {
+    pub fn into_bytes(&self) -> Vec<u8> {
         let mut payload_bytes = vec![];
 
         payload_bytes.extend(self.client_id);

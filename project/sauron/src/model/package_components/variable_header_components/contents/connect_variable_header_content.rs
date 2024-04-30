@@ -2,11 +2,12 @@ use std::io::Read;
 
 use crate::{errors::error::Error, model::package_components::fixed_header_components::qos::QoS};
 
-const PROTOCOL_NAME: Vec<u8> = vec![b'M', b'Q', b'T', b'T'];
-const PROTOCOL_LEVEL: u8 = 0x04;
 const CONNECT_LENGTH: usize = 8;
 
-pub struct ConnectVariableHeader {
+const PROTOCOL_NAME: [u8; 4] = [b'M', b'Q', b'T', b'T'];
+const PROTOCOL_LEVEL: u8 = 0x04;
+
+pub struct ConnectVariableHeaderContent {
     username: bool,
     password: bool,
     will_retain: bool,
@@ -17,7 +18,7 @@ pub struct ConnectVariableHeader {
     keep_alive_lsb: u8,
 }
 
-impl ConnectVariableHeader {
+impl ConnectVariableHeaderContent {
     pub fn new(
         username: bool,
         password: bool,
@@ -59,11 +60,45 @@ impl ConnectVariableHeader {
         conect_bytes
     }
 
-    pub fn get_length(self) -> usize {
+    pub fn get_length(&self) -> usize {
         CONNECT_LENGTH
     }
 
     pub fn from_bytes(stream: &mut dyn Read) -> Result<Self, Error> {
-        todo!()
+        let mut buffer = [0; CONNECT_LENGTH];
+        stream.read_exact(&mut buffer)?;
+
+        // debería seguir MQTT
+        for letter in PROTOCOL_NAME.iter() {
+            if *letter != buffer[0] {
+                return Err(Error::new("Invalid protocol name".to_string()));
+            }
+        }
+
+        if buffer[4] != PROTOCOL_LEVEL {
+            return Err(Error::new("Invalid protocol level".to_string()));
+        }
+
+        let flags_byte = buffer[5];
+        let username = (flags_byte & 0b1000_0000) >> 7 == 1;
+        let password = (flags_byte & 0b0100_0000) >> 6 == 1;
+        let will_retain = (flags_byte & 0b0010_0000) >> 5 == 1;
+        let will_qos = QoS::from_byte((flags_byte & 0b0001_1000) >> 3)?;
+        let will = (flags_byte & 0b0000_0100) >> 2 == 1;
+        let clean_session = (flags_byte & 0b0000_0010) >> 1 == 1;
+
+        let keep_alive_msb = buffer[6];
+        let keep_alive_lsb = buffer[7];
+
+        Ok(Self {
+            username,
+            password,
+            will_retain,
+            will_qos,
+            will,
+            clean_session,
+            keep_alive_msb,
+            keep_alive_lsb,
+        })
     }
 }

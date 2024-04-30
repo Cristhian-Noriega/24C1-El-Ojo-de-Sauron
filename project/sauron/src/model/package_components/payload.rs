@@ -14,20 +14,24 @@ pub enum Payload {
 }
 
 impl Payload {
+    pub fn into_bytes(&self) -> Vec<u8> {
+        todo!()
+    }
+
     pub fn from_bytes(
-        bytes: &mut dyn Read,
-        control_packet_type: ControlPacketType,
+        stream: &mut dyn Read,
+        control_packet_type: &ControlPacketType,
         remaining_length: usize,
     ) -> Result<Self, Error> {
         match control_packet_type {
             ControlPacketType::Connect => {
-                let connect = ConnectPayload::from_bytes(bytes, remaining_length)?;
+                let connect = ConnectPayload::from_bytes(stream, remaining_length)?;
                 Ok(Payload::Connect(connect))
             }
         }
     }
 
-    pub fn get_length(self) -> usize {
+    pub fn get_length(&self) -> usize {
         todo!()
     }
 }

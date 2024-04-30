@@ -28,7 +28,7 @@ impl FixedHeader {
         }
     }
 
-    pub fn into_bytes(self) -> Vec<u8> {
+    pub fn into_bytes(&self) -> Vec<u8> {
         let packet_type_bytes = self.control_packet_type.into_byte();
         let flags_bytes = self.flags.into_byte();
 
@@ -41,15 +41,16 @@ impl FixedHeader {
     }
 
     pub fn from_bytes(stream: &mut dyn Read) -> Result<Self, Error> {
-        let mut first_byte = [0; 1];
+        let mut buffer = [0; FIXED_HEADER_LENGTH];
+        stream.read_exact(&mut buffer)?;
 
-        //tengo que implementar un par de cosas en error para usar el ?
-        stream.read_exact(&mut first_byte)?;
+        let first_byte = buffer[0];
 
         let control_packet_type = ControlPacketType::from_byte(first_byte)?;
         let flags = FixedHeaderFlags::from_byte(first_byte, control_packet_type)?;
 
-        let remaining_length = stream.next()?;
+        stream.read_exact(&mut buffer)?;
+        let remaining_length = buffer[1] as usize;
 
         Ok(Self {
             control_packet_type,
@@ -58,7 +59,11 @@ impl FixedHeader {
         })
     }
 
-    pub fn get_remaining_leght(&self) -> usize {
+    pub fn get_remaining_length(&self) -> usize {
         self.remaining_length
+    }
+
+    pub fn get_control_packet_type(&self) -> &ControlPacketType {
+        &self.control_packet_type
     }
 }

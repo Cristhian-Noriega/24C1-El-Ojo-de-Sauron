@@ -8,7 +8,7 @@ mod model;
 
 pub fn send_connect(client_id: Vec<u8>) {
     let variable_header_content =
-        model::package_components::variable_header_components::contents::connect_variable_header::ConnectVariableHeader::new(
+        model::package_components::variable_header_components::contents::connect_variable_header_content::ConnectVariableHeaderContent::new(
             false,
             false,
             false,

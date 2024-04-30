@@ -2,28 +2,25 @@ use crate::errors::error::Error;
 
 use super::{
     control_packet_type::ControlPacketType,
-    flags::fixed_header_flags_connect::FixedHeaderFlagsConnect,
+    flags::fixed_header_flags_publish::FixedHeaderFlagsPublish,
 };
 
 pub enum FixedHeaderFlags {
-    Connect(FixedHeaderFlagsConnect),
+    Reserved,
+    Publish(FixedHeaderFlagsPublish),
 }
 
 impl FixedHeaderFlags {
     pub fn from_byte(byte: u8, control_packet_type: ControlPacketType) -> Result<Self, Error> {
         match control_packet_type {
-            ControlPacketType::Connect => {
-                let fixed_header_flags_connect = FixedHeaderFlagsConnect::from_byte(byte)?;
-                Ok(FixedHeaderFlags::Connect(fixed_header_flags_connect))
-            }
+            ControlPacketType::Connect => Ok(FixedHeaderFlags::Reserved),
         }
     }
 
     pub fn into_byte(&self) -> u8 {
         match self {
-            FixedHeaderFlags::Connect(fixed_header_flags_connect) => {
-                fixed_header_flags_connect.into_byte()
-            }
+            FixedHeaderFlags::Reserved => 0x00,
+            FixedHeaderFlags::Publish(flags) => flags.into_byte(),
         }
     }
 }
