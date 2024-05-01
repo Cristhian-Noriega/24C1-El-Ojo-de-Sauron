@@ -48,6 +48,17 @@ fn server_run(address: &str) -> std::io::Result<()> {
     Ok(())
 }
 
+
+fn wait_connection(listener: TcpListener) {
+    if let Err(_) = listener.set_nonblocking(true) {
+        println!("Error al setear el socket como no bloqueante");
+        return;
+    }
+    
+
+}
+
+#[allow(dead_code)]
 fn handle_client(stream: &mut dyn Read, address: &str) -> std::io::Result<()> {
     let reader = BufReader::new(stream);
     let mut lines = reader.lines();
