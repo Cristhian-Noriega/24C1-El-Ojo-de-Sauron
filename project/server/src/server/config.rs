@@ -1,6 +1,7 @@
 //Configuración: debe incluir todos los parámetros necesarios para la ejecución del servidor, como el puerto, direccion IP, etc. 
 //(no esta permitido definir estos valores mediante constantes en el código)
 
+// Config contains the configuration for the server to run it
 pub struct Config {
     port: u16,
     address: String,
@@ -8,7 +9,7 @@ pub struct Config {
 }
 
 impl Config{
-    pub fn new(config_file: &str) -> Option<Config> {
+    pub fn new<R: Read>(config_file: R) -> Option<Config> {
         let mut path = PathBuf::new(config_file);
         let file = File::open(&path)?;
         let reader = BufReader::new(file);
