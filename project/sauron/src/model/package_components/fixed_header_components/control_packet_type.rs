@@ -4,7 +4,7 @@ pub enum ControlPacketType {
 }
 
 impl ControlPacketType {
-    pub fn into_byte(&self) -> u8 {
+    pub fn to_byte(&self) -> u8 {
         match self {
             ControlPacketType::Connect => 0x01,
         }

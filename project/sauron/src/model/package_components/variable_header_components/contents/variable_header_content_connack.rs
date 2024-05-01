@@ -2,12 +2,12 @@ use std::io::Read;
 
 use crate::{errors::error::Error, model::package_components::fixed_header_components::qos::QoS};
 
-const CONNECT_LENGTH: usize = 8;
+const CONNACK_LENGTH: usize = 8;
 
 const PROTOCOL_NAME: [u8; 4] = [b'M', b'Q', b'T', b'T'];
 const PROTOCOL_LEVEL: u8 = 0x04;
 
-pub struct VariableHeaderContentConnect {
+pub struct VariableHeaderContentConnack {
     username: bool,
     password: bool,
     will_retain: bool,
@@ -17,7 +17,7 @@ pub struct VariableHeaderContentConnect {
     keep_alive: u16,
 }
 
-impl VariableHeaderContentConnect {
+impl VariableHeaderContentConnack {
     pub fn new(
         clean_session: bool,
         will: bool,
@@ -46,22 +46,22 @@ impl VariableHeaderContentConnect {
             | (self.password as u8) << 6
             | (self.username as u8) << 7;
 
-        let mut connect_bytes = vec![];
+        let mut connack_bytes = vec![];
 
-        connect_bytes.extend(PROTOCOL_NAME);
-        connect_bytes.push(PROTOCOL_LEVEL);
-        connect_bytes.push(flags_byte);
-        connect_bytes.extend(&self.keep_alive.to_be_bytes());
+        connack_bytes.extend(PROTOCOL_NAME);
+        connack_bytes.push(PROTOCOL_LEVEL);
+        connack_bytes.push(flags_byte);
+        connack_bytes.extend(&self.keep_alive.to_be_bytes());
 
-        connect_bytes
+        connack_bytes
     }
 
     pub fn get_length(&self) -> usize {
-        CONNECT_LENGTH
+        CONNACK_LENGTH
     }
 
     pub fn from_bytes(stream: &mut dyn Read) -> Result<Self, Error> {
-        let mut buffer = [0; CONNECT_LENGTH];
+        let mut buffer = [0; CONNACK_LENGTH];
         stream.read_exact(&mut buffer)?;
 
         // debería seguir MQTT
@@ -78,7 +78,7 @@ impl VariableHeaderContentConnect {
         let flags_byte = buffer[5];
 
         if (flags_byte & 0b0000_0001) != 0 {
-            return Err(Error::new("Invalid connect flags".to_string()));
+            return Err(Error::new("Invalid connack flags".to_string()));
         }
 
         let clean_session = (flags_byte & 0b0000_0010) >> 1 == 1;

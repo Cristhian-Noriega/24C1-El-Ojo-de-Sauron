@@ -33,7 +33,7 @@ impl EncodedString {
         Self { length, content }
     }
 
-    pub fn into_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes: Vec<u8> = vec![];
         bytes.extend(&self.length.to_be_bytes());
         bytes.extend(&self.content);

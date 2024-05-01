@@ -49,20 +49,20 @@ impl Package {
         })
     }
 
-    pub fn into_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(&self) -> Vec<u8> {
         let mut package_bytes: Vec<u8> = vec![];
 
         if let Some(payload) = &self.payload {
-            let payload_bytes = payload.into_bytes();
+            let payload_bytes = payload.to_bytes();
             package_bytes.extend(payload_bytes);
         }
 
         if let Some(variable_header) = &self.variable_header {
-            let variable_header_bytes = variable_header.into_bytes();
+            let variable_header_bytes = variable_header.to_bytes();
             package_bytes.extend(variable_header_bytes);
         }
 
-        let fixed_header_bytes = self.fixed_header.into_bytes();
+        let fixed_header_bytes = self.fixed_header.to_bytes();
         package_bytes.extend(fixed_header_bytes);
 
         package_bytes

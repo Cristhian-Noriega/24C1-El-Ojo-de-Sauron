@@ -19,7 +19,7 @@ impl FixedHeaderFlagsPublish {
         Ok(Self { retain, dup, qos })
     }
 
-    pub fn into_byte(&self) -> u8 {
+    pub fn to_byte(&self) -> u8 {
         let mut flags: u8 = 0x00;
 
         if self.retain {
@@ -30,7 +30,7 @@ impl FixedHeaderFlagsPublish {
             flags |= 0x01 << 3;
         }
 
-        flags |= self.qos.into_byte() << 1;
+        flags |= self.qos.to_byte() << 1;
 
         flags
     }

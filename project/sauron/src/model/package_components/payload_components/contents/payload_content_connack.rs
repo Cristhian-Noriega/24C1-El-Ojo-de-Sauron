@@ -4,16 +4,16 @@ use crate::{
     errors::error::Error,
     model::package_components::{
         payload_components::encoded_string::EncodedString,
-        variable_header_components::contents::variable_header_content_connect::VariableHeaderContentConnect,
+        variable_header_components::contents::variable_header_content_connack::VariableHeaderContentConnack,
     },
 };
-pub struct PayloadContentConnect {
+pub struct PayloadContentConnack {
     client_id: EncodedString,
     will: Option<(EncodedString, EncodedString)>,
     user: Option<(EncodedString, Option<EncodedString>)>,
 }
 
-impl PayloadContentConnect {
+impl PayloadContentConnack {
     pub fn new(
         client_id: EncodedString,
         will: Option<(EncodedString, EncodedString)>,
@@ -29,7 +29,7 @@ impl PayloadContentConnect {
     pub fn from_bytes(
         stream: &mut dyn Read,
         _remaining_length: usize,
-        variable_header_content: &VariableHeaderContentConnect,
+        variable_header_content: &VariableHeaderContentConnack,
     ) -> Result<Self, Error> {
         let client_id = EncodedString::from_bytes(stream)?;
 

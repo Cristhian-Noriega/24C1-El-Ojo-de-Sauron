@@ -20,7 +20,7 @@ use model::{
 mod errors;
 mod model;
 
-pub fn connect(
+#[allow(clippy::manual_map)] pub fn connect(
     client_id: String,
     clean_session: bool,
     keep_alive: u16,
@@ -56,7 +56,7 @@ pub fn connect(
 
     let (will_flag, will_qos, will_retain_flag) = match will {
         Some((qos, _, _)) => (true, qos, false),
-        None => (false, QoS::AtMostOnce, false),
+        None => (false, QoS::AtMost, false),
     };
 
     let (username_flag, password_flag) = match &user {

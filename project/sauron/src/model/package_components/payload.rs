@@ -11,7 +11,7 @@ pub enum Payload {
 }
 
 impl Payload {
-    pub fn from_bytes(
+    #[allow(clippy::infallible_destructuring_match)] pub fn from_bytes(
         stream: &mut dyn Read,
         control_packet_type: &ControlPacketType,
         remaining_length: usize,
@@ -33,9 +33,9 @@ impl Payload {
         }
     }
 
-    pub fn into_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(&self) -> Vec<u8> {
         match self {
-            Payload::Connect(connect) => connect.into_bytes(),
+            Payload::Connect(connect) => connect.to_bytes(),
         }
     }
 

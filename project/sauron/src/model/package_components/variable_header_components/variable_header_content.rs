@@ -12,9 +12,9 @@ pub enum VariableHeaderContent {
 }
 
 impl VariableHeaderContent {
-    pub fn into_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(&self) -> Vec<u8> {
         match self {
-            VariableHeaderContent::Connect(connect) => connect.into_bytes(),
+            VariableHeaderContent::Connect(connect) => connect.to_bytes(),
         }
     }
 

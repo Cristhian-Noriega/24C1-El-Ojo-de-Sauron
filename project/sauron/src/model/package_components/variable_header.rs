@@ -36,13 +36,13 @@ impl VariableHeader {
         Ok(VariableHeader::new(packet_identifier, content))
     }
 
-    pub fn into_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(&self) -> Vec<u8> {
         let mut variable_header_bytes = vec![];
 
         let packet_identifier_bytes = self.packet_identifier.to_be_bytes();
         variable_header_bytes.extend(packet_identifier_bytes);
 
-        let content_bytes = self.content.into_bytes();
+        let content_bytes = self.content.to_bytes();
         variable_header_bytes.extend(content_bytes);
 
         variable_header_bytes

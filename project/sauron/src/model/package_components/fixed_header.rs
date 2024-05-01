@@ -47,9 +47,9 @@ impl FixedHeader {
         })
     }
 
-    pub fn into_bytes(&self) -> Vec<u8> {
-        let packet_type_bytes = self.control_packet_type.into_byte();
-        let flags_bytes = self.flags.into_byte();
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let packet_type_bytes = self.control_packet_type.to_byte();
+        let flags_bytes = self.flags.to_byte();
 
         let fixed_header_bytes = vec![
             packet_type_bytes << 4 | flags_bytes,

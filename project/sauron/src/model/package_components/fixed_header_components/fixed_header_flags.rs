@@ -17,10 +17,10 @@ impl FixedHeaderFlags {
         }
     }
 
-    pub fn into_byte(&self) -> u8 {
+    pub fn to_byte(&self) -> u8 {
         match self {
             FixedHeaderFlags::Reserved => 0x00,
-            FixedHeaderFlags::Publish(flags) => flags.into_byte(),
+            FixedHeaderFlags::Publish(flags) => flags.to_byte(),
         }
     }
 }
