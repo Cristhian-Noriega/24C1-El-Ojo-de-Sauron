@@ -48,14 +48,12 @@ fn server_run(address: &str) -> std::io::Result<()> {
     Ok(())
 }
 
-
+#[allow(dead_code)]
 fn wait_connection(listener: TcpListener) {
-    if let Err(_) = listener.set_nonblocking(true) {
+    if listener.set_nonblocking(true).is_err() {
         println!("Error al setear el socket como no bloqueante");
-        return;
     }
-    
-
+    todo!();
 }
 
 #[allow(dead_code)]
