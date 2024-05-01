@@ -3,6 +3,8 @@ use std::sync::Mutex;
 use std::net::TcpStream;
 use crate::connect;
 use crate::model::package::Package;
+use sauron::connect as sauron_connect;
+use sauron::subscribe as sauron_subscribe;
 use crate::model::package_components::fixed_header_components::qos::QoS;
 
 
@@ -29,7 +31,7 @@ impl Client {
         will: Option<(QoS, String, String)>, 
         user: Option<(String, Option<String>)>
     ) -> Client {
-        let connect = connect(id.clone(), clean_session, keep_alive, will, user);
+        let connect = sauron_connect(id.clone(), clean_session, keep_alive, will, user);
         Client {
             id,
             password,
@@ -46,4 +48,20 @@ impl Client {
         let mut stream = self.stream.lock().unwrap();
         stream.write_all(&connect_bytes)
     }
+
+    pub fn suscribe(topic: String) {
+        let package = sauron_subscribe(self.id.clone(), vec![(topic_name.to_string(), qos)]);
+
+        let mut topic_handler = self.topic_handler.lock().unwrap();
+        topic_handler.subscribe(topic_name, self, qos)?;
+
+        self.send(package)
+    }
+
+    // pub fn publish(&self, topic: String, message: String) -> std::io::Result<()> {
+    //     let publish = sauron_publish(topic, message);
+    //     let publish_bytes = publish.into_bytes();
+    //     let mut stream = self.stream.lock().unwrap();
+    //     stream.write_all(&publish_bytes)
+    // }
 }
