@@ -11,7 +11,7 @@ pub enum FixedHeaderFlags {
 }
 
 impl FixedHeaderFlags {
-    pub fn from_byte(byte: u8, control_packet_type: &ControlPacketType) -> Result<Self, Error> {
+    pub fn from_byte(_byte: u8, control_packet_type: &ControlPacketType) -> Result<Self, Error> {
         match control_packet_type {
             ControlPacketType::Connect => Ok(FixedHeaderFlags::Reserved),
         }

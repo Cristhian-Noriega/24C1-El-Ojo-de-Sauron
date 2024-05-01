@@ -28,7 +28,7 @@ impl PayloadContentConnect {
 
     pub fn from_bytes(
         stream: &mut dyn Read,
-        remaining_length: usize,
+        _remaining_length: usize,
         variable_header_content: &VariableHeaderContentConnect,
     ) -> Result<Self, Error> {
         let client_id = EncodedString::from_bytes(stream)?;
