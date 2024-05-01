@@ -1,4 +1,4 @@
 pub struct Topic{
     id: int,
-    messages: Vec<package>
+    messages: Vec<package>,
 }
