@@ -1,1 +1,2 @@
-pub mod connect_payload;
+pub mod contents;
+pub mod encoded_string;

@@ -28,18 +28,6 @@ impl FixedHeader {
         }
     }
 
-    pub fn into_bytes(&self) -> Vec<u8> {
-        let packet_type_bytes = self.control_packet_type.into_byte();
-        let flags_bytes = self.flags.into_byte();
-
-        let fixed_header_bytes = vec![
-            packet_type_bytes << 4 | flags_bytes,
-            self.remaining_length as u8,
-        ];
-
-        fixed_header_bytes
-    }
-
     pub fn from_bytes(stream: &mut dyn Read) -> Result<Self, Error> {
         let mut buffer = [0; FIXED_HEADER_LENGTH];
         stream.read_exact(&mut buffer)?;
@@ -57,6 +45,18 @@ impl FixedHeader {
             flags,
             remaining_length,
         })
+    }
+
+    pub fn into_bytes(&self) -> Vec<u8> {
+        let packet_type_bytes = self.control_packet_type.into_byte();
+        let flags_bytes = self.flags.into_byte();
+
+        let fixed_header_bytes = vec![
+            packet_type_bytes << 4 | flags_bytes,
+            self.remaining_length as u8,
+        ];
+
+        fixed_header_bytes
     }
 
     pub fn get_remaining_length(&self) -> usize {

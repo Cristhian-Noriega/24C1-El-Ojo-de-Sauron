@@ -1,1 +1,1 @@
-pub mod connect_variable_header_content;
+pub mod variable_header_content_connect;

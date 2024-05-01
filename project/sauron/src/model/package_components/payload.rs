@@ -1,20 +1,16 @@
 use super::{
     fixed_header_components::control_packet_type::ControlPacketType,
-    payload_components::connect_payload::ConnectPayload,
+    payload_components::contents::payload_content_connect::PayloadContentConnect,
     variable_header_components::variable_header_content::{self, VariableHeaderContent},
 };
 use crate::errors::error::Error;
 use std::io::Read;
 
 pub enum Payload {
-    Connect(ConnectPayload),
+    Connect(PayloadContentConnect),
 }
 
 impl Payload {
-    pub fn into_bytes(&self) -> Vec<u8> {
-        todo!()
-    }
-
     pub fn from_bytes(
         stream: &mut dyn Read,
         control_packet_type: &ControlPacketType,
@@ -27,10 +23,19 @@ impl Payload {
 
         match control_packet_type {
             ControlPacketType::Connect => {
-                let connect =
-                    ConnectPayload::from_bytes(stream, remaining_length, variable_header_content)?;
+                let connect = PayloadContentConnect::from_bytes(
+                    stream,
+                    remaining_length,
+                    variable_header_content,
+                )?;
                 Ok(Payload::Connect(connect))
             }
+        }
+    }
+
+    pub fn into_bytes(&self) -> Vec<u8> {
+        match self {
+            Payload::Connect(connect) => connect.into_bytes(),
         }
     }
 

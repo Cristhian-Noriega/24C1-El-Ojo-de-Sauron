@@ -11,6 +11,14 @@ impl FixedHeaderFlagsPublish {
         Self { retain, dup, qos }
     }
 
+    pub fn from_byte(byte: u8) -> Result<Self, Error> {
+        let retain = (byte & 0x01) != 0;
+        let qos = QoS::from_byte((byte & 0x06) >> 1)?;
+        let dup = (byte & 0x08) != 0;
+
+        Ok(Self { retain, dup, qos })
+    }
+
     pub fn into_byte(&self) -> u8 {
         let mut flags: u8 = 0x00;
 
@@ -25,14 +33,5 @@ impl FixedHeaderFlagsPublish {
         flags |= self.qos.into_byte() << 1;
 
         flags
-    }
-
-    pub fn from_byte(byte: u8) -> Result<Self, Error> {
-        // ----
-        let retain = (byte & 0x01) != 0;
-        let qos = QoS::from_byte((byte & 0x06) >> 1)?;
-        let dup = (byte & 0x08) != 0;
-
-        Ok(Self { retain, dup, qos })
     }
 }

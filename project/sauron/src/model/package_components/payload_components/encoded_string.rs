@@ -2,6 +2,8 @@ use std::io::Read;
 
 use crate::errors::error::Error;
 
+const LENGTH_SIZE: usize = 2;
+
 pub struct EncodedString {
     length: u16,
     content: Vec<u8>,
@@ -12,24 +14,31 @@ impl EncodedString {
         Self { length, content }
     }
 
+    pub fn from_bytes(stream: &mut dyn Read) -> Result<Self, Error> {
+        let mut length_buffer = [0; LENGTH_SIZE];
+        stream.read_exact(&mut length_buffer)?;
+
+        let length: u16 = u16::from_be_bytes(length_buffer);
+
+        let mut content = vec![0; length as usize];
+        stream.read_exact(&mut content)?;
+
+        Ok(Self { length, content })
+    }
+
+    pub fn from_string(string: &String) -> Self {
+        let length = string.len() as u16;
+        let content = string.as_bytes().to_vec();
+
+        Self { length, content }
+    }
+
     pub fn into_bytes(&self) -> Vec<u8> {
         let mut bytes: Vec<u8> = vec![];
         bytes.extend(&self.length.to_be_bytes());
         bytes.extend(&self.content);
 
         bytes
-    }
-
-    pub fn from_bytes(stream: &mut dyn Read) -> Result<Self, Error> {
-        let mut length_buffer = [0; 2];
-        stream.read_exact(&mut length_buffer)?;
-
-        let length = u16::from_be_bytes(length_buffer);
-
-        let mut content = vec![0; length as usize];
-        stream.read_exact(&mut content)?;
-
-        Ok(Self { length, content })
     }
 
     pub fn get_length(&self) -> usize {

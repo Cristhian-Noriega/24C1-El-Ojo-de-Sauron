@@ -7,57 +7,53 @@ const CONNECT_LENGTH: usize = 8;
 const PROTOCOL_NAME: [u8; 4] = [b'M', b'Q', b'T', b'T'];
 const PROTOCOL_LEVEL: u8 = 0x04;
 
-pub struct ConnectVariableHeaderContent {
+pub struct VariableHeaderContentConnect {
     username: bool,
     password: bool,
     will_retain: bool,
     will_qos: QoS,
     will: bool,
     clean_session: bool,
-    keep_alive_msb: u8,
-    keep_alive_lsb: u8,
+    keep_alive: u16,
 }
 
-impl ConnectVariableHeaderContent {
+impl VariableHeaderContentConnect {
     pub fn new(
+        clean_session: bool,
+        will: bool,
+        will_qos: QoS,
+        will_retain: bool,
         username: bool,
         password: bool,
-        will_retain: bool,
-        will_qos: QoS,
-        will: bool,
-        clean_session: bool,
-        keep_alive_msb: u8,
-        keep_alive_lsb: u8,
+        keep_alive: u16,
     ) -> Self {
         Self {
+            clean_session,
+            will,
+            will_qos,
+            will_retain,
             username,
             password,
-            will_retain,
-            will_qos,
-            will,
-            clean_session,
-            keep_alive_msb,
-            keep_alive_lsb,
+            keep_alive,
         }
     }
 
     pub fn into_bytes(&self) -> Vec<u8> {
-        let flags_byte = (self.username as u8) << 7
-            | (self.password as u8) << 6
-            | (self.will_retain as u8) << 5
-            | (self.will_qos.into_byte() << 3)
+        let flags_byte = (self.clean_session as u8) << 1
             | (self.will as u8) << 2
-            | (self.clean_session as u8) << 1;
+            | (self.will_qos.into_byte() << 3)
+            | (self.will_retain as u8) << 5
+            | (self.password as u8) << 6
+            | (self.username as u8) << 7;
 
-        let mut conect_bytes = vec![];
+        let mut connect_bytes = vec![];
 
-        conect_bytes.extend(PROTOCOL_NAME);
-        conect_bytes.push(PROTOCOL_LEVEL);
-        conect_bytes.push(flags_byte);
-        conect_bytes.push(self.keep_alive_msb);
-        conect_bytes.push(self.keep_alive_lsb);
+        connect_bytes.extend(PROTOCOL_NAME);
+        connect_bytes.push(PROTOCOL_LEVEL);
+        connect_bytes.push(flags_byte);
+        connect_bytes.extend(&self.keep_alive.to_be_bytes());
 
-        conect_bytes
+        connect_bytes
     }
 
     pub fn get_length(&self) -> usize {
@@ -80,15 +76,32 @@ impl ConnectVariableHeaderContent {
         }
 
         let flags_byte = buffer[5];
+
+        if (flags_byte & 0b0000_0001) != 0 {
+            return Err(Error::new("Invalid connect flags".to_string()));
+        }
+
+        let clean_session = (flags_byte & 0b0000_0010) >> 1 == 1;
+        let will = (flags_byte & 0b0000_0100) >> 2 == 1;
+        let will_qos = QoS::from_byte((flags_byte & 0b0001_1000) >> 3)?;
+        let will_retain = (flags_byte & 0b0010_0000) >> 5 == 1;
+
+        if !will && will_qos != QoS::AtMostOnce {
+            return Err(Error::new("Invalid will qos".to_string()));
+        }
+
+        if !will && will_retain {
+            return Err(Error::new("Invalid will retain flag".to_string()));
+        }
+
         let username = (flags_byte & 0b1000_0000) >> 7 == 1;
         let password = (flags_byte & 0b0100_0000) >> 6 == 1;
-        let will_retain = (flags_byte & 0b0010_0000) >> 5 == 1;
-        let will_qos = QoS::from_byte((flags_byte & 0b0001_1000) >> 3)?;
-        let will = (flags_byte & 0b0000_0100) >> 2 == 1;
-        let clean_session = (flags_byte & 0b0000_0010) >> 1 == 1;
 
-        let keep_alive_msb = buffer[6];
-        let keep_alive_lsb = buffer[7];
+        if !username && password {
+            return Err(Error::new("Invalid password flag".to_string()));
+        }
+
+        let keep_alive = u16::from_be_bytes([buffer[6], buffer[7]]);
 
         Ok(Self {
             username,
@@ -97,8 +110,7 @@ impl ConnectVariableHeaderContent {
             will_qos,
             will,
             clean_session,
-            keep_alive_msb,
-            keep_alive_lsb,
+            keep_alive,
         })
     }
 

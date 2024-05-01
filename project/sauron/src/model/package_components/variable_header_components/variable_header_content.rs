@@ -5,10 +5,10 @@ use crate::{
     model::package_components::fixed_header_components::control_packet_type::ControlPacketType,
 };
 
-use super::contents::connect_variable_header_content::ConnectVariableHeaderContent;
+use super::contents::variable_header_content_connect::VariableHeaderContentConnect;
 
 pub enum VariableHeaderContent {
-    Connect(ConnectVariableHeaderContent),
+    Connect(VariableHeaderContentConnect),
 }
 
 impl VariableHeaderContent {
@@ -24,7 +24,7 @@ impl VariableHeaderContent {
     ) -> Result<Self, Error> {
         match control_packet_type {
             ControlPacketType::Connect => {
-                let connect = ConnectVariableHeaderContent::from_bytes(stream)?;
+                let connect = VariableHeaderContentConnect::from_bytes(stream)?;
                 Ok(VariableHeaderContent::Connect(connect))
             }
         }
