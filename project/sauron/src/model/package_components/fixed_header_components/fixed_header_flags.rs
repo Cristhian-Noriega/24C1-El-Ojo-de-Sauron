@@ -14,6 +14,7 @@ impl FixedHeaderFlags {
     pub fn from_byte(_byte: u8, control_packet_type: &ControlPacketType) -> Result<Self, Error> {
         match control_packet_type {
             ControlPacketType::Connect => Ok(FixedHeaderFlags::Reserved),
+            ControlPacketType::Connack => Ok(FixedHeaderFlags::Reserved),
         }
     }
 

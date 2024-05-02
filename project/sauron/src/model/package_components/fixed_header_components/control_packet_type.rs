@@ -1,12 +1,14 @@
 use crate::errors::error::Error;
 pub enum ControlPacketType {
     Connect,
+    Connack,
 }
 
 impl ControlPacketType {
     pub fn to_byte(&self) -> u8 {
         match self {
             ControlPacketType::Connect => 0x01,
+            ControlPacketType::Connack => 0x02,
         }
     }
 
