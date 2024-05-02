@@ -3,4 +3,4 @@
 // pub const PROTOCOL_LEVEL: u8 = 0x04;
 // pub const FIXED_HEADER_LENGTH: usize = 2;
 // pub const PACKET_IDENTIFIER_LENGTH: usize = 2;
-pub const LENGTH_SIZE: usize = 2;
+// pub const LENGTH_SIZE: usize = 2;
