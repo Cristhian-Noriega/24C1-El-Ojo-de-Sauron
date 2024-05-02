@@ -1,6 +1,6 @@
 use crate::{errors::error::Error, ConnectPacket};
 
-const CONNECT_PACKET_TYPE: u8 = 0x01;
+pub const CONNECT_PACKET_TYPE: u8 = 0x01;
 
 #[derive(Debug)]
 pub enum Packet {
