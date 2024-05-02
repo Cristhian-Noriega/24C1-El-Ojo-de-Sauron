@@ -49,13 +49,8 @@ impl ConnackPacket {
         stream.read_exact(&mut connect_ack_flags_buffer)?;
 
         let connect_ack_flags_byte = connect_ack_flags_buffer[0];
-        let session_present_flag: bool;
 
-        if (connect_ack_flags_byte & 0b0000_0001) == 0b0000_0001 {
-            session_present_flag = true
-        } else {
-            session_present_flag = false
-        }
+        let session_present_flag = (connect_ack_flags_byte & 0b0000_0001) == 0b0000_0001;
 
         let mut connect_return_code_buffer = [0; CONNECK_RETURN_CODE_LENGTH];
         stream.read_exact(&mut connect_return_code_buffer)?;
