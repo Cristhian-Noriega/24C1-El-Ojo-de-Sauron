@@ -1,4 +1,4 @@
-use model::{encoded_string::EncodedString, packet::Packet, packets::connect_packet::ConnectPacket, packets::connack_packet::ConnackPacket, qos::QoS};
+use model::{encoded_string::EncodedString, packet::Packet, packets::connect_packet::ConnectPacket, packets::connack_packet::ConnackPacket, qos::QoS, return_code::ReturnCode};
 
 mod errors;
 mod model;
@@ -40,5 +40,15 @@ pub fn connect(
         client_id,
         will,
         user,
+    ))
+}
+
+pub fn connack(
+    session_present: bool,
+    return_code: ReturnCode
+) -> Packet {
+    Packet::Connack(ConnackPacket::new(
+        session_present,
+        return_code,
     ))
 }

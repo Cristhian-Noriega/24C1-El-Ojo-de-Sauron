@@ -1,4 +1,5 @@
 use crate::errors::error::Error;
+use crate::model::return_code::ReturnCode;
 use std::io::Read;
 
 const FIXED_HEADER_LENGTH: usize = 2;
@@ -12,7 +13,7 @@ const CONNECK_RETURN_CODE_LENGTH: usize = 1;
 pub struct ConnackPacket {
     // Variable Header Fields
     session_present_flag: bool,
-    connect_return_code: u8,
+    connect_return_code: ReturnCode,
 
     // Connack no tiene payload
 }
@@ -21,7 +22,7 @@ impl ConnackPacket {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         session_present_flag: bool,
-        connect_return_code: u8
+        connect_return_code: ReturnCode
     ) -> Self {
         Self {
             session_present_flag,
@@ -56,10 +57,12 @@ impl ConnackPacket {
         stream.read_exact(&mut connect_return_code_buffer)?;
 
         let connect_return_code_byte = connect_return_code_buffer[0];
+        
+        let connect_return_code = ReturnCode::from_byte(connect_return_code_byte)?;
 
         Ok(ConnackPacket::new(
             session_present_flag,
-            connect_return_code_byte,
+            connect_return_code,
         ))
     }
 
@@ -73,7 +76,9 @@ impl ConnackPacket {
             variable_header_bytes.push(0x00)
         }
 
-        variable_header_bytes.push(self.connect_return_code);
+        let connect_return_code_bytes = self.connect_return_code.to_byte();
+
+        variable_header_bytes.push(connect_return_code_bytes);
 
         // Fixed Header
         let remaining_length = variable_header_bytes.len();
