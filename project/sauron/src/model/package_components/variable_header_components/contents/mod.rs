@@ -1,2 +1,0 @@
-pub mod variable_header_content_connack;
-pub mod variable_header_content_connect;

@@ -1,8 +1,6 @@
 use std::io::Read;
-
 use crate::errors::error::Error;
-
-const LENGTH_SIZE: usize = 2;
+use crate::model::constants::LENGTH_SIZE;
 
 pub struct EncodedString {
     length: u16,
