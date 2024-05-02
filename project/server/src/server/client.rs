@@ -7,7 +7,7 @@ use sauron::connect as sauron_connect;
 use sauron::subscribe as sauron_subscribe;
 use crate::model::package_components::fixed_header_components::qos::QoS;
 
-
+//represents the state of the client in the server 
 pub struct Client {
     id: String,
     password: String,

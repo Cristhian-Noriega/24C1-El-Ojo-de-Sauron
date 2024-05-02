@@ -5,10 +5,11 @@
 pub struct Config {
     port: u16,
     address: String,
-    log_file: String
+    log_file: String,
+    segs_to_disconnect: int,
 }
 
-impl Config{
+impl Config {
     pub fn new<R: Read>(config_file: R) -> Option<Config> {
         let mut path = PathBuf::new(config_file);
         let file = File::open(&path)?;

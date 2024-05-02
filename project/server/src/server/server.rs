@@ -14,12 +14,58 @@
 
 pub struct Server {
     clients: HashMap<Client_id, Client>,
-    active_connections: Vec<Connection>,
+    active_connections: HashSet<Connection>,
     topic_handler: TopicHandler,
     config: Config
 }
 
-//THREAD-POOL OR THREAD-PER-CONNECTION
+#[derive(Debug)]
+pub struct ConnectPacket {
+    // Fixed Header Fields
+
+    // Variable Header Fields
+    packet_identifier: u16,
+    clean_session: bool,
+    keep_alive: u16,
+
+    // Payload Fields
+    client_id: EncodedString,
+    will: Option<(QoS, bool, EncodedString, EncodedString)>, // tendría un struct will
+    user: Option<(EncodedString, Option<EncodedString>)>,    // tendría un struct user
+}
+#[derive(Debug)]
+pub enum Packet {
+    Connect(ConnectPacket),
+}
+
+//THREAD-PER-CONNECTION
+
+//TO DO:
+
+// Cris::do( mergear archivos server.rs y client.rs en carpeta server
+// seguir implementacion del server  
+// armar el server que escuche conexiones y cree un thread por cada cliente que se conecta
+// Ver logica handle_client
+// considerar matar o no el thread del client desconectado 
+
+
+
+// Mate::do(
+// handlear recepción de paquetes y emisión de paquetes. Implementar cada acción que se realiza cuando el servidor envia 
+// cada posible paquete y cuando lo recibe.)
+// Connect: si no existe lo crea y conecta, si ya existe solo conecta. Una vez que termina mandar Connack.
+// Connack: enviar paquete por el stream del cliente. 
+// Publish: Cliente publica un mensaje en topico "A" => pasar al topicHandler ese mensaje con ese topico => el TopicHandler 
+// crea los paquetes y los ids y los publica a los clientes suscriptos en ese instante. Pensar mas esta logica.
+// Subscribe: => 
+// Un cliente está conectado. cómo saber si perdió la conexión? Pings?
+// Considerar para ese caso, el field alive del estado del cliente, usando un AtomicBool para que sea thread safe.
+// Hay un thread por cada cliente. Ese thread cada un determinado tiempo manda un ping para ver si está conectado.
+// El ping lo manda solo si en ese tiempo el cliente no hizo nada. Si considera estar desconectado, sacarlo de las active_connections
+// Mata el thread. Qué hace el TopicHandler ahí??? Pasarle a TopicHandler las activeConnection para que sepa decidir eso
+// TopicHandler: mandarles los PubAck
+// 
+//    );    
 
 impl Server{
     fn new() -> Self {
@@ -49,6 +95,14 @@ impl Server{
                     println!("Client subscribed to topic: {:?}", topic);
                 } else {
                     println!("Received subscribe from unknown client: {:?}", client_id);
+                }
+            },
+            Package::Unsubscribe(topic) => {
+                if let Some(client) = self.clients.get(&client_id) {
+                    client.unsubscribe(topic);
+                    println!("Client unsubscribed from topic: {:?}", topic);
+                } else {
+                    println!("Received unsubscribe from unknown client: {:?}", client_id);
                 }
             },
             Package::Unsubscribe(topic) => {
