@@ -24,7 +24,7 @@ pub struct ConnectPackage {
 }
 
 impl ConnectPackage {
-    pub fn new(
+    #[allow(clippy::too_many_arguments)] pub fn new(
         remaining_length: usize,
         packet_identifier: u16,
         username_flag: bool,
