@@ -12,6 +12,7 @@ const PROTOCOL_LEVEL: u8 = 0x04;
 const FLAGS_LENGTH: usize = 1;
 const KEEP_ALIVE_LENGTH: usize = 2;
 
+#[derive(Debug)]
 pub struct ConnectPacket {
     // Fixed Header Fields
 
@@ -200,7 +201,6 @@ impl ConnectPacket {
         variable_header_bytes.extend(&self.keep_alive.to_be_bytes());
 
         // Fixed Header
-
         let remaining_length = variable_header_bytes.len() + payload_bytes.len();
 
         let fixed_header_bytes = vec![
@@ -209,7 +209,6 @@ impl ConnectPacket {
         ];
 
         // Packet
-
         let mut packet_bytes = vec![];
 
         packet_bytes.extend(fixed_header_bytes);

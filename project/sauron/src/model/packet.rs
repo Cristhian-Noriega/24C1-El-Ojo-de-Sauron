@@ -2,6 +2,7 @@ use crate::{errors::error::Error, ConnectPacket};
 
 const CONNECT_PACKET_TYPE: u8 = 0x01;
 
+#[derive(Debug)]
 pub enum Packet {
     Connect(ConnectPacket),
 }
@@ -34,5 +35,19 @@ impl Packet {
                 packet_bytes
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::model::packet::Packet;
+
+    #[test]
+    fn test_packet_from_bytes() {
+        let mut stream = std::io::Cursor::new(vec![
+            0x10, 0x0e, 0x00, 0x04, b'M', b'Q', b'T', b'T', 0x04, 0x02, 0x00, 0x00, 0x00, 0x00,
+        ]);
+
+        assert!(Packet::from_bytes(&mut stream).is_ok());
     }
 }
