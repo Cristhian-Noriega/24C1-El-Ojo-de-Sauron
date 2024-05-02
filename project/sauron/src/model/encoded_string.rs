@@ -1,9 +1,9 @@
-use std::io::Read;
-
 use crate::errors::error::Error;
+use std::io::Read;
 
 const LENGTH_SIZE: usize = 2;
 
+#[derive(Debug)]
 pub struct EncodedString {
     length: u16,
     content: Vec<u8>,
