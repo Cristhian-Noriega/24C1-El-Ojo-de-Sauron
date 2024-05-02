@@ -5,7 +5,6 @@ const FIXED_HEADER_LENGTH: usize = 2;
 const RESERVED_FIXED_HEADER_FLAGS: u8 = 0x00;
 const PACKET_TYPE: u8 = 0x01;
 
-const PACKET_IDENTIFIER_LENGTH: usize = 2;
 const PROTOCOL_LEVEL_LENGTH: usize = 1;
 const PROTOCOL_NAME: [u8; 4] = [b'M', b'Q', b'T', b'T'];
 const PROTOCOL_LEVEL: u8 = 0x04;
@@ -14,10 +13,7 @@ const KEEP_ALIVE_LENGTH: usize = 2;
 
 #[derive(Debug)]
 pub struct ConnectPacket {
-    // Fixed Header Fields
-
     // Variable Header Fields
-    packet_identifier: u16,
     clean_session: bool,
     keep_alive: u16,
 
@@ -30,7 +26,6 @@ pub struct ConnectPacket {
 impl ConnectPacket {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        packet_identifier: u16,
         clean_session: bool,
         keep_alive: u16,
         client_id: EncodedString,
@@ -38,7 +33,6 @@ impl ConnectPacket {
         user: Option<(EncodedString, Option<EncodedString>)>,
     ) -> Self {
         Self {
-            packet_identifier,
             clean_session,
             keep_alive,
             client_id,
@@ -63,11 +57,6 @@ impl ConnectPacket {
         }
 
         // Variable Header
-        let mut packet_identifier_buffer = [0; PACKET_IDENTIFIER_LENGTH];
-        stream.read_exact(&mut packet_identifier_buffer)?;
-
-        let packet_identifier = u16::from_be_bytes(packet_identifier_buffer);
-
         for letter in PROTOCOL_NAME.iter() {
             let mut letter_buffer = [0; 1];
             stream.read_exact(&mut letter_buffer)?;
@@ -145,7 +134,6 @@ impl ConnectPacket {
         };
 
         Ok(ConnectPacket::new(
-            packet_identifier,
             clean_session,
             keep_alive,
             client_id,
@@ -175,8 +163,6 @@ impl ConnectPacket {
 
         // Variable Header
         let mut variable_header_bytes = vec![];
-        let packet_identifier_bytes = self.packet_identifier.to_be_bytes();
-        variable_header_bytes.extend(packet_identifier_bytes);
         variable_header_bytes.extend(PROTOCOL_NAME);
         variable_header_bytes.push(PROTOCOL_LEVEL);
 

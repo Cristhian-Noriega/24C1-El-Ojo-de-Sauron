@@ -1,4 +1,4 @@
-use model::{encoded_string::EncodedString, packet::Packet, packets::connect_packet::ConnectPacket, qos::QoS};
+use model::{encoded_string::EncodedString, packet::Packet, packets::connect_packet::ConnectPacket, packets::connack_packet::ConnackPacket, qos::QoS};
 
 mod errors;
 mod model;
@@ -6,7 +6,6 @@ mod model;
 #[allow(clippy::manual_map)]
 pub fn connect(
     client_id: String,
-    packet_identifier: u16,
     clean_session: bool,
     keep_alive: u16,
     will: Option<(QoS, bool, String, String)>, // Tendría una estructura para esto
@@ -36,7 +35,6 @@ pub fn connect(
     };
 
     Packet::Connect(ConnectPacket::new(
-        packet_identifier,
         clean_session,
         keep_alive,
         client_id,
