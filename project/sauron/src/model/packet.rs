@@ -1,4 +1,4 @@
-use crate::{errors::error::Error, ConnectPacket, ConnackPacket};
+use crate::{errors::error::Error, ConnackPacket, ConnectPacket};
 
 pub const CONNECT_PACKET_TYPE: u8 = 0x01;
 pub const CONNACK_PACKET_TYPE: u8 = 0x02;
@@ -6,7 +6,7 @@ pub const CONNACK_PACKET_TYPE: u8 = 0x02;
 #[derive(Debug)]
 pub enum Packet {
     Connect(ConnectPacket),
-    Connack(ConnackPacket)
+    Connack(ConnackPacket),
 }
 
 impl Packet {
@@ -32,23 +32,18 @@ impl Packet {
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
+        let mut packet_bytes = vec![];
+
         match self {
             Packet::Connect(connect_packet) => {
-                let mut packet_bytes = vec![];
-
                 packet_bytes.push(0x10);
                 packet_bytes.extend(connect_packet.to_bytes());
-
-                packet_bytes
             }
             Packet::Connack(connack_packet) => {
-                let mut packet_bytes = vec![];
-
                 packet_bytes.push(0x20);
                 packet_bytes.extend(connack_packet.to_bytes());
-
-                packet_bytes
             }
         }
+        packet_bytes
     }
 }

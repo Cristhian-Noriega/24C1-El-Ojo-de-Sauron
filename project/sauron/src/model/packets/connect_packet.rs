@@ -2,14 +2,12 @@ use crate::{errors::error::Error, model::encoded_string::EncodedString, model::q
 use std::io::Read;
 
 const FIXED_HEADER_LENGTH: usize = 2;
-const RESERVED_FIXED_HEADER_FLAGS: u8 = 0x00;
 const PACKET_TYPE: u8 = 0x01;
+const RESERVED_FIXED_HEADER_FLAGS: u8 = 0x00;
 
-const PROTOCOL_LEVEL_LENGTH: usize = 1;
+const VARIABLE_HEADER_LENGTH: usize = 10;
 const PROTOCOL_NAME: [u8; 4] = [b'M', b'Q', b'T', b'T'];
 const PROTOCOL_LEVEL: u8 = 0x04;
-const FLAGS_LENGTH: usize = 1;
-const KEEP_ALIVE_LENGTH: usize = 2;
 
 #[derive(Debug)]
 pub struct ConnectPacket {
@@ -43,69 +41,67 @@ impl ConnectPacket {
 
     pub fn from_bytes(stream: &mut dyn Read) -> Result<Self, Error> {
         // Fixed Header
-        let mut fixed_buffer = [0; FIXED_HEADER_LENGTH];
-        stream.read_exact(&mut fixed_buffer)?;
+        let mut fixed_header_buffer = [0; FIXED_HEADER_LENGTH];
+        stream.read_exact(&mut fixed_header_buffer)?;
 
-        let first_byte = fixed_buffer[0];
+        let packet_type = fixed_header_buffer[0] >> 4;
 
-        if first_byte >> 4 != PACKET_TYPE {
+        if packet_type != PACKET_TYPE {
             return Err(Error::new("Invalid control packet type".to_string()));
         }
 
-        if first_byte & 0b0000_1111 != RESERVED_FIXED_HEADER_FLAGS {
+        let reserver_flags = fixed_header_buffer[0] & 0b0000_1111;
+
+        if reserver_flags != RESERVED_FIXED_HEADER_FLAGS {
             return Err(Error::new("Invalid flags".to_string()));
         }
 
-        // Variable Header
-        for letter in PROTOCOL_NAME.iter() {
-            let mut letter_buffer = [0; 1];
-            stream.read_exact(&mut letter_buffer)?;
+        let remaining_length: usize = fixed_header_buffer[1] as usize;
 
-            if letter_buffer[0] != *letter {
+        // Variable Header
+        let mut variable_header_buffer = vec![0; VARIABLE_HEADER_LENGTH];
+        stream.read_exact(&mut variable_header_buffer)?;
+
+        for i in 0..PROTOCOL_NAME.len() {
+            if variable_header_buffer[i] != PROTOCOL_NAME[i] {
                 return Err(Error::new("Invalid protocol name".to_string()));
             }
         }
 
-        let mut protocol_level_buffer = [0; PROTOCOL_LEVEL_LENGTH];
-        stream.read_exact(&mut protocol_level_buffer)?;
+        let protocol_level_byte = variable_header_buffer[4];
 
-        if protocol_level_buffer[0] != PROTOCOL_LEVEL {
+        if protocol_level_byte != PROTOCOL_LEVEL {
             return Err(Error::new("Invalid protocol level".to_string()));
         }
 
-        let flags_buffer = &mut [0; FLAGS_LENGTH];
-        stream.read_exact(flags_buffer)?;
+        let flags_byte = variable_header_buffer[5];
 
-        let reserved = flags_buffer[0] & 0b0000_0001;
+        let reserved = flags_byte & 0b0000_0001;
         if reserved != 0 {
             return Err(Error::new("Invalid reserved flag".to_string()));
         }
 
-        let clean_session = (flags_buffer[0] & 0b0000_0010) >> 1 == 1;
-        let will_flag = (flags_buffer[0] & 0b0000_0100) >> 2 == 1;
+        let clean_session = (flags_byte & 0b0000_0010) >> 1 == 1;
+        let will_flag = (flags_byte & 0b0000_0100) >> 2 == 1;
 
-        let will_qos = QoS::from_byte((flags_buffer[0] & 0b0001_1000) >> 3)?;
+        let will_qos = QoS::from_byte((flags_byte & 0b0001_1000) >> 3)?;
         if !will_flag && will_qos != QoS::AtMost {
             return Err(Error::new("Invalid will qos".to_string()));
         }
 
-        let will_retain = (flags_buffer[0] & 0b0010_0000) >> 5 == 1;
+        let will_retain = (flags_byte & 0b0010_0000) >> 5 == 1;
         if !will_flag && will_retain {
             return Err(Error::new("Invalid will retain flag".to_string()));
         }
 
-        let username_flag = (flags_buffer[0] & 0b1000_0000) >> 7 == 1;
+        let username_flag = (flags_byte & 0b1000_0000) >> 7 == 1;
 
-        let password_flag = (flags_buffer[0] & 0b0100_0000) >> 6 == 1;
+        let password_flag = (flags_byte & 0b0100_0000) >> 6 == 1;
         if !username_flag && password_flag {
             return Err(Error::new("Invalid password flag".to_string()));
         }
 
-        let mut keep_alive_buffer = [0; KEEP_ALIVE_LENGTH];
-        stream.read_exact(&mut keep_alive_buffer)?;
-
-        let keep_alive = u16::from_be_bytes(keep_alive_buffer);
-        //
+        let keep_alive = u16::from_be_bytes([variable_header_buffer[8], variable_header_buffer[9]]);
 
         // Payload
         let client_id = EncodedString::from_bytes(stream)?;
@@ -132,6 +128,18 @@ impl ConnectPacket {
         } else {
             None
         };
+
+        let length = client_id.length()
+            + will.as_ref().map_or(0, |(qos, _, topic, message)| {
+                qos.to_byte() as usize + topic.length() + message.length()
+            })
+            + user.as_ref().map_or(0, |(username, password)| {
+                username.length() + password.as_ref().map_or(0, |password| password.length())
+            });
+
+        if length != remaining_length {
+            return Err(Error::new("Invalid remaining length".to_string()));
+        }
 
         Ok(ConnectPacket::new(
             clean_session,
