@@ -41,6 +41,12 @@ pub enum Packet {
 }
 
 pub enum ClientTask{
+    send_connack,
+    send_publish,
+    send_puback,
+    send_suback,
+    send_unsuback,
+    send_pingresp,
     send_suback,
 }
 
@@ -74,7 +80,7 @@ pub enum ClientTask{
 //    );    
 
 // CLIENT TO SERVER:
-// Implementación de CONNECT -> En progreso
+// Implementación de CONNECT -> Refinar modelo 
 // Implementación de PUBLISH 
 // Implementación de PUBACK
 // Implementación de SUBSCRIBE
@@ -154,8 +160,8 @@ impl Server{
             packet::Puback => self.handle_puback(packet),
             packet::Subscribe => self.handle_subscribe(packet),
             packet::Unsubscribe => self.handle_unsubscribe(packet),
-            packet::Pingreq => self.send_pingresp(packet),
-            packet::Disconnect => self.send_disconnect(packet),
+            packet::Pingreq => self.handle_pingreq(packet),
+            packet::Disconnect => self.handle_disconnect(packet),
             _ => println!("Unsupported packet type"),
         }
     }
@@ -179,9 +185,61 @@ impl Server{
                 self.clients.insert(client_id, new_client);
                 println!("New client connected: {:?}", client_id);
             }
-            self.send_task(client_id, ClientTask::send_connack);
+            self.clients.get(&client_id).send_task(ClientTask::send_connack);
             self.active_connections.insert(client_id);
         }
+    }
+
+    fn handle_publish(&self, packet: packet::PublishPacket) {
+        let topic = packet.topic().unwrap();
+        let message = packet.message().unwrap();
+        let client_id = packet.client_id().unwrap();
+        let packet = packet::PublishPacket::new(client_id, topic, message);
+
+        self.topic_handler.publish(packet);
+        client.send_task(ClientTask::send_puback);
+    }
+
+    fn handle_subscribe(&self, packet: packet::SubscribePacket) {
+        let client_id = packet.client_id().unwrap();
+        let topic = packet.topic().unwrap();
+        let qos = packet.qos().unwrap();
+
+        if let Some(client) = self.clients.get(&client_id) {
+            client.subscribe(topic, qos);
+            client.send_task(ClientTask::send_suback);
+        } else {
+            println!("Failed to subscribe unknown client: {:?}", client_id);
+        }
+    }
+
+    fn handle_unsubscribe(&self, packet: packet::UnsubscribePacket) {
+        let client_id = packet.client_id().unwrap();
+        let topic = packet.topic().unwrap();
+
+        if let Some(client) = self.clients.get(&client_id) {
+            client.unsubscribe(topic);
+            client.send_task(ClientTask::send_unsuback);
+        } else {
+            println!("Failed to unsubscribe unknown client: {:?}", client_id);
+        }
+    }
+
+    fn handle_pingreq(&self, packet: packet::PingreqPacket) {
+        let client_id = packet.client_id().unwrap();
+
+        if let Some(client) = self.clients.get(&client_id) {
+            client.send_task(ClientTask::send_pingresp);
+        } else {
+            println!("Failed to send pingresp to unknown client: {:?}", client_id);
+        }
+    }
+
+    fn handle_disconnect(&self, packet: packet::DisconnectPacket) {
+        let client_id = packet.client_id().unwrap();
+        active_connections.remove(&client_id);
+        clients.remove(&client_id);
+        // TO DO: MATAR THREAD DEL CLIENTE
     }
 
     fn create_new_client_thread(&self, new_client: Client, receiver_channel: std::sync::mpsc::Receiver<ClientTask>) {
@@ -203,92 +261,11 @@ impl Server{
         });
     }
 
-    fn send_task(&self, client_id: Vec<u8>, task: ClientTask) {
-        if let Some(client) = self.clients.get(&client_id) {
-            client.send_task(task);
-        } else {
-            println!("Failed to send task to unknown client: {:?}", client_id);
-        }
-    }
-
-    fn handle_publish(&self, topic: String, message: String, client_id: Vec<u8>) {
-        if let Some(client) = self.clients.get(&client_id) {
-            self.topic_handler.publish(topic, message, client);
-            println!("Message published to topic: {:?}", topic);
-        } else {
-            println!("Received publish from unknown client: {:?}", client_id);
-        }
-    }
-
-    fn handle_puback(&self, topic: String, message: String, client_id: Vec<u8>) {
-        if let Some(client) = self.clients.get(&client_id) {
-            self.topic_handler.publish(topic, message, client);
-            println!("Message published to topic: {:?}", topic);
-        } else {
-            println!("Received publish from unknown client: {:?}", client_id);
-        }
-    }
-
-    fn handle_subscribe(&self, topic: String, client_id: Vec<u8>) {
-        if let Some(client) = self.clients.get(&client_id) {
-            client.subscribe(topic);
-            println!("Client subscribed to topic: {:?}", topic);
-        } else {
-            println!("Received subscribe from unknown client: {:?}", client_id);
-        }
-    }
-
-    fn handle_unsubscribe(&self, topic: String, client_id: Vec<u8>) {
-        if let Some(client) = self.clients.get(&client_id) {
-            client.unsubscribe(topic);
-            println!("Client unsubscribed from topic: {:?}", topic);
-        } else {
-            println!("Received unsubscribe from unknown client: {:?}", client_id);
-        }
-    }
-    
-    fn handle_unsuback(&self, topic: String, client_id: Vec<u8>) {
-        if let Some(client) = self.clients.get(&client_id) {
-            client.unsubscribe(topic);
-            println!("Client unsubscribed from topic: {:?}", topic);
-        } else {
-            println!("Received unsubscribe from unknown client: {:?}", client_id);
-        }
-    }
-
-    fn send_packet(&self, packet: packet, client_id: Vec<u8>) {
-        if let Some(client) = self.clients.get(&client_id) {
-            client.send_packet(packet);
-        } else {
-            println!("Failed to send packet to unknown client: {:?}", client_id);
-        }
-    }
-
-    fn send_packet(&self, packet: packet, client_id: Vec<u8>) {
+    fn stream_packet(&self, packet: packet, client_id: Vec<u8>) {
         if let Some(client) = self.clients.get(&client_id) {
             client.stream_packet(packet);
         } else {
             println!("Failed to send packet to unknown client: {:?}", client_id);
         }
     }
-
-    // fn wait_connection(&self, ) {
-    //     let listener = TcpListener::bind(address).unwrap();
-    //     for stream in listener.incoming() {
-    //         let mut stream = stream.unwrap();
-    //         let mut server = self.clone();
-
-    //         let mut buffer = [0; 1024];
-    //         let bytes_read = stream.read(&mut buffer).unwrap();
-
-    //         if bytes_read == 0 {
-    //             return;
-    //         }
-
-    //         let packet = packet::from_bytes(&buffer[..bytes_read]).unwrap();
-    //         let client_id = packet.client_id().unwrap();
-
-    //         server.handle_packet(packet, client_id);
-    //     }
-    // }
 }

@@ -52,21 +52,14 @@ impl Client {
         channel.send(task).unwrap();
     }
 
-    pub fn stream_packet(&self, packet: Package) -> std::io::Result<()> {
+    //ACA ESTÁ LA MAGIA DE LOS CLIENT THREADS Y LAS OPERACIONES QUE REALIZAN
+    // manda por su stream el package suback
+    pub fn stream_packet(&self, packet: Packet) -> std::io::Result<()> {
         let packet_bytes = packet.into_bytes();
         let mut stream = self.stream.lock().unwrap();
         stream.write_all(&packet_bytes)
     }
     
-    //ACA ESTÁ LA MAGIA DE LOS CLIENT THREADS Y LAS OPERACIONES QUE REALIZAN
-    // manda por su stream el package suback
-    pub fn stream_suback(&self) -> std::io::Result<()> {
-        let suback = sauron_suback();
-        let suback_bytes = suback.into_bytes();
-        let mut stream = self.stream.lock().unwrap();
-        stream.write_all(&suback_bytes)
-    }
-
 
 // ESTO NO VA EN LA CARPETA DE CLIENTE???
 // Connects the client to the server by sending a connect package to the server
