@@ -41,11 +41,11 @@ impl EncodedString {
         bytes
     }
 
-    pub fn get_length(&self) -> usize {
+    pub fn length(&self) -> usize {
         self.length as usize
     }
 
-    pub fn get_content(&self) -> &Vec<u8> {
+    pub fn content(&self) -> &Vec<u8> {
         &self.content
     }
 }
