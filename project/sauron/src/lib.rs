@@ -1,4 +1,7 @@
-use model::{encoded_string::EncodedString, packet::Packet, packets::connect_packet::ConnectPacket, packets::connack_packet::ConnackPacket, qos::QoS, return_code::ReturnCode};
+use model::{
+    encoded_string::EncodedString, packet::Packet, packets::connack::Connack,
+    packets::connect::Connect, qos::QoS, return_code::ReturnCode,
+};
 
 mod errors;
 mod model;
@@ -34,7 +37,7 @@ pub fn connect(
         None => None,
     };
 
-    Packet::Connect(ConnectPacket::new(
+    Packet::Connect(Connect::new(
         clean_session,
         keep_alive,
         client_id,
@@ -43,12 +46,6 @@ pub fn connect(
     ))
 }
 
-pub fn connack(
-    session_present: bool,
-    return_code: ReturnCode
-) -> Packet {
-    Packet::Connack(ConnackPacket::new(
-        session_present,
-        return_code,
-    ))
+pub fn connack(session_present: bool, return_code: ReturnCode) -> Packet {
+    Packet::Connack(Connack::new(session_present, return_code))
 }

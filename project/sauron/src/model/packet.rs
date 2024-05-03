@@ -1,12 +1,12 @@
-use crate::{errors::error::Error, ConnackPacket, ConnectPacket};
+use crate::{errors::error::Error, Connack, Connect};
 
 pub const CONNECT_PACKET_TYPE: u8 = 0x01;
 pub const CONNACK_PACKET_TYPE: u8 = 0x02;
 
 #[derive(Debug)]
 pub enum Packet {
-    Connect(ConnectPacket),
-    Connack(ConnackPacket),
+    Connect(Connect),
+    Connack(Connack),
 }
 
 impl Packet {
@@ -15,12 +15,12 @@ impl Packet {
 
         match packet_type {
             CONNECT_PACKET_TYPE => {
-                let connect_packet = ConnectPacket::from_bytes(stream)?;
+                let connect_packet = Connect::from_bytes(stream)?;
 
                 Ok(Packet::Connect(connect_packet))
             }
             CONNACK_PACKET_TYPE => {
-                let connack_packet = ConnackPacket::from_bytes(stream)?;
+                let connack_packet = Connack::from_bytes(stream)?;
 
                 Ok(Packet::Connack(connack_packet))
             }

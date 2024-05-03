@@ -9,14 +9,14 @@ const PACKET_TYPE: u8 = 0x02;
 const VARIABLE_HEADER_LENGTH: usize = 2;
 
 #[derive(Debug)]
-pub struct ConnackPacket {
+pub struct Connack {
     // Variable Header Fields
     session_present_flag: bool,
     connect_return_code: ReturnCode,
     // Connack no tiene payload
 }
 
-impl ConnackPacket {
+impl Connack {
     #[allow(clippy::too_many_arguments)]
     pub fn new(session_present_flag: bool, connect_return_code: ReturnCode) -> Self {
         Self {
@@ -50,10 +50,7 @@ impl ConnackPacket {
 
         let connect_return_code = ReturnCode::from_byte(variable_header_buffer[1])?;
 
-        Ok(ConnackPacket::new(
-            session_present_flag,
-            connect_return_code,
-        ))
+        Ok(Connack::new(session_present_flag, connect_return_code))
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {

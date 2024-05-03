@@ -10,7 +10,7 @@ const PROTOCOL_NAME: [u8; 4] = [b'M', b'Q', b'T', b'T'];
 const PROTOCOL_LEVEL: u8 = 0x04;
 
 #[derive(Debug)]
-pub struct ConnectPacket {
+pub struct Connect {
     // Variable Header Fields
     clean_session: bool,
     keep_alive: u16,
@@ -21,7 +21,7 @@ pub struct ConnectPacket {
     user: Option<(EncodedString, Option<EncodedString>)>,    // tendría un struct user
 }
 
-impl ConnectPacket {
+impl Connect {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         clean_session: bool,
@@ -141,7 +141,7 @@ impl ConnectPacket {
             return Err(Error::new("Invalid remaining length".to_string()));
         }
 
-        Ok(ConnectPacket::new(
+        Ok(Connect::new(
             clean_session,
             keep_alive,
             client_id,
