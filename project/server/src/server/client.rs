@@ -14,6 +14,9 @@ pub struct Client {
     subscriptions: Vec<String>,
     log: Vec<package>,
     alive: bool,
+    // Channel between server thread and client thread
+    channel: Option<mpsc::Sender<Task>>,
+
     // the stream represents the communication channel between the client and the server
     // throught the client will received and send data
     // it is wrapped in a mutex for thread safety
@@ -42,6 +45,30 @@ impl Client {
             connect,
         }
     }
+
+
+    pub fn send_task(&self, task: ClientTask) {
+        let channel = self.channel.as_ref().unwrap();
+        channel.send(task).unwrap();
+    }
+
+    pub fn stream_packet(&self, packet: Package) -> std::io::Result<()> {
+        let packet_bytes = packet.into_bytes();
+        let mut stream = self.stream.lock().unwrap();
+        stream.write_all(&packet_bytes)
+    }
+    
+    //ACA ESTÁ LA MAGIA DE LOS CLIENT THREADS Y LAS OPERACIONES QUE REALIZAN
+    // manda por su stream el package suback
+    pub fn stream_suback(&self) -> std::io::Result<()> {
+        let suback = sauron_suback();
+        let suback_bytes = suback.into_bytes();
+        let mut stream = self.stream.lock().unwrap();
+        stream.write_all(&suback_bytes)
+    }
+
+
+// ESTO NO VA EN LA CARPETA DE CLIENTE???
 // Connects the client to the server by sending a connect package to the server
     pub fn connect(&self) -> std::io::Result<()> {
         let connect_bytes = self.connect.into_bytes();
