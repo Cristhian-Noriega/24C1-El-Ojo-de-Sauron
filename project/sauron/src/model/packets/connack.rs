@@ -1,8 +1,8 @@
 use crate::errors::error::Error;
+use crate::model::fixed_header::FixedHeader;
 use crate::model::return_code::ReturnCode;
 use std::io::Read;
 
-const FIXED_HEADER_LENGTH: usize = 2;
 const RESERVED_FIXED_HEADER_FLAGS: u8 = 0x00;
 const PACKET_TYPE: u8 = 0x02;
 
@@ -25,19 +25,18 @@ impl Connack {
         }
     }
 
-    pub fn from_bytes(stream: &mut dyn Read) -> Result<Self, Error> {
+    pub fn from_bytes(fixed_header: FixedHeader, stream: &mut dyn Read) -> Result<Self, Error> {
         // Fixed Header
-        let mut fixed_header_buffer = [0; FIXED_HEADER_LENGTH];
-        stream.read_exact(&mut fixed_header_buffer)?;
+        let fixed_header_flags = fixed_header.first_byte() & 0b0000_1111;
 
-        let first_byte = fixed_header_buffer[0];
-
-        if first_byte >> 4 != PACKET_TYPE {
-            return Err(Error::new("Invalid control packet type".to_string()));
+        if fixed_header_flags != RESERVED_FIXED_HEADER_FLAGS {
+            return Err(Error::new("Invalid flags".to_string()));
         }
 
-        if first_byte & 0b0000_1111 != RESERVED_FIXED_HEADER_FLAGS {
-            return Err(Error::new("Invalid flags".to_string()));
+        let remaining_length = fixed_header.remaining_length() as usize;
+
+        if remaining_length != VARIABLE_HEADER_LENGTH {
+            return Err(Error::new("Invalid remaining length".to_string()));
         }
 
         // Variable Header

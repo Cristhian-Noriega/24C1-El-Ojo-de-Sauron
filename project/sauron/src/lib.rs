@@ -1,6 +1,7 @@
 use model::{
-    encoded_string::EncodedString, packet::Packet, packets::connack::Connack,
-    packets::connect::Connect, packets::publish::Publish, qos::QoS, return_code::ReturnCode,
+    encoded_string::EncodedString, fixed_header::FixedHeader, packet::Packet,
+    packets::connack::Connack, packets::connect::Connect, packets::publish::Publish, qos::QoS,
+    return_code::ReturnCode,
 };
 
 mod errors;

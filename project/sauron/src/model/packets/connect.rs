@@ -1,7 +1,9 @@
-use crate::{errors::error::Error, model::encoded_string::EncodedString, model::qos::QoS};
+use crate::{
+    errors::error::Error,
+    model::{encoded_string::EncodedString, fixed_header::FixedHeader, qos::QoS},
+};
 use std::io::Read;
 
-const FIXED_HEADER_LENGTH: usize = 2;
 const PACKET_TYPE: u8 = 0x01;
 const RESERVED_FIXED_HEADER_FLAGS: u8 = 0x00;
 
@@ -39,24 +41,15 @@ impl Connect {
         }
     }
 
-    pub fn from_bytes(stream: &mut dyn Read) -> Result<Self, Error> {
+    pub fn from_bytes(fixed_header: FixedHeader, stream: &mut dyn Read) -> Result<Self, Error> {
         // Fixed Header
-        let mut fixed_header_buffer = [0; FIXED_HEADER_LENGTH];
-        stream.read_exact(&mut fixed_header_buffer)?;
+        let fixed_header_flags = fixed_header.first_byte() & 0b0000_1111;
 
-        let packet_type = fixed_header_buffer[0] >> 4;
-
-        if packet_type != PACKET_TYPE {
-            return Err(Error::new("Invalid control packet type".to_string()));
-        }
-
-        let reserver_flags = fixed_header_buffer[0] & 0b0000_1111;
-
-        if reserver_flags != RESERVED_FIXED_HEADER_FLAGS {
+        if fixed_header_flags != RESERVED_FIXED_HEADER_FLAGS {
             return Err(Error::new("Invalid flags".to_string()));
         }
 
-        let remaining_length: usize = fixed_header_buffer[1] as usize;
+        let remaining_length = fixed_header.remaining_length() as usize;
 
         // Variable Header
         let mut variable_header_buffer = vec![0; VARIABLE_HEADER_LENGTH];
