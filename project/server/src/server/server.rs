@@ -1,9 +1,8 @@
 #![allow(dead_code)]
 use std::{
-    collections::{HashMap, HashSet, VecDeque}, io::BufReader, net::TcpListener, sync::mpsc::{self, TryRecvError}, thread
+    collections::{HashMap, HashSet, VecDeque}, io::BufReader, net::{TcpListener, TcpStream}, sync::mpsc::{self, TryRecvError}, thread
 };
-
-use crate::{client::Client, config::Config, topic_handler::TopicHandler};
+use crate::{client::{Client, ClientTask}, config::Config, topic_handler::TopicHandler};
 
 // Servicio de mensajería
 // Independientemente del protocolo elegido se recomienda seguir el patrón de comunicación publisher-suscriber y 
@@ -21,7 +20,7 @@ use crate::{client::Client, config::Config, topic_handler::TopicHandler};
 
 pub struct Server {
     clients: HashMap<String, Client>,
-    active_connections: HashSet<Connection>,
+    active_connections: HashSet<i32>,
     topic_handler: TopicHandler,
     config: Config
 }
@@ -38,16 +37,6 @@ pub enum Packet {
     Pingreq(Pingreq),
     Pingresp(Pingresp),
     Disconnect(Disconnect),
-}
-
-pub enum ClientTask{
-    SendConnack,
-    SendPublish,
-    SendPuback,
-    SendSubscribe,
-    SendUnsubscribe,
-    SendPingreq,
-    SendDisconnect,
 }
 
 //THREAD-PER-CONNECTION
@@ -103,7 +92,7 @@ impl Server {
             clients: Vec::new(),
             topic_handler: TopicHandler::new(),
             active_connections: HashSet::new(),
-            config: Config::new(),
+            config: Config::new("/."),
         }
     }
 
@@ -127,7 +116,7 @@ impl Server {
                     let packet = Packet::from_bytes(&mut cursor)?;
             
                     println!("Packet recibidio desde la dirección: {:?}", address);
-                    handle_packet(packet, address);
+                    server.handle_packet(packet, address, stream);
                 }
                 Err(err) => {
                     println!("Error al recibir paquete: {:?}", err);
@@ -138,20 +127,20 @@ impl Server {
         Ok(())
     }
 
-    pub fn handle_packet(&self, packet: packet, client_id: Vec<u8>) {
+    pub fn handle_packet(&self, packet: Packet, client_id: Vec<u8>, stream: TcpStream) {
         match packet {
-            packet::Connect => self.handle_connect(packet),
-            packet::Publish => self.handle_publish(packet),
-            packet::Puback => self.handle_puback(packet),
-            packet::Subscribe => self.handle_subscribe(packet),
-            packet::Unsubscribe => self.handle_unsubscribe(packet),
-            packet::Pingreq => self.handle_pingreq(packet),
-            packet::Disconnect => self.handle_disconnect(packet),
+            Connect => self.handle_connect(packet, stream),
+            Publish => self.handle_publish(packet),
+            Puback => self.handle_puback(packet),
+            Subscribe => self.handle_subscribe(packet),
+            Unsubscribe => self.handle_unsubscribe(packet),
+            Pingreq => self.handle_pingreq(packet),
+            Disconnect => self.handle_disconnect(packet),
             _ => println!("Unsupported packet type"),
         }
     }
 
-    pub fn handle_connect(&self, packet: packet::ConnectPacket) {
+    pub fn handle_connect(&self, packet: Packet, stream: TcpStream) {
         let client_id = packet.client_id().unwrap();
 
         if self.active_connections.contains(&client_id) {
@@ -164,28 +153,27 @@ impl Server {
             }
             else { // CLIENTE NUEVO (CREAR)
                 let (sender_channel, receiver_channel) = mpsc::channel();
-                let new_client = Client::new(client_id, sender_channel, packet);
+                let new_client = Client::new(client_id, "PASSWORD".to_string(), stream, sender_channel, true, 0);
                 
                 self.create_new_client_thread(new_client, receiver_channel);
                 self.clients.insert(client_id, new_client);
                 println!("New client connected: {:?}", client_id);
             }
-            self.clients.get(&client_id).send_task(ClientTask::send_connack);
+            self.clients.get(&client_id).send_task(ClientTask::SendConnack);
             self.active_connections.insert(client_id);
         }
     }
 
-    pub fn handle_publish(&self, packet: packet::PublishPacket) {
-        let topic = packet.topic().unwrap();
-        let message = packet.message().unwrap();
-        let client_id = packet.client_id().unwrap();
-        let packet = packet::PublishPacket::new(client_id, topic, message);
+    pub fn handle_publish(&self, packet: Packet) {
+        // let topic = packet.topic().unwrap();
+        // let message = packet.message().unwrap();
+        // let client_id = packet.client_id().unwrap();
+        // let packet = Packet::PublishPacket::new(client_id, topic, message);
 
         self.topic_handler.publish(packet);
-        client.send_task(ClientTask::send_puback);
     }
 
-    pub fn handle_subscribe(&self, packet: packet::SubscribePacket) {
+    pub fn handle_subscribe(&self, packet: Packet) {
         let client_id = packet.client_id().unwrap();
         let topic = packet.topic().unwrap();
         let qos = packet.qos().unwrap();
@@ -198,7 +186,7 @@ impl Server {
         }
     }
 
-    pub fn handle_unsubscribe(&self, packet: packet::UnsubscribePacket) {
+    pub fn handle_unsubscribe(&self, packet: Packet) {
         let client_id = packet.client_id().unwrap();
         let topic = packet.topic().unwrap();
 
@@ -210,7 +198,7 @@ impl Server {
         }
     }
 
-    pub fn handle_pingreq(&self, packet: packet::PingreqPacket) {
+    pub fn handle_pingreq(&self, packet: Packet) {
         let client_id = packet.client_id().unwrap();
 
         if let Some(client) = self.clients.get(&client_id) {
@@ -220,14 +208,14 @@ impl Server {
         }
     }
 
-    pub fn handle_disconnect(&self, packet: packet::DisconnectPacket) {
+    pub fn handle_disconnect(&self, packet: Packet) {
         let client_id = packet.client_id().unwrap();
-        active_connections.remove(&client_id);
-        clients.remove(&client_id);
+        self.active_connections.remove(&client_id);
+        self.clients.remove(&client_id);
         // TO DO: MATAR THREAD DEL CLIENTE
     }
 
-    pub fn create_new_client_thread(&self, new_client: Client, receiver_channel: std::sync::mpsc::Receiver<ClientTask>) {
+    pub fn create_new_client_thread(&self, client: Client, receiver_channel: std::sync::mpsc::Receiver<ClientTask>) {
         thread::spawn(move || {
             let mut current_tasks: VecDeque<ClientTask> = VecDeque::new();
             loop {
@@ -237,16 +225,16 @@ impl Server {
                     Err(TryRecvError::Disconnected) => break,
                 }
 
-                while let Some(task) = tasks.pop_front() {
+                while let Some(task) = current_tasks.pop_front() {
                     match task {
-                        send_suback => client.stream_suback(),
+                        SendConnack => client.stream_packet(Connack),
                     }
                 }
             }
         });
     }
 
-    pub fn stream_packet(&self, packet: packet, client_id: Vec<u8>) {
+    pub fn stream_packet(&self, packet: Packet, client_id: Vec<u8>) {
         if let Some(client) = self.clients.get(&client_id) {
             client.stream_packet(packet);
         } else {

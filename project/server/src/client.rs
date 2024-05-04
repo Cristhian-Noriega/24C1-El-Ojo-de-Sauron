@@ -21,26 +21,38 @@ pub struct Client {
     // alive is an atomic bool to avoid race conditions
     alive: AtomicBool,
     // Channel between server thread and client thread
-    channel: Option<mpsc::Sender<Task>>,
+    channel: mpsc::Sender<ClientTask>,
 
     // the stream represents the communication channel between the client and the server
     // throught the client will received and send data
     // it is wrapped in a mutex for thread safety
     stream: Mutex<TcpStream>,
-    connect: Packet,
+    //connect: Packet,
 }
+
+pub enum ClientTask{
+    SendConnack,
+    SendPublish,
+    SendPuback,
+    SendSubscribe,
+    SendUnsubscribe,
+    SendPingreq,
+    SendDisconnect,
+}
+
 
 impl Client {
     pub fn new(
         id: String, 
         password: String, 
         stream: TcpStream, 
-        clean_session: bool, 
+        channel: mpsc::Sender<ClientTask>,
+        clean_session: bool,
         keep_alive: u16, 
         // will: Option<(QoS, String, String)>, 
         // user: Option<(String, Option<String>)>
     ) -> Client {
-        let connect = sauron_connect(id.clone(), clean_session, keep_alive, will, user);
+        //let connect = sauron_connect(id.clone(), clean_session, keep_alive, will, user);
         Client {
             id,
             password,
@@ -48,7 +60,7 @@ impl Client {
             //log: Vec::new(),
             alive: true,
             stream: Mutex::new(stream),
-            connect,
+            channel,
         }
     }
 
@@ -69,20 +81,20 @@ impl Client {
 
 // ESTO NO VA EN LA CARPETA DE CLIENTE???
 // Connects the client to the server by sending a connect package to the server
-    pub fn connect(&self) -> std::io::Result<()> {
-        let connect_bytes = self.connect.into_bytes();
-        let mut stream = self.stream.lock().unwrap();
-        stream.write_all(&connect_bytes)
-    }
+    // pub fn connect(&self) -> std::io::Result<()> {
+    //     let connect_bytes = self.connect.into_bytes();
+    //     let mut stream = self.stream.lock().unwrap();
+    //     stream.write_all(&connect_bytes)
+    // }
 
-    pub fn suscribe(topic: String) {
-        let package = sauron_subscribe(self.id.clone(), vec![(topic_name.to_string(), qos)]);
+    // pub fn suscribe(&self, topic: String) {
+    //     let package = sauron_subscribe(self.id.clone(), vec![(topic_name.to_string(), qos)]);
 
-        let mut topic_handler = self.topic_handler.lock().unwrap();
-        topic_handler.subscribe(topic_name, self, qos)?;
+    //     let mut topic_handler = self.topic_handler.lock().unwrap();
+    //     topic_handler.subscribe(topic_name, self, qos)?;
 
-        self.send(package)
-    }
+    //     self.send(package)
+    // }
 
     // pub fn publish(&self, topic: String, message: String) -> std::io::Result<()> {
     //     let publish = sauron_publish(topic, message);
