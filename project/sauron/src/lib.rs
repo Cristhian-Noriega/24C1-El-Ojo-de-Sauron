@@ -1,6 +1,6 @@
 use model::{
     encoded_string::EncodedString, packet::Packet, packets::connack::Connack,
-    packets::connect::Connect, qos::QoS, return_code::ReturnCode,
+    packets::connect::Connect, packets::publish::Publish, qos::QoS, return_code::ReturnCode,
 };
 
 mod errors;
@@ -48,4 +48,24 @@ pub fn connect(
 
 pub fn connack(session_present: bool, return_code: ReturnCode) -> Packet {
     Packet::Connack(Connack::new(session_present, return_code))
+}
+
+pub fn publish(
+    dup: bool,
+    qos: QoS,
+    retain: bool,
+    topic_name: String,
+    package_identifier: Option<u16>,
+    payload: Vec<u8>,
+) -> Packet {
+    let topic_name = EncodedString::from_string(&topic_name);
+
+    Packet::Publish(Publish::new(
+        dup,
+        qos,
+        retain,
+        topic_name,
+        package_identifier,
+        payload,
+    ))
 }
