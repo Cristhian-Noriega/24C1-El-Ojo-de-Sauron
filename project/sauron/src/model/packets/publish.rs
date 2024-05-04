@@ -1,12 +1,11 @@
 use std::io::Read;
 
-const FIXED_HEADER_LENGTH: usize = 2;
 const PUBLISH_PACKET_TYPE: u8 = 0x03;
 const PACKAGE_IDENTIFIER_LENGTH: usize = 2;
 
 use crate::{
     errors::error::Error,
-    model::{encoded_string::EncodedString, qos::QoS},
+    model::{encoded_string::EncodedString, fixed_header::FixedHeader, qos::QoS},
 };
 
 #[derive(Debug)]
@@ -38,23 +37,16 @@ impl Publish {
         }
     }
 
-    pub fn from_bytes(stream: &mut dyn Read) -> Result<Self, Error> {
-        let mut fixed_header_buffer = [0; FIXED_HEADER_LENGTH];
-        stream.read_exact(&mut fixed_header_buffer)?;
+    pub fn from_bytes(fixed_header: FixedHeader, stream: &mut dyn Read) -> Result<Self, Error> {
+        // Fixed Header
 
-        let packet_type = fixed_header_buffer[0] >> 4;
-
-        if packet_type != PUBLISH_PACKET_TYPE {
-            return Err(Error::new("Invalid control packet type".to_string()));
-        }
-
-        let fixed_header_flags = fixed_header_buffer[0] & 0b0000_1111;
+        let fixed_header_flags = fixed_header.first_byte() & 0b0000_1111;
 
         let dup = (fixed_header_flags >> 3) & 1 == 1;
         let qos = QoS::from_byte((fixed_header_flags >> 1) & 0b11)?;
         let retain = fixed_header_flags & 1 == 1;
 
-        let remaining_length: usize = fixed_header_buffer[1] as usize;
+        let remaining_length = fixed_header.remaining_length() as usize;
 
         let topic_name = EncodedString::from_bytes(stream)?;
 

@@ -21,17 +21,17 @@ impl Packet {
 
         match packet_type {
             CONNECT_PACKET_TYPE => {
-                let connect_packet = Connect::from_bytes(stream)?;
+                let connect_packet = Connect::from_bytes(fixed_header, stream)?;
 
                 Ok(Packet::Connect(connect_packet))
             }
             CONNACK_PACKET_TYPE => {
-                let connack_packet = Connack::from_bytes(stream)?;
+                let connack_packet = Connack::from_bytes(fixed_header, stream)?;
 
                 Ok(Packet::Connack(connack_packet))
             }
             PUBLISH_PACKET_TYPE => {
-                let publish_packet = Publish::from_bytes(stream)?;
+                let publish_packet = Publish::from_bytes(fixed_header, stream)?;
 
                 Ok(Packet::Publish(publish_packet))
             }
