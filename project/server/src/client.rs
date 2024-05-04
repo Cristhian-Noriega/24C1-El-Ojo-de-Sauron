@@ -1,40 +1,93 @@
-use std::env::args;
-use std::io::stdin;
+#![allow(dead_code)]
+
 use std::io::Write;
-use std::io::{BufRead, BufReader, Read};
+use std::sync::atomic::AtomicBool;
+use std::sync::{mpsc, Mutex};
 use std::net::TcpStream;
 
-static CLIENT_ARGS: usize = 3;
+use crate::server::server::Packet;
+// use crate::connect;
+// use sauron::connect as sauron_connect;
+// use sauron::subscribe as sauron_subscribe;
+// use crate::model::package_components::fixed_header_components::qos::QoS;
 
-fn main() -> Result<(), ()> {
-    let argv = args().collect::<Vec<String>>();
-    if argv.len() != CLIENT_ARGS {
-        println!("Cantidad de argumentos inválido");
-        let app_name = &argv[0];
-        println!("{:?} <host> <puerto>", app_name);
-        return Err(());
-    }
+//represents the state of the client in the server 
 
-    let address = argv[1].clone() + ":" + &argv[2];
-    println!("Conectándome a {:?}", address);
+pub struct Client { 
+    id: String,
+    password: String,
+    subscriptions: Vec<String>,
+    //log: Vec<package>,
+    // alive is an atomic bool to avoid race conditions
+    alive: AtomicBool,
+    // Channel between server thread and client thread
+    channel: Option<mpsc::Sender<Task>>,
 
-    match client_run(&address, &mut stdin()) {
-        Ok(_) => Ok(()),
-        Err(e) => {
-            println!("Error: {:?}", e);
-            Err(())
-        }
-    }
+    // the stream represents the communication channel between the client and the server
+    // throught the client will received and send data
+    // it is wrapped in a mutex for thread safety
+    stream: Mutex<TcpStream>,
+    connect: Packet,
 }
 
-fn client_run(address: &str, stream: &mut dyn Read) -> std::io::Result<()> {
-    let reader = BufReader::new(stream);
-    let mut socket = TcpStream::connect(address)?;
-
-    for line in reader.lines().map_while(Result::ok) {
-        println!("Enviando: {:?}", line);
-        let _ = socket.write(line.as_bytes());
-        let _ = socket.write("\n".as_bytes());
+impl Client {
+    pub fn new(
+        id: String, 
+        password: String, 
+        stream: TcpStream, 
+        clean_session: bool, 
+        keep_alive: u16, 
+        // will: Option<(QoS, String, String)>, 
+        // user: Option<(String, Option<String>)>
+    ) -> Client {
+        let connect = sauron_connect(id.clone(), clean_session, keep_alive, will, user);
+        Client {
+            id,
+            password,
+            subscriptions: Vec::new(),
+            //log: Vec::new(),
+            alive: true,
+            stream: Mutex::new(stream),
+            connect,
+        }
     }
-    Ok(())
+
+
+    pub fn send_task(&self, task: ClientTask) {
+        let channel = self.channel.as_ref().unwrap();
+        channel.send(task).unwrap();
+    }
+
+    //ACA ESTÁ LA MAGIA DE LOS CLIENT THREADS Y LAS OPERACIONES QUE REALIZAN
+    // manda por su stream el package suback
+    pub fn stream_packet(&self, packet: Packet) -> std::io::Result<()> {
+        let packet_bytes = packet.into_bytes();
+        let mut stream = self.stream.lock().unwrap();
+        stream.write_all(&packet_bytes)
+    }
+    
+
+// ESTO NO VA EN LA CARPETA DE CLIENTE???
+// Connects the client to the server by sending a connect package to the server
+    pub fn connect(&self) -> std::io::Result<()> {
+        let connect_bytes = self.connect.into_bytes();
+        let mut stream = self.stream.lock().unwrap();
+        stream.write_all(&connect_bytes)
+    }
+
+    pub fn suscribe(topic: String) {
+        let package = sauron_subscribe(self.id.clone(), vec![(topic_name.to_string(), qos)]);
+
+        let mut topic_handler = self.topic_handler.lock().unwrap();
+        topic_handler.subscribe(topic_name, self, qos)?;
+
+        self.send(package)
+    }
+
+    // pub fn publish(&self, topic: String, message: String) -> std::io::Result<()> {
+    //     let publish = sauron_publish(topic, message);
+    //     let publish_bytes = publish.into_bytes();
+    //     let mut stream = self.stream.lock().unwrap();
+    //     stream.write_all(&publish_bytes)
+    // }
 }

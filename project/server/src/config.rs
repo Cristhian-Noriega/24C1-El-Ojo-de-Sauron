@@ -1,7 +1,11 @@
+
+
 //Configuración: debe incluir todos los parámetros necesarios para la ejecución del servidor, como el puerto, direccion IP, etc.
 
 //(no esta permitido definir estos valores mediante constantes en el código)
 // Config contains the configuration for the server to run it
+
+use std::{fs::File, io::{BufRead, BufReader, Read}};
 
 pub struct Config {
 port: u16,
@@ -18,10 +22,10 @@ impl Config {
 
     pub fn from_file<R: Read>(config_file: R) -> Option<Config> {
         let mut buf_reader = BufReader::new(config_file);
-        let mut port = get_value_from_file(&mut buf_reader, "port")?;
-        let mut address = get_value_from_file(&mut buf_reader, "address")?;
-        let mut log_file = get_value_from_file(&mut buf_reader, "log_file")?;
-        let mut segs_to_disconnect = get_value_from_file(&mut buf_reader, "segs_to_disconnect")?;
+        let mut port = Self::get_value_from_file(&mut buf_reader, "port")?;
+        let mut address = Self::get_value_from_file(&mut buf_reader, "address")?;
+        let mut log_file = Self::get_value_from_file(&mut buf_reader, "log_file")?;
+        let mut segs_to_disconnect = Self::get_value_from_file(&mut buf_reader, "segs_to_disconnect")?;
         
         let segs_to_disconnect = segs_to_disconnect.parse().ok()?;
         let port = port.parse().ok()?;

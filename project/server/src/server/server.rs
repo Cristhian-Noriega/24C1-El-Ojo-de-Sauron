@@ -1,9 +1,9 @@
-use std::env::args;
-use std::io::{BufRead, BufReader, Read};
-use std::net::TcpListener;
-use std::thread;
+#![allow(dead_code)]
+use std::{
+    collections::{HashMap, HashSet, VecDeque}, io::BufReader, net::TcpListener, sync::mpsc::{self, TryRecvError}, thread
+};
 
-static SERVER_ARGS: usize = 2;
+use crate::{client::Client, config::Config, topic_handler::TopicHandler};
 
 // Servicio de mensajería
 // Independientemente del protocolo elegido se recomienda seguir el patrón de comunicación publisher-suscriber y 
@@ -20,7 +20,7 @@ static SERVER_ARGS: usize = 2;
 // ejecucion del servidor.
 
 pub struct Server {
-    clients: HashMap<Client_id, Client>,
+    clients: HashMap<String, Client>,
     active_connections: HashSet<Connection>,
     topic_handler: TopicHandler,
     config: Config
@@ -41,13 +41,13 @@ pub enum Packet {
 }
 
 pub enum ClientTask{
-    send_connack,
-    send_publish,
-    send_puback,
-    send_suback,
-    send_unsuback,
-    send_pingresp,
-    send_suback,
+    SendConnack,
+    SendPublish,
+    SendPuback,
+    SendSubscribe,
+    SendUnsubscribe,
+    SendPingreq,
+    SendDisconnect,
 }
 
 //THREAD-PER-CONNECTION
@@ -97,63 +97,48 @@ pub enum ClientTask{
 // Implementación de PINGRESP
 
 
-fn main() -> Result<(), ()> {
-    let argv = args().collect::<Vec<String>>();
-    if argv.len() != SERVER_ARGS {
-        println!("Cantidad de argumentos inválido");
-        let app_name = &argv[0];
-        println!("Usage:\n{:?} <puerto>", app_name);
-        return Err(());
-    }
-
-    let address = "127.0.0.1:".to_owned() + &argv[1]; // HARDCODEADO
-    if let Err(err) = server_run(&address) {
-        println!("Error al ejecutar el servidor: {:?}", err);
-        return Err(());
-    }
-
-    Ok(())
-}
-
-fn server_run(address: &str) -> std::io::Result<()> {
-    let server = Server::new()?;
-    let listener = TcpListener::bind(address)?;
-
-    for stream_result in listener.incoming() {
-        match stream_result {
-            Ok(stream) => {
-                let address = stream.peer_addr()?.to_string();
-                println!("Nuevo paquete de la dirección: {:?}", address);
-                let mut reader = BufReader::new(stream);
-                let mut buffer = Vec::new();
-        
-                reader.read_to_end(&mut buffer)?;
-        
-                let mut cursor = std::io::Cursor::new(buffer);
-
-                let packet = Packet::from_bytes(&mut cursor)?;
-        
-                println!("Packet recibidio desde la dirección: {:?}", address);
-                server::handle_packet(packet);
-            }
-            Err(err) => {
-                println!("Error al recibir paquete: {:?}", err);
-            }
-        }
-    }
-
-    Ok(())
-}
-
-impl Server{
-    fn new() -> Self {
+impl Server {
+    pub fn new() -> Self {
         Server {
             clients: Vec::new(),
             topic_handler: TopicHandler::new(),
+            active_connections: HashSet::new(),
+            config: Config::new(),
         }
     }
 
-    fn handle_packet(&self, packet: packet, client_id: Vec<u8>) {
+
+    pub fn server_run(address: &str) -> std::io::Result<()> {
+        let server = Server::new()?;
+        let listener = TcpListener::bind(address)?;
+
+        for stream_result in listener.incoming() {
+            match stream_result {
+                Ok(stream) => {
+                    let address = stream.peer_addr()?.to_string();
+                    println!("Nuevo paquete de la dirección: {:?}", address);
+                    let mut reader = BufReader::new(stream);
+                    let mut buffer = Vec::new();
+            
+                    reader.read_to_end(&mut buffer)?;
+            
+                    let mut cursor = std::io::Cursor::new(buffer);
+
+                    let packet = Packet::from_bytes(&mut cursor)?;
+            
+                    println!("Packet recibidio desde la dirección: {:?}", address);
+                    handle_packet(packet, address);
+                }
+                Err(err) => {
+                    println!("Error al recibir paquete: {:?}", err);
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn handle_packet(&self, packet: packet, client_id: Vec<u8>) {
         match packet {
             packet::Connect => self.handle_connect(packet),
             packet::Publish => self.handle_publish(packet),
@@ -166,7 +151,7 @@ impl Server{
         }
     }
 
-    fn handle_connect(&self, packet: packet::ConnectPacket) {
+    pub fn handle_connect(&self, packet: packet::ConnectPacket) {
         let client_id = packet.client_id().unwrap();
 
         if self.active_connections.contains(&client_id) {
@@ -190,7 +175,7 @@ impl Server{
         }
     }
 
-    fn handle_publish(&self, packet: packet::PublishPacket) {
+    pub fn handle_publish(&self, packet: packet::PublishPacket) {
         let topic = packet.topic().unwrap();
         let message = packet.message().unwrap();
         let client_id = packet.client_id().unwrap();
@@ -200,7 +185,7 @@ impl Server{
         client.send_task(ClientTask::send_puback);
     }
 
-    fn handle_subscribe(&self, packet: packet::SubscribePacket) {
+    pub fn handle_subscribe(&self, packet: packet::SubscribePacket) {
         let client_id = packet.client_id().unwrap();
         let topic = packet.topic().unwrap();
         let qos = packet.qos().unwrap();
@@ -213,7 +198,7 @@ impl Server{
         }
     }
 
-    fn handle_unsubscribe(&self, packet: packet::UnsubscribePacket) {
+    pub fn handle_unsubscribe(&self, packet: packet::UnsubscribePacket) {
         let client_id = packet.client_id().unwrap();
         let topic = packet.topic().unwrap();
 
@@ -225,7 +210,7 @@ impl Server{
         }
     }
 
-    fn handle_pingreq(&self, packet: packet::PingreqPacket) {
+    pub fn handle_pingreq(&self, packet: packet::PingreqPacket) {
         let client_id = packet.client_id().unwrap();
 
         if let Some(client) = self.clients.get(&client_id) {
@@ -235,14 +220,14 @@ impl Server{
         }
     }
 
-    fn handle_disconnect(&self, packet: packet::DisconnectPacket) {
+    pub fn handle_disconnect(&self, packet: packet::DisconnectPacket) {
         let client_id = packet.client_id().unwrap();
         active_connections.remove(&client_id);
         clients.remove(&client_id);
         // TO DO: MATAR THREAD DEL CLIENTE
     }
 
-    fn create_new_client_thread(&self, new_client: Client, receiver_channel: std::sync::mpsc::Receiver<ClientTask>) {
+    pub fn create_new_client_thread(&self, new_client: Client, receiver_channel: std::sync::mpsc::Receiver<ClientTask>) {
         thread::spawn(move || {
             let mut current_tasks: VecDeque<ClientTask> = VecDeque::new();
             loop {
@@ -261,7 +246,7 @@ impl Server{
         });
     }
 
-    fn stream_packet(&self, packet: packet, client_id: Vec<u8>) {
+    pub fn stream_packet(&self, packet: packet, client_id: Vec<u8>) {
         if let Some(client) = self.clients.get(&client_id) {
             client.stream_packet(packet);
         } else {

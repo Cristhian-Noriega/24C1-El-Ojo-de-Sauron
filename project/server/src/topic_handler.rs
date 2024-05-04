@@ -1,13 +1,15 @@
 use std::collections::HashMap;
+use std::sync::RwLock;
+
+
 
 pub struct SubscriptionData {
-    client: Client,
     qos: QoSLevel,
 }
 
 pub struct Message {
     pub client_id: String,
-    pub packet: Package,
+    pub packet: Publish,
 }
 
 type Suscriber = HashMap<String, SubscriptionData>;
@@ -28,7 +30,6 @@ pub struct Topic {
 impl Topic {
     pub fn new(name: String) -> Self {
         Topic {
-            name, //si el nombre del topic ya venga en el packet quizas no haga falta
             subscribers: RwLock::new(HashMap::new()),
             retained_messages: RwLock::new(Vec::new()),
             subtopics: RwLock::new(HashMap::new()),
@@ -43,7 +44,7 @@ pub struct TopicHandler {
 impl TopicHandler {
     pub fn new() -> Self {
         TopicHandler {
-            topic: Topic::new("".to_string())
+            topics: HashMap::new()
         }
     }
 
