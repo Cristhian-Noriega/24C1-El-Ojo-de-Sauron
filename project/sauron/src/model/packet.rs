@@ -30,6 +30,11 @@ impl Packet {
 
                 Ok(Packet::Connack(connack_packet))
             }
+            PUBLISH_PACKET_TYPE => {
+                let publish_packet = Publish::from_bytes(stream)?;
+
+                Ok(Packet::Publish(publish_packet))
+            }
             _ => Err(crate::errors::error::Error::new(format!(
                 "Invalid packet type: {}",
                 packet_type
