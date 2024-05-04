@@ -13,7 +13,8 @@ pub struct Client {
     password: String,
     subscriptions: Vec<String>,
     log: Vec<package>,
-    alive: bool,
+    // alive is an atomic bool to avoid race conditions
+    alive: AtomicBool,
     // Channel between server thread and client thread
     channel: Option<mpsc::Sender<Task>>,
 
@@ -21,7 +22,7 @@ pub struct Client {
     // throught the client will received and send data
     // it is wrapped in a mutex for thread safety
     stream: Mutex<TcpStream>,
-    connect: Package,
+    connect: Packet,
 }
 
 impl Client {

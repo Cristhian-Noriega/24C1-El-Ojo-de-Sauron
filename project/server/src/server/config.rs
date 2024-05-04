@@ -1,50 +1,113 @@
-//Configuración: debe incluir todos los parámetros necesarios para la ejecución del servidor, como el puerto, direccion IP, etc. 
-//(no esta permitido definir estos valores mediante constantes en el código)
+//Configuración: debe incluir todos los parámetros necesarios para la ejecución del servidor, como el puerto, direccion IP, etc.
 
+//(no esta permitido definir estos valores mediante constantes en el código)
 // Config contains the configuration for the server to run it
+
 pub struct Config {
-    port: u16,
-    address: String,
-    log_file: String,
-    segs_to_disconnect: int,
+port: u16,
+address: String,
+log_file: String,
+segs_to_disconnect: u32,
 }
 
 impl Config {
-    pub fn new<R: Read>(config_file: R) -> Option<Config> {
-        let mut path = PathBuf::new(config_file);
-        let file = File::open(&path)?;
-        let reader = BufReader::new(file);
-
-        let map = Self::parse_config(reader)?;
-
-        let port = Self::get_port(&map)?;
-        let address = Self::get_address(&map)?;
-        let log_file = Self::get_log_file(&map)?;
-
-        Some(Self { port, address, log_file })
+    pub fn new(path_file: &str) -> Option<Config> {
+        let config_file = File::open(&path_file).ok()?;
+        Config::from_file(config_file)
     }
 
-    fn parse_config<R: BufRead>(reader: R) -> Option<HashMap<String, String>> {
-        let mut map = HashMap::new();
+    pub fn from_file<R: Read>(config_file: R) -> Option<Config> {
+        let mut buf_reader = BufReader::new(config_file);
+        let mut port = get_value_from_file(&mut buf_reader, "port")?;
+        let mut address = get_value_from_file(&mut buf_reader, "address")?;
+        let mut log_file = get_value_from_file(&mut buf_reader, "log_file")?;
+        let mut segs_to_disconnect = get_value_from_file(&mut buf_reader, "segs_to_disconnect")?;
+        
+        let segs_to_disconnect = segs_to_disconnect.parse().ok()?;
+        let port = port.parse().ok()?;
+
+        Some(Config {
+            port,
+            address,
+            log_file,
+            segs_to_disconnect,
+        })
+    }
+
+    fn get_value_from_file<R: BufRead>(reader: &mut R, key: &str) -> Option<String> {
         for line in reader.lines() {
             let line = line.ok()?;
             let mut parts = line.splitn(2, '=');
-            if let (Some(key), Some(value)) = (parts.next(), parts.next()) {
-                map.insert(key.trim().to_string(), value.trim().to_string());
+            if let (Some(k), Some(value)) = (parts.next(), parts.next()) {
+                if k.trim() == key {
+                    return Some(value.trim().to_string());
+                }
             }
         }
-        Some(map)
+        None
     }
 
-    fn get_port(map: &HashMap<String, String>) -> Option<u16> {
-        map.get("port")?.parse().ok()
+    pub fn get_port(&self) -> u16 {
+        self.port
     }
 
-    fn get_address(map: &HashMap<String, String>) -> Option<String> {
-        map.get("address").cloned()
+    pub fn get_address(&self) -> &str {
+        &self.address
     }
 
-    fn get_log_file(map: &HashMap<String, String>) -> Option<String> {
-        map.get("log_file").cloned()
+    pub fn get_log_file(&self) -> &str {
+        &self.log_file
+    }
+
+    pub fn get_segs_to_disconnect(&self) -> u32 {
+        self.segs_to_disconnect
     }
 }
+
+  
+
+// Tests
+
+  
+
+// #[cfg(test)]
+
+// mod tests {
+
+// use super::*;
+
+  
+
+// #[test]
+
+// fn test_valid_config_file() {
+
+// let config_data = r#"
+
+// port=8080
+
+// address=127.0.0.1
+
+// log_file=/var/log/server.log
+
+// segs_to_disconnect=5
+
+// "#;
+
+// let mut cursor = Cursor::new(config_data);
+
+// let config = Config::from_file(&mut cursor).unwrap();
+
+  
+
+// assert_eq!(config.port, 8080);
+
+// assert_eq!(config.address, "127.0.0.1");
+
+// assert_eq!(config.log_file, "/var/log/server.log");
+
+// assert_eq!(config.segs_to_disconnect, 5);
+
+// }
+
+// }
