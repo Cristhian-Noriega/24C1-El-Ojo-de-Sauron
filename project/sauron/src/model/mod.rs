@@ -5,3 +5,4 @@ pub mod packet;
 pub mod packets;
 pub mod qos;
 pub mod return_code;
+pub mod topic_filter;
