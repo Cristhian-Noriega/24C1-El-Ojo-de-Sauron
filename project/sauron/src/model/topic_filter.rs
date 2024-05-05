@@ -1,6 +1,9 @@
 use std::io::Read;
 
-use crate::{errors::error::Error, model::{encoded_string::EncodedString, qos::QoS}};
+use crate::{
+    errors::error::Error,
+    model::{encoded_string::EncodedString, qos::QoS},
+};
 
 #[derive(Debug)]
 pub struct TopicFilter {
@@ -10,10 +13,7 @@ pub struct TopicFilter {
 
 impl TopicFilter {
     pub fn new(name: EncodedString, qos: QoS) -> Self {
-        Self {
-            name,
-            qos,
-        }
+        Self { name, qos }
     }
 
     pub fn from_bytes(stream: &mut dyn Read) -> Result<Self, Error> {
@@ -25,10 +25,7 @@ impl TopicFilter {
         stream.read_exact(qos_buffer)?;
         let qos = QoS::from_byte(qos_buffer[0])?;
 
-        Ok(Self {
-            name,
-            qos,
-        })
+        Ok(Self { name, qos })
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
@@ -47,11 +44,10 @@ impl TopicFilter {
         }
         if content.starts_with(&[b'/']) || content.ends_with(&[b'/']) {
             return false;
-        }   
+        }
         if content.iter().any(|&byte| byte == b'+' || byte == b'#') {
             return false;
         }
-        true 
+        true
     }
-
 }

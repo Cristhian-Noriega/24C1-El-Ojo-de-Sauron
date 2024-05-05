@@ -1,12 +1,10 @@
 use crate::{
-    errors::error::Error, model::fixed_header::FixedHeader,
-    model::topic_filter::TopicFilter,
+    errors::error::Error, model::fixed_header::FixedHeader, model::topic_filter::TopicFilter,
 };
 use std::io::Read;
 
 const PACKET_TYPE: u8 = 0x02;
 const RESERVED_FIXED_HEADER_FLAGS: u8 = 0x02;
-
 
 #[derive(Debug)]
 pub struct Subscribe {
@@ -30,11 +28,11 @@ impl Subscribe {
             return Err(Error::new("Invalid flags".to_string()));
         }
 
-       // Variable Header
+        // Variable Header
         let mut variable_header_buffer = [0; 2];
-       stream.read_exact(&mut variable_header_buffer)?;
+        stream.read_exact(&mut variable_header_buffer)?;
 
-       let packet_identifier = u16::from_be_bytes(variable_header_buffer);
+        let packet_identifier = u16::from_be_bytes(variable_header_buffer);
 
         // Payload
         let mut topics = Vec::new();
@@ -57,48 +55,34 @@ impl Subscribe {
             packet_identifier,
             topics,
         })
-
-        
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::new();
-    
+
         // Variable Header
         let packet_identifier_bytes = self.packet_identifier.to_be_bytes();
         bytes.extend_from_slice(&packet_identifier_bytes);
-    
+
         // Payload
         for topic in &self.topics {
             bytes.extend_from_slice(&topic.name.to_bytes());
             bytes.push(topic.qos.to_byte());
         }
-    
+
         // Fixed Header
         let remaining_length = bytes.len();
         let fixed_header_bytes = vec![
             PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS,
             remaining_length as u8,
         ];
-    
+
         // Packet
         let mut packet_bytes = vec![];
-    
+
         packet_bytes.extend(fixed_header_bytes);
         packet_bytes.extend(bytes);
-    
+
         packet_bytes
     }
-
-
-    // devuelve un suback con los codigos de retorno correspondientes
-    // lo comento porque no esta definido Suback
-    // pub fn response(&self) -> Result<Suback, Error> {
-    //     let mut return_codes = Vec::new();
-    //     for topic in &self.topics {
-    //         let qos_byte = topic.qos.to_byte();
-    //         return_codes.push(topic.qos.to_byte());
-    //     }
-    //     Suback::new(self.packet_identifier, return_codes)
-    // }
 }

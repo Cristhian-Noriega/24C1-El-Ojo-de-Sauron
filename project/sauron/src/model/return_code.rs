@@ -7,7 +7,7 @@ pub enum ReturnCode {
     IdentifierRejected,
     ServerUnavailable,
     BadUsernameOrPassword,
-    NotAuthorized
+    NotAuthorized,
 }
 
 impl ReturnCode {
@@ -18,7 +18,7 @@ impl ReturnCode {
             ReturnCode::IdentifierRejected => 0x02,
             ReturnCode::ServerUnavailable => 0x03,
             ReturnCode::BadUsernameOrPassword => 0x04,
-            ReturnCode::NotAuthorized => 0x05
+            ReturnCode::NotAuthorized => 0x05,
         }
     }
 
