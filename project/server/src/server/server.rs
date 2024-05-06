@@ -4,20 +4,6 @@ use std::{
 };
 use crate::{client::{Client, ClientTask}, config::Config, topic_handler::TopicHandler};
 
-// Servicio de mensajería
-// Independientemente del protocolo elegido se recomienda seguir el patrón de comunicación publisher-suscriber y 
-//la arquitectura cliente-servidor. Para lo cual se deberá implementar por un lado el servidor de mensajería y 
-// por otro lado una library que permitirá la comunicación por parte de los clientes. Se deberá tener en cuenta los siguientes requerimientos:
-
-// Seguridad: autenticación, autorización, encriptación, etc.
-// Calidad de servicio (Quality of Service, QoS): como mínimo se debe soportar 'at least one'
-// Reliability: el servidor deberá tener registro de los clientes conectados y permitir a un cliente que sufra una desconexión 
-// poder reconectarse y obtener los mensajes que no recibió (sesiones y almacenamiento de mensajes)
-// Configuración: debe incluir todos los parámetros necesarios para la ejecución del servidor, como el puerto, direccion IP, etc.
-// (no esta permitido definir estos valores mediante constantes en el código)
-// Logging: debe registrar un resumen de los mensajes recibidos y enviados, y cualquier error o evento significativo durante la 
-// ejecucion del servidor.
-
 pub struct Server {
     clients: HashMap<String, Client>,
     active_connections: HashSet<i32>,
@@ -39,53 +25,6 @@ pub enum Packet {
     Disconnect(Disconnect),
 }
 
-//THREAD-PER-CONNECTION
-
-//TO DO:
-
-// Cris::do( mergear archivos server.rs y client.rs en carpeta server
-// seguir implementacion del server  
-// armar el server que escuche conexiones y cree un thread por cada cliente que se conecta
-// Ver logica handle_client
-// considerar matar o no el thread del client desconectado 
-
-
-
-// Mate::do(
-// handlear recepción de paquetes y emisión de paquetes. Implementar cada acción que se realiza cuando el servidor envia 
-// cada posible paquete y cuando lo recibe.)
-// Connect: si no existe lo crea y conecta, si ya existe solo conecta. Una vez que termina mandar Connack.
-// Connack: enviar paquete por el stream del cliente. 
-// Publish: Cliente publica un mensaje en topico "A" => pasar al topicHandler ese mensaje con ese topico => el TopicHandler 
-// crea los paquetes y los ids y los publica a los clientes suscriptos en ese instante. Pensar mas esta logica.
-// Subscribe: => 
-// Un cliente está conectado. cómo saber si perdió la conexión? Pings?
-// Considerar para ese caso, el field alive del estado del cliente, usando un AtomicBool para que sea thread safe.
-// Hay un thread por cada cliente. Ese thread cada un determinado tiempo manda un ping para ver si está conectado.
-// El ping lo manda solo si en ese tiempo el cliente no hizo nada. Si considera estar desconectado, sacarlo de las active_connections
-// Mata el thread. Qué hace el TopicHandler ahí??? Pasarle a TopicHandler las activeConnection para que sepa decidir eso
-// TopicHandler: mandarles los PubAck
-// 
-//    );    
-
-// CLIENT TO SERVER:
-// Implementación de CONNECT -> Refinar modelo 
-// Implementación de PUBLISH 
-// Implementación de PUBACK
-// Implementación de SUBSCRIBE
-// Implementación de UNSUBSCRIBE
-// Implementación de PINGREQ
-// Implementación de DISCONNECT
-
-// SERVER TO CLIENT:
-// Implementación de CONNACK 
-// Implementación de PUBLISH
-// Implementación de PUBACK
-// Implementación de SUBACK
-// Implementación de UNSUBACK
-// Implementación de PINGRESP
-
-
 impl Server {
     pub fn new() -> Self {
         Server {
@@ -95,7 +34,6 @@ impl Server {
             config: Config::new("/."),
         }
     }
-
 
     pub fn server_run(address: &str) -> std::io::Result<()> {
         let server = Server::new()?;
