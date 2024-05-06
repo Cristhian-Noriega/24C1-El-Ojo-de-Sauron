@@ -1,5 +1,6 @@
 use crate::{
-    errors::error::Error, model::fixed_header::FixedHeader, model::topic_filter::TopicFilter,
+    errors::error::Error,
+    model::{fixed_header::FixedHeader, topic_filter::TopicFilter},
 };
 use std::io::Read;
 
