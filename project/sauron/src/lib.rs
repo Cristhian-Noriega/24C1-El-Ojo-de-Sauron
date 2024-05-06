@@ -1,6 +1,6 @@
 use model::{
     encoded_string::EncodedString, fixed_header::FixedHeader, packet::Packet,
-    packets::connack::Connack, packets::connect::Connect, packets::publish::Publish, qos::QoS,
+    packets::connack::Connack, packets::connect::Connect, packets::publish::Publish, packets::puback::Puback, qos::QoS,
     return_code::ReturnCode,
 };
 
