@@ -67,7 +67,7 @@ impl Subscribe {
 
         // Payload
         for topic in &self.topics {
-            bytes.extend_from_slice(&topic.name.to_bytes());
+            bytes.extend_from_slice(&topic.topic_name.to_bytes());
             bytes.push(topic.qos.to_byte());
         }
 
@@ -78,7 +78,6 @@ impl Subscribe {
             remaining_length as u8,
         ];
 
-        // Packet
         let mut packet_bytes = vec![];
 
         packet_bytes.extend(fixed_header_bytes);
