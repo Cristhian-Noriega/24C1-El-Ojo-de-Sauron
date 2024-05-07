@@ -1,18 +1,18 @@
 use std::io::Read;
 
-use crate::{errors::error::Error, Connack, Connect, FixedHeader, Publish, Pingreq};
+use crate::{errors::error::Error, Connack, Connect, FixedHeader, Publish, Pingresp};
 
 pub const CONNECT_PACKET_TYPE: u8 = 0x01;
 pub const CONNACK_PACKET_TYPE: u8 = 0x02;
 pub const PUBLISH_PACKET_TYPE: u8 = 0x03;
-pub const PINGREQ_PACKET_TYPE: u8 = 0x12;
+pub const PINGRESP_PACKET_TYPE: u8 = 0x13;
 
 #[derive(Debug)]
 pub enum Packet {
     Connect(Connect),
     Connack(Connack),
     Publish(Publish),
-    Pingreq(Pingreq),
+    Pingresp(Pingresp),
 }
 
 impl Packet {
@@ -37,10 +37,10 @@ impl Packet {
 
                 Ok(Packet::Publish(publish_packet))
             }
-            PINGREQ_PACKET_TYPE => {
-                let pingreq_packet = Pingreq::from_bytes(fixed_header)?;
+            PINGRESP_PACKET_TYPE => {
+                let pingresp_packet = Pingresp::from_bytes(fixed_header)?;
 
-                Ok(Packet::Pingreq(pingreq_packet))
+                Ok(Packet::Pingresp(pingresp_packet))
             }
 
             _ => Err(crate::errors::error::Error::new(format!(
@@ -66,8 +66,8 @@ impl Packet {
                 packet_bytes.push(PUBLISH_PACKET_TYPE);
                 packet_bytes.extend(publish_packet.to_bytes());
             }
-            Packet::Pingreq(pingreq_packet) => {
-                packet_bytes.push(PINGREQ_PACKET_TYPE);
+            Packet::Pingresp(pingreq_packet) => {
+                packet_bytes.push(PINGRESP_PACKET_TYPE);
                 packet_bytes.extend(pingreq_packet.to_bytes());
             }
         }
