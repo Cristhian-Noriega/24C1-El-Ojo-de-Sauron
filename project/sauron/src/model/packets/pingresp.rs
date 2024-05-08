@@ -1,10 +1,7 @@
-use crate::{
-    errors::error::Error,
-    model::fixed_header::FixedHeader,
-};
+use crate::{errors::error::Error, model::fixed_header::FixedHeader};
 
 const PACKET_TYPE: u8 = 0x13;
-const RESERVED_FIXED_HEADER_FLAGS:u8 = 0x00;
+const RESERVED_FIXED_HEADER_FLAGS: u8 = 0x00;
 
 #[derive(Debug)]
 pub struct Pingresp;
@@ -26,7 +23,6 @@ impl Pingresp {
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
-
         // Fixed Header
         let remaining_length: u8 = 0x00;
 

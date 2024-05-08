@@ -1,8 +1,8 @@
 use model::{
     encoded_string::EncodedString, fixed_header::FixedHeader, packet::Packet,
-    packets::puback::Puback, qos::QoS,return_code::ReturnCode,
-    packets::connack::Connack, packets::connect::Connect, packets::publish::Publish,
-    packets::disconnect::Disconnect, packets::pingresp::Pingresp, packets::pingreq::Pingreq,
+    packets::connack::Connack, packets::connect::Connect, packets::disconnect::Disconnect,
+    packets::pingreq::Pingreq, packets::pingresp::Pingresp, packets::puback::Puback,
+    packets::publish::Publish, qos::QoS, return_code::ReturnCode,
 };
 
 mod errors;

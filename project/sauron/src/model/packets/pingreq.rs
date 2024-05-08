@@ -1,12 +1,12 @@
 use crate::{errors::error::Error, model::fixed_header::FixedHeader};
 
-const PACKET_TYPE: u8 = 0x14;
+const PACKET_TYPE: u8 = 0x12;
 const RESERVED_FIXED_HEADER_FLAGS: u8 = 0x00;
 
 #[derive(Debug)]
-pub struct Disconnect;
+pub struct Pingreq;
 
-impl Disconnect {
+impl Pingreq {
     pub fn new() -> Self {
         return Self;
     }
@@ -19,7 +19,7 @@ impl Disconnect {
             return Err(Error::new("Invalid reserved header flags".to_string()));
         }
 
-        Ok(Disconnect::new())
+        Ok(Pingreq::new())
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {

@@ -16,9 +16,7 @@ pub struct Puback {
 
 impl Puback {
     pub fn new(packet_identifier: Option<u16>) -> Self {
-        Self {
-            packet_identifier,
-        }
+        Self { packet_identifier }
     }
 
     pub fn from_bytes(fixed_header: FixedHeader, stream: &mut dyn Read) -> Result<Self, Error> {
@@ -39,7 +37,7 @@ impl Puback {
         let mut packet_identifier_buffer = [0; PACKAGE_IDENTIFIER_LENGTH];
         stream.read_exact(&mut packet_identifier_buffer)?;
 
-        let packet_identifier =  Some(u16::from_be_bytes(packet_identifier_buffer));
+        let packet_identifier = Some(u16::from_be_bytes(packet_identifier_buffer));
 
         Ok(Puback::new(packet_identifier))
     }

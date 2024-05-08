@@ -1,7 +1,9 @@
 use std::io::Read;
 
-use crate::{errors::error::Error, Connack, Connect, FixedHeader, Publish, Disconnect, Puback, Pingreq, Pingresp};
-
+use crate::{
+    errors::error::Error, Connack, Connect, Disconnect, FixedHeader, Pingreq, Pingresp, Puback,
+    Publish,
+};
 
 pub const CONNECT_PACKET_TYPE: u8 = 0x01;
 pub const CONNACK_PACKET_TYPE: u8 = 0x02;
