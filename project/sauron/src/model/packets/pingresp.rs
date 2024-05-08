@@ -3,13 +3,13 @@ use crate::{
     model::fixed_header::FixedHeader,
 };
 
-const PACKET_TYPE: u8 = 0x12;
+const PACKET_TYPE: u8 = 0x13;
 const RESERVED_FIXED_HEADER_FLAGS:u8 = 0x00;
 
 #[derive(Debug)]
-pub struct Pingreq;
+pub struct Pingresp;
 
-impl Pingreq {
+impl Pingresp {
     pub fn new() -> Self {
         return Self;
     }
@@ -22,7 +22,7 @@ impl Pingreq {
             return Err(Error::new("Invalid reserved header flags".to_string()));
         }
 
-        Ok(Pingreq::new())
+        Ok(Pingresp::new())
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
