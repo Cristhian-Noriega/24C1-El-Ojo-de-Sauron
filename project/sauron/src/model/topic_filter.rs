@@ -72,22 +72,22 @@ mod test {
         let content = b"home/livingroom".to_vec();
         let length = content.len() as u16;
         let encoded_string = EncodedString::new(length, content);
-        assert_eq!(TopicFilter::is_valid_topic_name(&encoded_string), true);
+        assert!(TopicFilter::is_valid_topic_name(&encoded_string));
 
         let content = b"home/living room".to_vec();
         let length = content.len() as u16;
         let encoded_string = EncodedString::new(length, content);
-        assert_eq!(TopicFilter::is_valid_topic_name(&encoded_string), true);
+        assert!(TopicFilter::is_valid_topic_name(&encoded_string));
 
         let content = b"home/+/livingroom".to_vec();
         let length = content.len() as u16;
         let encoded_string = EncodedString::new(length, content);
-        assert_eq!(TopicFilter::is_valid_topic_name(&encoded_string), true);
+        assert!(TopicFilter::is_valid_topic_name(&encoded_string));
 
         let content = b"+/+/+/#".to_vec();
         let length = content.len() as u16;
         let encoded_string = EncodedString::new(length, content);
-        assert_eq!(TopicFilter::is_valid_topic_name(&encoded_string), true);
+        assert!(TopicFilter::is_valid_topic_name(&encoded_string));
     }
 
     #[test]
@@ -120,7 +120,7 @@ mod test {
         let content = vec![];
         let length = content.len() as u16;
         let encoded_string = EncodedString::new(length, content);
-        assert_eq!(TopicFilter::is_valid_topic_name(&encoded_string), false);
+        assert!(!TopicFilter::is_valid_topic_name(&encoded_string));
     }
 
     #[test]
@@ -128,7 +128,7 @@ mod test {
         let content = vec![b'/'];
         let length = content.len() as u16;
         let encoded_string = EncodedString::new(length, content);
-        assert_eq!(TopicFilter::is_valid_topic_name(&encoded_string), false);
+        assert!(!TopicFilter::is_valid_topic_name(&encoded_string));
     }
 
     #[test]
@@ -136,21 +136,21 @@ mod test {
         let content = b"home+/livingroom".to_vec();
         let length = content.len() as u16;
         let encoded_string = EncodedString::new(length, content);
-        assert_eq!(TopicFilter::is_valid_topic_name(&encoded_string), false);
+        assert!(!TopicFilter::is_valid_topic_name(&encoded_string));
 
         let content = b"home+".to_vec();
         let length = content.len() as u16;
         let encoded_string = EncodedString::new(length, content);
-        assert_eq!(TopicFilter::is_valid_topic_name(&encoded_string), false);
+        assert!(!TopicFilter::is_valid_topic_name(&encoded_string));
 
         let content = b"+home/livingroom".to_vec();
         let length = content.len() as u16;
         let encoded_string = EncodedString::new(length, content);
-        assert_eq!(TopicFilter::is_valid_topic_name(&encoded_string), false);
+        assert!(!TopicFilter::is_valid_topic_name(&encoded_string));
 
         let content = b"home/livin+groom".to_vec();
         let length = content.len() as u16;
         let encoded_string = EncodedString::new(length, content);
-        assert_eq!(TopicFilter::is_valid_topic_name(&encoded_string), false);
+        assert!(!TopicFilter::is_valid_topic_name(&encoded_string));
     }
 }
