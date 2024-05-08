@@ -4,7 +4,7 @@ use crate::{
 };
 use std::io::Read;
 
-const PACKET_TYPE: u8 = 0x02;
+const PACKET_TYPE: u8 = 0x08;
 const RESERVED_FIXED_HEADER_FLAGS: u8 = 0x02;
 
 #[derive(Debug)]

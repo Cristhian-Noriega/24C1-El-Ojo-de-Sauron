@@ -1,6 +1,6 @@
 use crate::errors::error::Error;
 use crate::model::fixed_header::FixedHeader;
-use crate::model::return_code::ReturnCode;
+use crate::model::return_code::ConnackReturnCode;
 use std::io::Read;
 
 const RESERVED_FIXED_HEADER_FLAGS: u8 = 0x00;
@@ -12,13 +12,13 @@ const VARIABLE_HEADER_LENGTH: usize = 2;
 pub struct Connack {
     // Variable Header Fields
     session_present_flag: bool,
-    connect_return_code: ReturnCode,
+    connect_return_code: ConnackReturnCode,
     // Connack no tiene payload
 }
 
 impl Connack {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(session_present_flag: bool, connect_return_code: ReturnCode) -> Self {
+    pub fn new(session_present_flag: bool, connect_return_code: ConnackReturnCode) -> Self {
         Self {
             session_present_flag,
             connect_return_code,
@@ -47,7 +47,7 @@ impl Connack {
 
         let session_present_flag = (connect_ack_flags & 0b0000_0001) == 0b0000_0001;
 
-        let connect_return_code = ReturnCode::from_byte(variable_header_buffer[1])?;
+        let connect_return_code = ConnackReturnCode::from_byte(variable_header_buffer[1])?;
 
         Ok(Connack::new(session_present_flag, connect_return_code))
     }

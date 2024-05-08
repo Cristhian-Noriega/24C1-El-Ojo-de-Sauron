@@ -1,11 +1,12 @@
 use std::io::Read;
 
-use crate::{errors::error::Error, Connack, Connect, FixedHeader, Publish, Subscribe};
+use crate::{errors::error::Error, Connack, Connect, FixedHeader, Publish, Subscribe, Suback};
 
 pub const CONNECT_PACKET_TYPE: u8 = 0x01;
 pub const CONNACK_PACKET_TYPE: u8 = 0x02;
 pub const PUBLISH_PACKET_TYPE: u8 = 0x03;
 pub const SUBSCRIBE_PACKET_TYPE: u8 = 0x08;
+pub const SUBACK_PACKET_TYPE: u8 = 0x09;
 
 #[derive(Debug)]
 pub enum Packet {
@@ -13,6 +14,7 @@ pub enum Packet {
     Connack(Connack),
     Publish(Publish),
     Subscribe(Subscribe),
+    Suback(Suback),
 }
 
 impl Packet {
@@ -42,6 +44,10 @@ impl Packet {
 
                 Ok(Packet::Subscribe(subscribe_packet))
             }
+            SUBACK_PACKET_TYPE => {
+                let suback_packet = Suback::from_bytes(fixed_header, stream)?;
+                Ok(Packet::Suback(suback_packet))
+            }
             _ => Err(crate::errors::error::Error::new(format!(
                 "Invalid packet type: {}",
                 packet_type
@@ -68,6 +74,10 @@ impl Packet {
             Packet::Subscribe(subscribe_packet) => {
                 packet_bytes.push(SUBSCRIBE_PACKET_TYPE);
                 packet_bytes.extend(subscribe_packet.to_bytes());
+            }
+            Packet::Suback(suback_packet) => {
+                packet_bytes.push(SUBACK_PACKET_TYPE);
+                packet_bytes.extend(suback_packet.to_bytes());
             }
         }
         packet_bytes
