@@ -1,12 +1,12 @@
 use std::io::Read;
 
-
-use crate::{errors::error::Error, Connack, Connect, FixedHeader, Publish, Disconnect, Puback};
+use crate::{errors::error::Error, Connack, Connect, FixedHeader, Publish, Disconnect, Puback, Pingreq};
 
 pub const CONNECT_PACKET_TYPE: u8 = 0x01;
 pub const CONNACK_PACKET_TYPE: u8 = 0x02;
 pub const PUBLISH_PACKET_TYPE: u8 = 0x03;
 pub const PUBACK_PACKET_TYPE: u8 = 0x04;
+pub const PINGREQ_PACKET_TYPE: u8 = 0x12;
 pub const DISCONNECT_PACKET_TYPE: u8 = 0x14;
 
 #[derive(Debug)]
@@ -16,6 +16,7 @@ pub enum Packet {
     Publish(Publish),
     Puback(Puback),
     Disconnect(Disconnect),
+    Pingreq(Pingreq),
 }
 
 impl Packet {
@@ -50,6 +51,11 @@ impl Packet {
 
                 Ok(Packet::Disconnect(disconnect_packet))
             }
+            PINGREQ_PACKET_TYPE => {
+                let pingreq_packet = Pingreq::from_bytes(fixed_header)?;
+
+                Ok(Packet::Pingreq(pingreq_packet))
+            }
             _ => Err(crate::errors::error::Error::new(format!(
                 "Invalid packet type: {}",
                 packet_type
@@ -80,6 +86,10 @@ impl Packet {
             Packet::Disconnect(disconnect_packet) => {
                 packet_bytes.push(DISCONNECT_PACKET_TYPE);
                 packet_bytes.extend(disconnect_packet.to_bytes());
+            }
+            Packet::Pingreq(pingreq_packet) => {
+                packet_bytes.push(PINGREQ_PACKET_TYPE);
+                packet_bytes.extend(pingreq_packet.to_bytes());
             }
         }
         packet_bytes
