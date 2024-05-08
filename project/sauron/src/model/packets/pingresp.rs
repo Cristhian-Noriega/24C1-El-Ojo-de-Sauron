@@ -3,12 +3,12 @@ use crate::{errors::error::Error, model::fixed_header::FixedHeader};
 const PACKET_TYPE: u8 = 0x13;
 const RESERVED_FIXED_HEADER_FLAGS: u8 = 0x00;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Pingresp;
 
 impl Pingresp {
     pub fn new() -> Self {
-        return Self;
+        Self
     }
 
     pub fn from_bytes(fixed_header: FixedHeader) -> Result<Self, Error> {
