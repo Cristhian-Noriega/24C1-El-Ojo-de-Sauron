@@ -1,6 +1,6 @@
 use std::io::Read;
 
-use crate::{errors::error::Error, Connack, Connect, FixedHeader, Publish, Subscribe, Suback};
+use crate::{errors::error::Error, Connack, Connect, FixedHeader, Publish, Suback, Subscribe};
 
 pub const CONNECT_PACKET_TYPE: u8 = 0x01;
 pub const CONNACK_PACKET_TYPE: u8 = 0x02;
