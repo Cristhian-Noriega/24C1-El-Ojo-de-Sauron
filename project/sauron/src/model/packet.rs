@@ -2,11 +2,16 @@ use std::io::Read;
 
 use crate::{errors::error::Error, Connack, Connect, FixedHeader, Publish, Suback, Subscribe};
 
+
 pub const CONNECT_PACKET_TYPE: u8 = 0x01;
 pub const CONNACK_PACKET_TYPE: u8 = 0x02;
 pub const PUBLISH_PACKET_TYPE: u8 = 0x03;
 pub const SUBSCRIBE_PACKET_TYPE: u8 = 0x08;
 pub const SUBACK_PACKET_TYPE: u8 = 0x09;
+pub const PUBACK_PACKET_TYPE: u8 = 0x04;
+pub const PINGREQ_PACKET_TYPE: u8 = 0x12;
+pub const PINGRESP_PACKET_TYPE: u8 = 0x13;
+pub const DISCONNECT_PACKET_TYPE: u8 = 0x14;
 
 #[derive(Debug)]
 pub enum Packet {
@@ -15,6 +20,10 @@ pub enum Packet {
     Publish(Publish),
     Subscribe(Subscribe),
     Suback(Suback),
+    Puback(Puback),
+    Disconnect(Disconnect),
+    Pingreq(Pingreq),
+    Pingresp(Pingresp),
 }
 
 impl Packet {
@@ -47,6 +56,23 @@ impl Packet {
             SUBACK_PACKET_TYPE => {
                 let suback_packet = Suback::from_bytes(fixed_header, stream)?;
                 Ok(Packet::Suback(suback_packet))
+            PUBACK_PACKET_TYPE => {
+                let puback_packet = Publish::from_bytes(fixed_header, stream)?;
+
+                Ok(Packet::Publish(puback_packet))
+            }
+            DISCONNECT_PACKET_TYPE => {
+                let disconnect_packet = Disconnect::from_bytes(fixed_header)?;
+
+                Ok(Packet::Disconnect(disconnect_packet))
+            }
+            PINGREQ_PACKET_TYPE => {
+                let pingreq_packet = Pingreq::from_bytes(fixed_header)?;
+                Ok(Packet::Pingreq(pingreq_packet))
+            }
+            PINGRESP_PACKET_TYPE => {
+                let pingresp_packet = Pingresp::from_bytes(fixed_header)?;
+                Ok(Packet::Pingresp(pingresp_packet))
             }
             _ => Err(crate::errors::error::Error::new(format!(
                 "Invalid packet type: {}",
@@ -78,6 +104,21 @@ impl Packet {
             Packet::Suback(suback_packet) => {
                 packet_bytes.push(SUBACK_PACKET_TYPE);
                 packet_bytes.extend(suback_packet.to_bytes());
+            Packet::Puback(puback_packet) => {
+                packet_bytes.push(PUBACK_PACKET_TYPE);
+                packet_bytes.extend(puback_packet.to_bytes());
+            }
+            Packet::Disconnect(disconnect_packet) => {
+                packet_bytes.push(DISCONNECT_PACKET_TYPE);
+                packet_bytes.extend(disconnect_packet.to_bytes());
+            }
+            Packet::Pingreq(pingreq_packet) => {
+                packet_bytes.push(PINGREQ_PACKET_TYPE);
+                packet_bytes.extend(pingreq_packet.to_bytes());
+            }
+            Packet::Pingresp(pingresp_packet) => {
+                packet_bytes.push(PINGRESP_PACKET_TYPE);
+                packet_bytes.extend(pingresp_packet.to_bytes());
             }
         }
         packet_bytes

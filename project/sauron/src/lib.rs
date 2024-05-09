@@ -1,6 +1,7 @@
 use model::{
     encoded_string::EncodedString, fixed_header::FixedHeader, packet::Packet,
-    packets::connack::Connack, packets::connect::Connect, packets::publish::Publish,
+    packets::connack::Connack, packets::connect::Connect, packets::disconnect::Disconnect, packets::publish::Publish,
+    packets::pingreq::Pingreq, packets::pingresp::Pingresp, packets::puback::Puback,
     packets::suback::Suback, packets::subscribe::Subscribe, qos::QoS,
     return_code::ConnackReturnCode,
 };
