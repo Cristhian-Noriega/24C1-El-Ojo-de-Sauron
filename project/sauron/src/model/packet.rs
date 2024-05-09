@@ -1,7 +1,6 @@
 use std::io::Read;
 
-use crate::{errors::error::Error, Connack, Connect, FixedHeader, Publish, Suback, Subscribe};
-
+use crate::{errors::error::Error, Connack, Connect, FixedHeader, Publish, Suback, Subscribe, Puback, Disconnect, Pingreq, Pingresp};
 
 pub const CONNECT_PACKET_TYPE: u8 = 0x01;
 pub const CONNACK_PACKET_TYPE: u8 = 0x02;
@@ -56,6 +55,7 @@ impl Packet {
             SUBACK_PACKET_TYPE => {
                 let suback_packet = Suback::from_bytes(fixed_header, stream)?;
                 Ok(Packet::Suback(suback_packet))
+            }
             PUBACK_PACKET_TYPE => {
                 let puback_packet = Publish::from_bytes(fixed_header, stream)?;
 
@@ -104,6 +104,7 @@ impl Packet {
             Packet::Suback(suback_packet) => {
                 packet_bytes.push(SUBACK_PACKET_TYPE);
                 packet_bytes.extend(suback_packet.to_bytes());
+            }
             Packet::Puback(puback_packet) => {
                 packet_bytes.push(PUBACK_PACKET_TYPE);
                 packet_bytes.extend(puback_packet.to_bytes());
