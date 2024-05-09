@@ -1,6 +1,6 @@
 use crate::errors::error::Error;
 use crate::model::fixed_header::FixedHeader;
-use crate::model::return_code::ConnackReturnCode;
+use crate::model::return_codes::connack_return_code::ConnackReturnCode;
 use std::io::Read;
 
 const RESERVED_FIXED_HEADER_FLAGS: u8 = 0x00;

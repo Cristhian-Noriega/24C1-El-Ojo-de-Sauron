@@ -2,7 +2,8 @@ use std::io::Read;
 
 use crate::{
     errors::error::Error,
-    model::{fixed_header::FixedHeader, return_code::SubackReturnCode},
+    model::fixed_header::FixedHeader,
+    model::return_codes::suback_return_code::SubackReturnCode,
 };
 
 const RESERVED_FIXED_HEADER_FLAGS: u8 = 0x02;
