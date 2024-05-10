@@ -1,11 +1,14 @@
 use std::io::Read;
 
-const PUBLISH_PACKET_TYPE: u8 = 0x03;
+const PACKET_TYPE: u8 = 0x03;
 const PACKAGE_IDENTIFIER_LENGTH: usize = 2;
 
 use crate::{
     errors::error::Error,
-    model::{encoded_string::EncodedString, fixed_header::FixedHeader, qos::QoS},
+    model::{
+        encoded_string::EncodedString, fixed_header::FixedHeader, qos::QoS,
+        remaining_length::RemainingLength,
+    },
 };
 
 #[derive(Debug)]
@@ -46,7 +49,9 @@ impl Publish {
         let qos = QoS::from_byte((fixed_header_flags >> 1) & 0b11)?;
         let retain = fixed_header_flags & 1 == 1;
 
-        let remaining_length = fixed_header.remaining_length() as usize;
+        let remaining_length = fixed_header.remaining_length().value();
+
+        // Variable Header
 
         let topic_name = EncodedString::from_bytes(stream)?;
 
@@ -62,9 +67,7 @@ impl Publish {
         let variable_header_len =
             topic_name.length() + package_identifier.map_or(0, |_| PACKAGE_IDENTIFIER_LENGTH);
 
-        if remaining_length < variable_header_len {
-            return Err(Error::new("Invalid remaining length".to_string()));
-        }
+        // Payload
 
         let payload_len = remaining_length - variable_header_len;
 
@@ -94,17 +97,15 @@ impl Publish {
 
         // Fixed Header
 
-        let mut fixed_header_bytes = vec![];
-
         let fixed_header_flags = (if self.dup { 1 } else { 0 } << 3)
             | (self.qos.to_byte() << 1)
             | (if self.retain { 1 } else { 0 });
 
-        fixed_header_bytes.push(PUBLISH_PACKET_TYPE << 4 | fixed_header_flags);
+        let mut fixed_header_bytes = vec![PACKET_TYPE << 4 | fixed_header_flags];
 
-        let remaining_length = variable_header_bytes.len() + self.payload.len();
-
-        fixed_header_bytes.push(remaining_length as u8);
+        let remaining_length_value = variable_header_bytes.len() as u32 + self.payload.len() as u32;
+        let remaining_length_bytes = RemainingLength::new(remaining_length_value).to_bytes();
+        fixed_header_bytes.extend(remaining_length_bytes);
 
         let mut packet_bytes = vec![];
 

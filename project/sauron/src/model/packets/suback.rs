@@ -2,8 +2,10 @@ use std::io::Read;
 
 use crate::{
     errors::error::Error,
-    model::fixed_header::FixedHeader,
-    model::return_codes::suback_return_code::SubackReturnCode,
+    model::{
+        fixed_header::FixedHeader, remaining_length::RemainingLength,
+        return_codes::suback_return_code::SubackReturnCode,
+    },
 };
 
 const RESERVED_FIXED_HEADER_FLAGS: u8 = 0x02;
@@ -32,11 +34,7 @@ impl Suback {
             return Err(Error::new("Invalid flags".to_string()));
         }
 
-        let remaining_length = fixed_header.remaining_length() as usize;
-
-        if remaining_length < VARIABLE_HEADER_LENGTH {
-            return Err(Error::new("Invalid remaining length".to_string()));
-        }
+        let remaining_length = fixed_header.remaining_length().value();
 
         // Variable Header
         let mut variable_header_buffer = vec![0; VARIABLE_HEADER_LENGTH];
@@ -69,11 +67,11 @@ impl Suback {
         }
 
         // Fixed Header
-        let remaining_length = variable_header_bytes.len();
-        let fixed_header_bytes = vec![
-            PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS,
-            remaining_length as u8,
-        ];
+        let mut fixed_header_bytes = vec![PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS];
+
+        let remaining_length_value = variable_header_bytes.len() as u32;
+        let remaining_length_bytes = RemainingLength::new(remaining_length_value).to_bytes();
+        fixed_header_bytes.extend(remaining_length_bytes);
 
         let mut packet_bytes = vec![];
 

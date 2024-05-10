@@ -1,6 +1,9 @@
 use crate::{
     errors::error::Error,
-    model::{encoded_string::EncodedString, fixed_header::FixedHeader, qos::QoS},
+    model::{
+        encoded_string::EncodedString, fixed_header::FixedHeader, qos::QoS,
+        remaining_length::RemainingLength,
+    },
 };
 use std::io::Read;
 
@@ -48,8 +51,6 @@ impl Connect {
         if fixed_header_flags != RESERVED_FIXED_HEADER_FLAGS {
             return Err(Error::new("Invalid flags".to_string()));
         }
-
-        let remaining_length = fixed_header.remaining_length() as usize;
 
         // Variable Header
         let mut variable_header_buffer = vec![0; VARIABLE_HEADER_LENGTH];
@@ -122,18 +123,6 @@ impl Connect {
             None
         };
 
-        let length = client_id.length()
-            + will.as_ref().map_or(0, |(qos, _, topic, message)| {
-                qos.to_byte() as usize + topic.length() + message.length()
-            })
-            + user.as_ref().map_or(0, |(username, password)| {
-                username.length() + password.as_ref().map_or(0, |password| password.length())
-            });
-
-        if length != remaining_length {
-            return Err(Error::new("Invalid remaining length".to_string()));
-        }
-
         Ok(Connect::new(
             clean_session,
             keep_alive,
@@ -187,13 +176,13 @@ impl Connect {
         variable_header_bytes.push(flags_byte);
         variable_header_bytes.extend(&self.keep_alive.to_be_bytes());
 
-        // Fixed Header
-        let remaining_length = variable_header_bytes.len() + payload_bytes.len();
+        let mut fixed_header_bytes = vec![PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS];
 
-        let fixed_header_bytes = vec![
-            PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS,
-            remaining_length as u8,
-        ];
+        // Fixed Header
+        let remaining_length_value =
+            variable_header_bytes.len() as u32 + payload_bytes.len() as u32;
+        let remaining_length_bytes = RemainingLength::new(remaining_length_value).to_bytes();
+        fixed_header_bytes.extend(remaining_length_bytes);
 
         // Packet
         let mut packet_bytes = vec![];

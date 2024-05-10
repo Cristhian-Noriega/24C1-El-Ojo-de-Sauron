@@ -1,6 +1,8 @@
 use crate::{
     errors::error::Error,
-    model::{fixed_header::FixedHeader, topic_filter::TopicFilter},
+    model::{
+        fixed_header::FixedHeader, remaining_length::RemainingLength, topic_filter::TopicFilter,
+    },
 };
 use std::io::Read;
 
@@ -59,29 +61,32 @@ impl Subscribe {
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::new();
-
         // Variable Header
+        let mut variable_header_bytes = vec![];
+
         let packet_identifier_bytes = self.packet_identifier.to_be_bytes();
-        bytes.extend_from_slice(&packet_identifier_bytes);
+        variable_header_bytes.extend_from_slice(&packet_identifier_bytes);
 
         // Payload
+        let mut payload_bytes = vec![];
+
         for topic in &self.topics {
-            bytes.extend_from_slice(&topic.topic_name.to_bytes());
-            bytes.push(topic.qos.to_byte());
+            payload_bytes.extend(&topic.topic_name.to_bytes());
+            payload_bytes.push(topic.qos.to_byte());
         }
 
         // Fixed Header
-        let remaining_length = bytes.len();
-        let fixed_header_bytes = vec![
-            PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS,
-            remaining_length as u8,
-        ];
+        let mut fixed_header_bytes = vec![PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS];
+
+        let remaining_length_value =
+            variable_header_bytes.len() as u32 + payload_bytes.len() as u32;
+        let remaining_length_bytes = RemainingLength::new(remaining_length_value).to_bytes();
+        fixed_header_bytes.extend(remaining_length_bytes);
 
         let mut packet_bytes = vec![];
 
         packet_bytes.extend(fixed_header_bytes);
-        packet_bytes.extend(bytes);
+        packet_bytes.extend(variable_header_bytes);
 
         packet_bytes
     }
