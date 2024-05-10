@@ -2,7 +2,7 @@ use std::io::{Cursor, Read};
 
 use crate::{
     errors::error::Error, Connack, Connect, Disconnect, FixedHeader, Pingreq, Pingresp, Puback,
-    Publish, Suback, Subscribe, Unsubscribe,
+    Publish, Suback, Subscribe, Unsubscribe, Unsuback,
 };
 
 pub const CONNECT_PACKET_TYPE: u8 = 0x01;
@@ -15,6 +15,7 @@ pub const PINGREQ_PACKET_TYPE: u8 = 0x12;
 pub const PINGRESP_PACKET_TYPE: u8 = 0x13;
 pub const DISCONNECT_PACKET_TYPE: u8 = 0x14;
 pub const UNSUBSCRIBE_PACKET_TYPE: u8 = 0x0A;
+pub const UNSUBACK_PACKET_TYPE: u8 = 0x0B;
 
 #[derive(Debug)]
 pub enum Packet {
@@ -27,7 +28,8 @@ pub enum Packet {
     Disconnect(Disconnect),
     Pingreq(Pingreq),
     Pingresp(Pingresp),
-    Unsubscribe(Unsubscribe)
+    Unsubscribe(Unsubscribe),
+    Unsuback(Unsuback)
 }
 
 impl Packet {
@@ -91,6 +93,10 @@ impl Packet {
 
                 Packet::Unsubscribe(unsubscribe_packet)
             }
+            UNSUBACK_PACKET_TYPE => {
+                let unsuback_packet = Unsuback::from_bytes(fixed_header, stream)?;
+                Packet::Unsuback(unsuback_packet)
+            }
             _ => {
                 return Err(crate::errors::error::Error::new(format!(
                     "Invalid packet type: {}",
@@ -151,6 +157,10 @@ impl Packet {
             Packet::Unsubscribe(unsubscribe_packet) => {
                 packet_bytes.push(UNSUBSCRIBE_PACKET_TYPE);
                 packet_bytes.extend(unsubscribe_packet.to_bytes());
+            }
+            Packet::Unsuback(unsuback_packet) => {
+                packet_bytes.push(UNSUBACK_PACKET_TYPE);
+                packet_bytes.extend(unsuback_packet.to_bytes());
             }
         }
         packet_bytes

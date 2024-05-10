@@ -3,7 +3,8 @@ use model::{
     packets::connack::Connack, packets::connect::Connect, packets::publish::Publish,
     packets::suback::Suback, packets::subscribe::Subscribe, packets::puback::Puback,
     packets::disconnect::Disconnect, packets::pingreq::Pingreq, packets::pingresp::Pingresp,
-    packets::unsubscribe::Unsubscribe, qos::QoS, return_codes::connack_return_code::ConnackReturnCode,
+    packets::unsubscribe::Unsubscribe, packets::unsuback::Unsuback, qos::QoS,
+    return_codes::connack_return_code::ConnackReturnCode,
 };
 
 mod errors;
