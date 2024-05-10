@@ -8,11 +8,11 @@ use crate::{
 #[derive(Debug)]
 pub struct TopicFilter {
     pub topic_name: EncodedString,
-    pub qos: QoS,
+    pub qos: Option<QoS>,
 }
 
 impl TopicFilter {
-    pub fn new(topic_name: EncodedString, qos: QoS) -> Self {
+    pub fn new(topic_name: EncodedString, qos: Option<QoS>) -> Self {
         Self { topic_name, qos }
     }
 
@@ -22,17 +22,22 @@ impl TopicFilter {
             return Err(Error::new("Invalid topic name".to_string()));
         }
         let qos_buffer = &mut [0; 1];
-        stream.read_exact(qos_buffer)?;
+        if stream.read_exact(qos_buffer).is_err() {
+            return Ok(Self { topic_name, qos: None });
+        }
         let qos = QoS::from_byte(qos_buffer[0])?;
 
-        Ok(Self { topic_name, qos })
+        Ok(Self { topic_name, qos: Some(qos) })
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::new();
 
         bytes.extend_from_slice(&self.topic_name.to_bytes());
-        bytes.push(self.qos.to_byte());
+
+        if let Some(qos) = &self.qos{
+            bytes.push(qos.to_byte());
+        }
 
         bytes
     }
@@ -95,7 +100,15 @@ mod test {
         let mut buffer = Cursor::new(vec![0x00, 0x04, b't', b'e', b's', b't', 0x00]);
         let topic_filter = TopicFilter::from_bytes(&mut buffer).unwrap();
         assert_eq!(topic_filter.topic_name.content(), &[b't', b'e', b's', b't']);
-        assert_eq!(topic_filter.qos, QoS::AtMost);
+        assert_eq!(topic_filter.qos.unwrap(), QoS::AtMost);
+    }
+
+    #[test]
+    fn test_from_bytes_valid_without_qos() {
+        let mut buffer = Cursor::new(vec![0x00, 0x04, b't', b'e', b's', b't']);
+        let topic_filter = TopicFilter::from_bytes(&mut buffer).unwrap();
+        assert_eq!(topic_filter.topic_name.content(), &[b't', b'e', b's', b't']);
+        assert_eq!(topic_filter.qos, None);
     }
 
     #[test]

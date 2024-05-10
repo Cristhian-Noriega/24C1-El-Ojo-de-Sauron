@@ -72,7 +72,10 @@ impl Subscribe {
 
         for topic in &self.topics {
             payload_bytes.extend(&topic.topic_name.to_bytes());
-            payload_bytes.push(topic.qos.to_byte());
+
+            if let Some(qos) = &topic.qos {
+                payload_bytes.push(qos.to_byte());
+            }
         }
 
         // Fixed Header

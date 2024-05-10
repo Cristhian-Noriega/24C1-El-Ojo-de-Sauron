@@ -6,12 +6,15 @@ use crate::{
 };
 use std::io::Read;
 
-const PACKET_TYPE: u8 = 0x08;
+const PACKET_TYPE: u8 = 0x0A;
 const RESERVED_FIXED_HEADER_FLAGS: u8 = 0x02;
 
 #[derive(Debug)]
 pub struct Unsubscribe {
+    // Variable Header
     pub packet_identifier: u16,
+
+    // Payload
     pub topics: Vec<TopicFilter>,
 }
 
@@ -68,11 +71,10 @@ impl Unsubscribe {
         variable_header_bytes.extend_from_slice(&packet_identifier_bytes);
 
         // Payload
-        let mut payload_bytes = vec![];
+        let mut payload_bytes: Vec<u8> = vec![];
 
         for topic in &self.topics {
             payload_bytes.extend(&topic.topic_name.to_bytes());
-            payload_bytes.push(topic.qos.to_byte());
         }
 
         // Fixed Header
