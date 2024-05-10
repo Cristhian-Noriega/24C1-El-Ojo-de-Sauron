@@ -1,13 +1,12 @@
 use std::io::Read;
 
-use crate::{
-    errors::error::Error, Connack, Connect, Disconnect, FixedHeader, Pingreq, Pingresp, Puback,
-    Publish,
-};
+use crate::{errors::error::Error, Connack, Connect, FixedHeader, Publish, Suback, Subscribe, Puback, Disconnect, Pingreq, Pingresp};
 
 pub const CONNECT_PACKET_TYPE: u8 = 0x01;
 pub const CONNACK_PACKET_TYPE: u8 = 0x02;
 pub const PUBLISH_PACKET_TYPE: u8 = 0x03;
+pub const SUBSCRIBE_PACKET_TYPE: u8 = 0x08;
+pub const SUBACK_PACKET_TYPE: u8 = 0x09;
 pub const PUBACK_PACKET_TYPE: u8 = 0x04;
 pub const PINGREQ_PACKET_TYPE: u8 = 0x12;
 pub const PINGRESP_PACKET_TYPE: u8 = 0x13;
@@ -18,6 +17,8 @@ pub enum Packet {
     Connect(Connect),
     Connack(Connack),
     Publish(Publish),
+    Subscribe(Subscribe),
+    Suback(Suback),
     Puback(Puback),
     Disconnect(Disconnect),
     Pingreq(Pingreq),
@@ -45,6 +46,15 @@ impl Packet {
                 let publish_packet = Publish::from_bytes(fixed_header, stream)?;
 
                 Ok(Packet::Publish(publish_packet))
+            }
+            SUBSCRIBE_PACKET_TYPE => {
+                let subscribe_packet = Subscribe::from_bytes(fixed_header, stream)?;
+
+                Ok(Packet::Subscribe(subscribe_packet))
+            }
+            SUBACK_PACKET_TYPE => {
+                let suback_packet = Suback::from_bytes(fixed_header, stream)?;
+                Ok(Packet::Suback(suback_packet))
             }
             PUBACK_PACKET_TYPE => {
                 let puback_packet = Publish::from_bytes(fixed_header, stream)?;
@@ -86,6 +96,14 @@ impl Packet {
             Packet::Publish(publish_packet) => {
                 packet_bytes.push(PUBLISH_PACKET_TYPE);
                 packet_bytes.extend(publish_packet.to_bytes());
+            }
+            Packet::Subscribe(subscribe_packet) => {
+                packet_bytes.push(SUBSCRIBE_PACKET_TYPE);
+                packet_bytes.extend(subscribe_packet.to_bytes());
+            }
+            Packet::Suback(suback_packet) => {
+                packet_bytes.push(SUBACK_PACKET_TYPE);
+                packet_bytes.extend(suback_packet.to_bytes());
             }
             Packet::Puback(puback_packet) => {
                 packet_bytes.push(PUBACK_PACKET_TYPE);
