@@ -9,7 +9,7 @@ use crate::{
 
 const RESERVED_FIXED_HEADER_FLAGS: u8 = 0x0B;
 const VARIABLE_HEADER_LENGTH: usize = 2;
-const PACKET_TYPE: u8 = 0x09;
+const PACKET_TYPE: u8 = 0x11;
 
 #[derive(Debug)]
 pub struct Unsuback {
