@@ -1,13 +1,16 @@
-use std::io::Read;
+use std::io::{Cursor, Read};
 
-use crate::{errors::error::Error, Connack, Connect, FixedHeader, Publish, Suback, Subscribe, Puback, Disconnect, Pingreq, Pingresp};
+use crate::{
+    errors::error::Error, Connack, Connect, Disconnect, FixedHeader, Pingreq, Pingresp, Puback,
+    Publish, Suback, Subscribe,
+};
 
 pub const CONNECT_PACKET_TYPE: u8 = 0x01;
 pub const CONNACK_PACKET_TYPE: u8 = 0x02;
 pub const PUBLISH_PACKET_TYPE: u8 = 0x03;
+pub const PUBACK_PACKET_TYPE: u8 = 0x04;
 pub const SUBSCRIBE_PACKET_TYPE: u8 = 0x08;
 pub const SUBACK_PACKET_TYPE: u8 = 0x09;
-pub const PUBACK_PACKET_TYPE: u8 = 0x04;
 pub const PINGREQ_PACKET_TYPE: u8 = 0x12;
 pub const PINGRESP_PACKET_TYPE: u8 = 0x13;
 pub const DISCONNECT_PACKET_TYPE: u8 = 0x14;
@@ -31,54 +34,71 @@ impl Packet {
 
         let packet_type = fixed_header.first_byte() >> 4;
 
-        match packet_type {
+        let remaining_length_value = fixed_header.remaining_length().value();
+
+        let content = &mut vec![0; remaining_length_value];
+        stream.read_exact(content)?;
+
+        let stream = &mut Cursor::new(content);
+
+        let packet = match packet_type {
             CONNECT_PACKET_TYPE => {
                 let connect_packet = Connect::from_bytes(fixed_header, stream)?;
 
-                Ok(Packet::Connect(connect_packet))
+                Packet::Connect(connect_packet)
             }
             CONNACK_PACKET_TYPE => {
                 let connack_packet = Connack::from_bytes(fixed_header, stream)?;
 
-                Ok(Packet::Connack(connack_packet))
+                Packet::Connack(connack_packet)
             }
             PUBLISH_PACKET_TYPE => {
                 let publish_packet = Publish::from_bytes(fixed_header, stream)?;
 
-                Ok(Packet::Publish(publish_packet))
+                Packet::Publish(publish_packet)
             }
             SUBSCRIBE_PACKET_TYPE => {
                 let subscribe_packet = Subscribe::from_bytes(fixed_header, stream)?;
 
-                Ok(Packet::Subscribe(subscribe_packet))
+                Packet::Subscribe(subscribe_packet)
             }
             SUBACK_PACKET_TYPE => {
                 let suback_packet = Suback::from_bytes(fixed_header, stream)?;
-                Ok(Packet::Suback(suback_packet))
+                Packet::Suback(suback_packet)
             }
             PUBACK_PACKET_TYPE => {
                 let puback_packet = Publish::from_bytes(fixed_header, stream)?;
 
-                Ok(Packet::Publish(puback_packet))
+                Packet::Publish(puback_packet)
             }
             DISCONNECT_PACKET_TYPE => {
                 let disconnect_packet = Disconnect::from_bytes(fixed_header)?;
 
-                Ok(Packet::Disconnect(disconnect_packet))
+                Packet::Disconnect(disconnect_packet)
             }
             PINGREQ_PACKET_TYPE => {
                 let pingreq_packet = Pingreq::from_bytes(fixed_header)?;
-                Ok(Packet::Pingreq(pingreq_packet))
+                Packet::Pingreq(pingreq_packet)
             }
             PINGRESP_PACKET_TYPE => {
                 let pingresp_packet = Pingresp::from_bytes(fixed_header)?;
-                Ok(Packet::Pingresp(pingresp_packet))
+                Packet::Pingresp(pingresp_packet)
             }
-            _ => Err(crate::errors::error::Error::new(format!(
-                "Invalid packet type: {}",
-                packet_type
-            ))),
+            _ => {
+                return Err(crate::errors::error::Error::new(format!(
+                    "Invalid packet type: {}",
+                    packet_type
+                )))
+            }
+        };
+
+        if let Ok(remaining_length) = stream.read(&mut [0; 1]) {
+            if remaining_length != 0 {
+                return Err(Error::new("Invalid remaining length".to_string()));
+            }
         }
+
+        Ok(packet)
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
