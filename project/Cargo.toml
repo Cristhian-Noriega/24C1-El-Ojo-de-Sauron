@@ -1,7 +1,10 @@
 [workspace]
+resolver = "2"
 
 members = [
     "server",
     "drone",
-    "sauron",
+    "sauron", 
+    "camera-system", 
+    "monitor",
 ]
