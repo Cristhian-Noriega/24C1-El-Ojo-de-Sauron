@@ -1,7 +1,9 @@
 use model::{
     encoded_string::EncodedString, fixed_header::FixedHeader, packet::Packet,
-    packets::connack::Connack, packets::connect::Connect, packets::publish::Publish, qos::QoS,
-    return_code::ReturnCode,
+    packets::connack::Connack, packets::connect::Connect, packets::publish::Publish,
+    packets::suback::Suback, packets::subscribe::Subscribe, packets::puback::Puback,
+    packets::disconnect::Disconnect, packets::pingreq::Pingreq, packets::pingresp::Pingresp,
+    qos::QoS, return_codes::connack_return_code::ConnackReturnCode,
 };
 
 mod errors;
@@ -47,7 +49,7 @@ pub fn connect(
     ))
 }
 
-pub fn connack(session_present: bool, return_code: ReturnCode) -> Packet {
+pub fn connack(session_present: bool, return_code: ConnackReturnCode) -> Packet {
     Packet::Connack(Connack::new(session_present, return_code))
 }
 

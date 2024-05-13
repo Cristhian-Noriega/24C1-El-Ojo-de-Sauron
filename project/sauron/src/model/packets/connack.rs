@@ -1,6 +1,7 @@
 use crate::errors::error::Error;
 use crate::model::fixed_header::FixedHeader;
-use crate::model::return_code::ReturnCode;
+use crate::model::remaining_length::RemainingLength;
+use crate::model::return_codes::connack_return_code::ConnackReturnCode;
 use std::io::Read;
 
 const RESERVED_FIXED_HEADER_FLAGS: u8 = 0x00;
@@ -12,13 +13,13 @@ const VARIABLE_HEADER_LENGTH: usize = 2;
 pub struct Connack {
     // Variable Header Fields
     session_present_flag: bool,
-    connect_return_code: ReturnCode,
+    connect_return_code: ConnackReturnCode,
     // Connack no tiene payload
 }
 
 impl Connack {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(session_present_flag: bool, connect_return_code: ReturnCode) -> Self {
+    pub fn new(session_present_flag: bool, connect_return_code: ConnackReturnCode) -> Self {
         Self {
             session_present_flag,
             connect_return_code,
@@ -33,12 +34,6 @@ impl Connack {
             return Err(Error::new("Invalid flags".to_string()));
         }
 
-        let remaining_length = fixed_header.remaining_length() as usize;
-
-        if remaining_length != VARIABLE_HEADER_LENGTH {
-            return Err(Error::new("Invalid remaining length".to_string()));
-        }
-
         // Variable Header
         let mut variable_header_buffer = vec![0; VARIABLE_HEADER_LENGTH];
         stream.read_exact(&mut variable_header_buffer)?;
@@ -47,7 +42,7 @@ impl Connack {
 
         let session_present_flag = (connect_ack_flags & 0b0000_0001) == 0b0000_0001;
 
-        let connect_return_code = ReturnCode::from_byte(variable_header_buffer[1])?;
+        let connect_return_code = ConnackReturnCode::from_byte(variable_header_buffer[1])?;
 
         Ok(Connack::new(session_present_flag, connect_return_code))
     }
@@ -67,12 +62,11 @@ impl Connack {
         variable_header_bytes.push(connect_return_code_bytes);
 
         // Fixed Header
-        let remaining_length = variable_header_bytes.len();
+        let mut fixed_header_bytes = vec![PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS];
 
-        let fixed_header_bytes = vec![
-            PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS,
-            remaining_length as u8,
-        ];
+        let remaining_length_value = VARIABLE_HEADER_LENGTH as u32;
+        let remaining_length_bytes = RemainingLength::new(remaining_length_value).to_bytes();
+        fixed_header_bytes.extend(remaining_length_bytes);
 
         // Packet
         let mut packet_bytes = vec![];
