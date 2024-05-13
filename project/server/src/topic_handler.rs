@@ -7,7 +7,13 @@ use std::sync::RwLock;
 // es decir, hay una estructura de arbol en los topics
 // 
 
-
+pub enum TopicHandlerTask {
+    SubscribeClient,
+    UnsubscribeClient,
+    Publish(String),
+    DisconnectClient,
+    RetrieveMessages,
+}
 
 
 pub struct SubscriptionData {

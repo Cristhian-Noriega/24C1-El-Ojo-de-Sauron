@@ -2,29 +2,15 @@
 use std::{
     collections::{HashMap, HashSet, VecDeque}, io::BufReader, net::{Shutdown, TcpListener, TcpStream}, sync::mpsc::{self, TryRecvError}, thread
 };
-use crate::{client::{Client, ClientTask}, config::Config, topic_handler::{self, TopicHandler}};
+use crate::{client::{Client, ClientTask}, config::Config, topic_handler::{self, TopicHandler, TopicHandlerTask}};
 
-use crate::model::packets::{Connect, Connack, Publish, Puback, Subscribe, Suback, Unsubscribe, Unsuback, Pingreq, Pingresp, Disconnect};
+use sauron::model::{packet::Packet, packets::{connect::Connect, disconnect::Disconnect, pingreq::Pingreq, puback::Puback, publish::Publish, subscribe::Subscribe}};
 
 pub struct Server {
     clients: HashMap<String, Client>,
     active_connections: HashSet<i32>,
     topic_handler: TopicHandler,
     config: Config
-}
-
-pub enum Packet {
-    Connect(Connect),
-    Connack(Connack),
-    Publish(Publish),
-    Puback(Puback),
-    Subscribe(Subscribe),
-    Suback(Suback),
-    Unsubscribe(Unsubscribe),
-    Unsuback(Unsuback),
-    Pingreq(Pingreq),
-    Pingresp(Pingresp),
-    Disconnect(Disconnect),
 }
 
 impl Server {
@@ -69,88 +55,41 @@ impl Server {
 
     pub fn handle_packet_server(&self, packet: Packet, client_id: Vec<u8>, stream: TcpStream) {
         match packet {
-            Connect => self.handle_connect(packet, stream),
-            // Publish => self.handle_publish(packet),
-            // Puback => self.handle_puback(packet),
-            // Subscribe => self.handle_subscribe(packet),
-            // Unsubscribe => self.handle_unsubscribe(packet),
-            // Pingreq => self.handle_pingreq(packet),
-            // Disconnect => self.handle_disconnect(packet),
+            Packet::Connect(connect_packet) => self.handle_connect(connect_packet, stream),
             _ => println!("Unsupported packet type"),
         }
     }
 
-    pub fn handle_connect(&self, packet: Packet, stream: TcpStream) {
-        let client_id = packet.client_id().unwrap();
+    pub fn handle_connect(&self, connect_packet: Connect, stream: TcpStream) {
+        let client_id = connect_packet.client_id().unwrap();
 
         if self.active_connections.contains(&client_id) {
             println!("Client already connected: {:?}", client_id);
             return;
         }
         else {
+            let (server_to_client_sender_channel, server_to_client_receiver_channel) = mpsc::channel();
+            let (client_to_server_sender_channel, client_to_server_receiver_channel) = mpsc::channel();
+
             if self.clients.contains_key(&client_id) {
                 println!("Client reconnected: {:?}", client_id);
             }
-            else { // CLIENTE NUEVO (CREAR)
-                let (sender_channel, receiver_channel) = mpsc::channel();
-                let new_client = Client::new(client_id, "PASSWORD".to_string(), stream, sender_channel, true, 0);
-                
-                self.create_new_client_thread(receiver_channel, stream);
+            else { 
+                let new_client = Client::new(client_id, "PASSWORD".to_string(), stream, server_to_client_receiver_channel, client_to_server_sender_channel, true, 0);
                 self.clients.insert(client_id, new_client);
-                println!("New client connected: {:?}", client_id);
             }
+
+            self.create_new_client_thread(server_to_client_receiver_channel, client_to_server_sender_channel, stream);
+            println!("New client connected: {:?}", client_id);
             self.active_connections.insert(client_id);
         }
     }
 
-    // pub fn handle_publish(&self, packet: Packet) {
-    //     self.topic_handler.publish(packet);
-    // }
-
-    // pub fn handle_subscribe(&self, packet: Packet) {
-    //     let client_id = packet.client_id().unwrap();
-    //     let topic = packet.topic().unwrap();
-    //     let qos = packet.qos().unwrap();
-
-    //     if let Some(client) = self.clients.get(&client_id) {
-    //         client.subscribe(topic, qos);
-    //         client.send_task(ClientTask::send_suback);
-    //     } else {
-    //         println!("Failed to subscribe unknown client: {:?}", client_id);
-    //     }
-    // }
-
-    // pub fn handle_unsubscribe(&self, packet: Packet) {
-    //     let client_id = packet.client_id().unwrap();
-    //     let topic = packet.topic().unwrap();
-
-    //     if let Some(client) = self.clients.get(&client_id) {
-    //         client.unsubscribe(topic);
-    //         client.send_task(ClientTask::send_unsuback);
-    //     } else {
-    //         println!("Failed to unsubscribe unknown client: {:?}", client_id);
-    //     }
-    // }
-
-    // pub fn handle_pingreq(&self, packet: Packet) {
-    //     let client_id = packet.client_id().unwrap();
-
-    //     if let Some(client) = self.clients.get(&client_id) {
-    //         client.send_task(ClientTask::send_pingresp);
-    //     } else {
-    //         println!("Failed to send pingresp to unknown client: {:?}", client_id);
-    //     }
-    // }
-
-    // pub fn handle_disconnect(&self, packet: Packet) {
-    //     let client_id = packet.client_id().unwrap();
-    //     self.active_connections.remove(&client_id);
-    //     self.clients.remove(&client_id);
-    //     // TO DO: MATAR THREAD DEL CLIENTE
-    // }
-
-    pub fn create_new_client_thread(receiver_channel: std::sync::mpsc::Receiver<ClientTask>, mut stream: TcpStream) {
+    pub fn create_new_client_thread(receiver_channel: std::sync::mpsc::Receiver<ClientTask>, sender_channel: std::sync::mpsc::Sender<TopicHandlerTask> ,mut stream: TcpStream) {
         thread::spawn(move || {
+            let mut receiver_channel = receiver_channel;
+            let mut sender_channel = sender_channel;
+
             let address = stream.peer_addr().unwrap().to_string();
             loop {
                 // Create a buffer to read incoming data
@@ -162,17 +101,14 @@ impl Server {
                         let mut cursor = std::io::Cursor::new(buffer);
                         let packet: Packet = Packet::from_bytes(&mut cursor)?;
     
-                        // Handle the received packet
                         println!("Packet received from address: {:?}", address);
                         handle_packet(packet, address.clone(), stream);
     
-                        // Clear the buffer for the next read
                         buffer.clear();
                     }
                     Err(err) => {
-                        // Handle read errors, e.g., connection reset by peer
                         println!("Error reading from stream: {:?}", err);
-                        break; // Exit the loop and terminate the thread
+                        break;
                     }
                 }
             }
@@ -184,8 +120,8 @@ impl Server {
 
 pub fn handle_packet(packet: Packet, client_id: Vec<u8>, stream: TcpStream) {
     match packet {
-        Publish => handle_publish(packet, stream),
-        Puback => handle_puback(packet, stream),
+        Packet::Publish(publish_packet)  => handle_publish(publish_packet, stream),
+        Packet::Puback(puback_packet) => handle_puback(puback_packet, stream),
         Subscribe => handle_subscribe(packet, stream),
         Unsubscribe => handle_unsubscribe(packet, stream),
         Pingreq => handle_pingreq(packet, stream),
@@ -250,8 +186,13 @@ pub fn send_unsuback(stream: TcpStream) {
     stream.write_all(&unsuback_bytes);
 }
 
-
-
 pub fn kill_thread(stream: TcpStream) {
     // LOGICA DE MATAR EL THREAD ACTUAL
 }
+
+
+
+// Preguntar: ¿Cómo se maneja el cierre de la conexión?
+// Cual es el alcance de cada client thread?
+// Hilo Topic Handler
+

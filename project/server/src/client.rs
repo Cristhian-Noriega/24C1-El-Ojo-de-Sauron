@@ -5,29 +5,26 @@ use std::sync::atomic::AtomicBool;
 use std::sync::{mpsc, Mutex};
 use std::net::TcpStream;
 
-use crate::server::server::Packet;
-// use crate::connect;
-// use sauron::connect as sauron_connect;
-// use sauron::subscribe as sauron_subscribe;
-// use crate::model::package_components::fixed_header_components::qos::QoS;
+use sauron::model::{packet::Packet, packets::{connect::Connect, disconnect::Disconnect, pingreq::Pingreq, puback::Puback, publish::Publish, subscribe::Subscribe}};
 
-//represents the state of the client in the server 
+use crate::topic_handler::{self, TopicHandler, TopicHandlerTask};
+
+
+// represents the state of the client in the server 
 
 pub struct Client { 
     id: String,
     password: String,
     subscriptions: Vec<String>,
-    //log: Vec<package>,
-    // alive is an atomic bool to avoid race conditions
     alive: AtomicBool,
-    // Channel between server thread and client thread
-    channel: mpsc::Sender<ClientTask>,
+    // Channel between server thread and client thread and vice-versa
+    sender_channel: mpsc::Sender<ClientTask>,
+    receiver_channel: mpsc::Receiver<TopicHandlerTask>,
 
     // the stream represents the communication channel between the client and the server
     // throught the client will received and send data
     // it is wrapped in a mutex for thread safety
     stream: Mutex<TcpStream>,
-    //connect: Packet,
 }
 
 pub enum ClientTask{
@@ -46,7 +43,8 @@ impl Client {
         id: String, 
         password: String, 
         stream: TcpStream, 
-        channel: mpsc::Sender<ClientTask>,
+        receiver_channel: mpsc::Receiver<ClientTask>,
+        sender_channel: mpsc::Sender<TopicHandlerTask>,
         clean_session: bool,
         keep_alive: u16, 
         // will: Option<(QoS, String, String)>, 
@@ -60,7 +58,8 @@ impl Client {
             //log: Vec::new(),
             alive: true,
             stream: Mutex::new(stream),
-            channel,
+            sender_channel,
+            receiver_channel,
         }
     }
 

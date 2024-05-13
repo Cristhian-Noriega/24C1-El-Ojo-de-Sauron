@@ -7,7 +7,7 @@ use model::{
 };
 
 mod errors;
-mod model;
+pub mod model;
 
 #[allow(clippy::manual_map)]
 pub fn connect(
