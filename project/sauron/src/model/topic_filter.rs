@@ -63,6 +63,15 @@ impl TopicFilter {
         }
         true
     }
+
+    pub fn encoded_length(&self) -> usize {
+        let topic_name_length = self.topic_name.encoded_length();
+        if self.qos.is_some() {
+            topic_name_length + 1
+        } else {
+            topic_name_length
+        }
+    }
 }
 
 #[allow(unused_imports)]

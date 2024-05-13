@@ -39,15 +39,15 @@ impl Subscribe {
 
         // Payload
         let mut topics = Vec::new();
-        loop {
-            let topic_filter = TopicFilter::from_bytes(stream)?;
-            topics.push(topic_filter);
-
-            let mut buffer = [0; 1];
-            stream.read_exact(&mut buffer)?;
-            if buffer[0] == 0 {
-                break;
+        let mut remaining_length = fixed_header.remaining_length().length() as usize;
+        while remaining_length > 0 {
+            let topic = TopicFilter::from_bytes(stream)?;
+            let encoded_length = topic.encoded_length();
+            if encoded_length > remaining_length {
+                return Err(Error::new("Invalid topic filter length".to_string()));
             }
+            topics.push(topic);
+            remaining_length -= encoded_length;
         }
 
         if topics.is_empty() {

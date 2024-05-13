@@ -48,4 +48,8 @@ impl EncodedString {
     pub fn content(&self) -> &Vec<u8> {
         &self.content
     }
+
+    pub fn encoded_length(&self) -> usize {
+        LENGTH_SIZE + self.length as usize
+    }
 }
