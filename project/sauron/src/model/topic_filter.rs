@@ -23,11 +23,17 @@ impl TopicFilter {
         }
         let qos_buffer = &mut [0; 1];
         if stream.read_exact(qos_buffer).is_err() {
-            return Ok(Self { topic_name, qos: None });
+            return Ok(Self {
+                topic_name,
+                qos: None,
+            });
         }
         let qos = QoS::from_byte(qos_buffer[0])?;
 
-        Ok(Self { topic_name, qos: Some(qos) })
+        Ok(Self {
+            topic_name,
+            qos: Some(qos),
+        })
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
@@ -35,7 +41,7 @@ impl TopicFilter {
 
         bytes.extend_from_slice(&self.topic_name.to_bytes());
 
-        if let Some(qos) = &self.qos{
+        if let Some(qos) = &self.qos {
             bytes.push(qos.to_byte());
         }
 

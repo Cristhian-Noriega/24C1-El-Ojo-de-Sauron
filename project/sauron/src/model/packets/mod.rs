@@ -7,5 +7,5 @@ pub mod puback;
 pub mod publish;
 pub mod suback;
 pub mod subscribe;
-pub mod unsubscribe;
 pub mod unsuback;
+pub mod unsubscribe;

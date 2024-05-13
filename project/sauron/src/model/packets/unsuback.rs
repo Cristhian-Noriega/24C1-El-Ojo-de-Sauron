@@ -2,9 +2,7 @@ use std::io::Read;
 
 use crate::{
     errors::error::Error,
-    model::{
-        fixed_header::FixedHeader, remaining_length::RemainingLength,
-    },
+    model::{fixed_header::FixedHeader, remaining_length::RemainingLength},
 };
 
 const RESERVED_FIXED_HEADER_FLAGS: u8 = 0x0B;
@@ -18,9 +16,7 @@ pub struct Unsuback {
 
 impl Unsuback {
     pub fn new(packet_identifier: u16) -> Self {
-        Self {
-            packet_identifier,
-        }
+        Self { packet_identifier }
     }
 
     pub fn from_bytes(fixed_header: FixedHeader, stream: &mut dyn Read) -> Result<Self, Error> {

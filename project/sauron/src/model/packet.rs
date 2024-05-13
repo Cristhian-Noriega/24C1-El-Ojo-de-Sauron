@@ -2,7 +2,7 @@ use std::io::{Cursor, Read};
 
 use crate::{
     errors::error::Error, Connack, Connect, Disconnect, FixedHeader, Pingreq, Pingresp, Puback,
-    Publish, Suback, Subscribe, Unsubscribe, Unsuback,
+    Publish, Suback, Subscribe, Unsuback, Unsubscribe,
 };
 
 pub const CONNECT_PACKET_TYPE: u8 = 0x01;
@@ -29,7 +29,7 @@ pub enum Packet {
     Pingreq(Pingreq),
     Pingresp(Pingresp),
     Unsubscribe(Unsubscribe),
-    Unsuback(Unsuback)
+    Unsuback(Unsuback),
 }
 
 impl Packet {

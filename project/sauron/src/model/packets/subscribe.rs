@@ -39,7 +39,7 @@ impl Subscribe {
 
         // Payload
         let mut topics = Vec::new();
-        let mut remaining_length = fixed_header.remaining_length().length() as usize;
+        let mut remaining_length = fixed_header.remaining_length().length();
         while remaining_length > 0 {
             let topic = TopicFilter::from_bytes(stream)?;
             let encoded_length = topic.encoded_length();
