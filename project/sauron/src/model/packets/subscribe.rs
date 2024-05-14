@@ -1,7 +1,8 @@
 use crate::{
     errors::error::Error,
     model::{
-        fixed_header::FixedHeader, remaining_length::RemainingLength, topic_filter::TopicFilter,
+        fixed_header::FixedHeader, qos::QoS, remaining_length::RemainingLength,
+        topic_filter::TopicFilter,
     },
 };
 use std::io::Read;
@@ -11,12 +12,12 @@ const RESERVED_FIXED_HEADER_FLAGS: u8 = 0x02;
 
 #[derive(Debug)]
 pub struct Subscribe {
-    pub packet_identifier: u16,
-    pub topics: Vec<TopicFilter>,
+    packet_identifier: u16,
+    topics: Vec<(TopicFilter, QoS)>,
 }
 
 impl Subscribe {
-    pub fn new(packet_identifier: u16, topics: Vec<TopicFilter>) -> Self {
+    pub fn new(packet_identifier: u16, topics: Vec<(TopicFilter, QoS)>) -> Self {
         Self {
             packet_identifier,
             topics,
@@ -39,15 +40,18 @@ impl Subscribe {
 
         // Payload
         let mut topics = Vec::new();
-        let mut remaining_length = fixed_header.remaining_length().length();
+        let mut remaining_length = fixed_header.remaining_length().value() - 2; // Del variable header
+
         while remaining_length > 0 {
-            let topic = TopicFilter::from_bytes(stream)?;
-            let encoded_length = topic.encoded_length();
-            if encoded_length > remaining_length {
-                return Err(Error::new("Invalid topic filter length".to_string()));
-            }
-            topics.push(topic);
-            remaining_length -= encoded_length;
+            let topic_filter = TopicFilter::from_bytes(stream)?;
+
+            let qos_buffer = &mut [0; 1];
+            stream.read_exact(qos_buffer)?;
+            let qos = QoS::from_byte(qos_buffer[0])?;
+
+            remaining_length -= topic_filter.length() + 1; // Del qos
+
+            topics.push((topic_filter, qos));
         }
 
         if topics.is_empty() {
@@ -70,12 +74,9 @@ impl Subscribe {
         // Payload
         let mut payload_bytes = vec![];
 
-        for topic in &self.topics {
-            payload_bytes.extend(&topic.topic_name.to_bytes());
-
-            if let Some(qos) = &topic.qos {
-                payload_bytes.push(qos.to_byte());
-            }
+        for (topic_filter, qos) in &self.topics {
+            payload_bytes.extend(topic_filter.to_bytes());
+            payload_bytes.push(qos.to_byte());
         }
 
         // Fixed Header

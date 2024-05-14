@@ -14,8 +14,8 @@ const PACKET_TYPE: u8 = 0x09;
 
 #[derive(Debug)]
 pub struct Suback {
-    pub packet_identifier: u16,
-    pub suback_return_codes: Vec<SubackReturnCode>,
+    packet_identifier: u16,
+    suback_return_codes: Vec<SubackReturnCode>,
 }
 
 impl Suback {

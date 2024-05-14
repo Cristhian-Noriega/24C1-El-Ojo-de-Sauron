@@ -12,10 +12,10 @@ const RESERVED_FIXED_HEADER_FLAGS: u8 = 0x02;
 #[derive(Debug)]
 pub struct Unsubscribe {
     // Variable Header
-    pub packet_identifier: u16,
+    packet_identifier: u16,
 
     // Payload
-    pub topics: Vec<TopicFilter>,
+    topics: Vec<TopicFilter>,
 }
 
 impl Unsubscribe {
@@ -40,17 +40,15 @@ impl Unsubscribe {
 
         let packet_identifier = u16::from_be_bytes(variable_header_buffer);
 
-        // Payload
-        let mut topics = Vec::new();
-        loop {
-            let topic_filter = TopicFilter::from_bytes(stream)?;
-            topics.push(topic_filter);
+        let mut remaining_length = fixed_header.remaining_length().value() - 2;
 
-            let mut buffer = [0; 1];
-            stream.read_exact(&mut buffer)?;
-            if buffer[0] == 0 {
-                break;
-            }
+        // Payload
+        let mut topics = vec![];
+        while remaining_length > 0 {
+            let topic_filter = TopicFilter::from_bytes(stream)?;
+            remaining_length -= topic_filter.length();
+
+            topics.push(topic_filter);
         }
 
         if topics.is_empty() {
@@ -71,10 +69,10 @@ impl Unsubscribe {
         variable_header_bytes.extend_from_slice(&packet_identifier_bytes);
 
         // Payload
-        let mut payload_bytes: Vec<u8> = vec![];
+        let mut payload_bytes = vec![];
 
-        for topic in &self.topics {
-            payload_bytes.extend(&topic.topic_name.to_bytes());
+        for topic_filter in &self.topics {
+            payload_bytes.extend(topic_filter.to_bytes());
         }
 
         // Fixed Header

@@ -11,7 +11,7 @@ const PACKET_TYPE: u8 = 0x11;
 
 #[derive(Debug)]
 pub struct Unsuback {
-    pub packet_identifier: u16,
+    packet_identifier: u16,
 }
 
 impl Unsuback {
