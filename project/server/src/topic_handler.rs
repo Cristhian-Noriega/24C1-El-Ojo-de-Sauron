@@ -51,13 +51,15 @@ impl Topic {
 }
 
 pub struct TopicHandler {
-    root: Topic
+    root: Topic,
+    client_accions_receiver_channel: mpsc::Receiver<TopicHandlerTask>,
 }
 
 impl TopicHandler {
-    pub fn new() -> Self {
+    pub fn new(receiver_channel: mpsc::Receiver<TopicHandlerTask>) -> Self {
         TopicHandler {
-            root: Topic::new()
+            root: Topic::new(),
+            client_accions_receiver_channel,
         }
     }
 
