@@ -16,9 +16,9 @@ pub struct Publish {
     dup: bool,
     qos: QoS,
     retain: bool,
-    topic_name: EncodedString,
-    package_identifier: Option<u16>,
-    payload: Vec<u8>,
+    pub topic_name: EncodedString,
+    pub package_identifier: Option<u16>,
+    pub payload: Vec<u8>,
 }
 
 impl Publish {

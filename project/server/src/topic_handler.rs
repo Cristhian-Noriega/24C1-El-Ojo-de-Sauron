@@ -5,14 +5,16 @@ use std::sync::RwLock;
 // home/livingroom/temperature. En este caso, home es el topico padre de livingroom
 // y livingroom es el topico padre de temperature. 
 // es decir, hay una estructura de arbol en los topics
-// 
+
+
+use sauron::model::{packet::Packet, packets::{connect::Connect, disconnect::Disconnect, pingreq::Pingreq, pingresp::Pingresp, puback::Puback, publish::Publish, subscribe::Subscribe}};
 
 pub enum TopicHandlerTask {
     SubscribeClient,
     UnsubscribeClient,
-    Publish(String),
+    Publish(Publish),
+    RegisterPubAck(Puback),
     DisconnectClient,
-    RetrieveMessages,
 }
 
 
