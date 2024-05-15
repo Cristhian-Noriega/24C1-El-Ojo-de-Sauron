@@ -1,12 +1,17 @@
 use model::{
-    encoded_string::EncodedString, fixed_header::FixedHeader, packet::Packet,
-    packets::connack::Connack, packets::connect::Connect, packets::publish::Publish,
-    packets::suback::Suback, packets::subscribe::Subscribe, packets::puback::Puback,
-    packets::disconnect::Disconnect, packets::pingreq::Pingreq, packets::pingresp::Pingresp,
-    qos::QoS, return_codes::connack_return_code::ConnackReturnCode,
+    encoded_string::EncodedString,
+    fixed_header::FixedHeader,
+    packet::Packet,
+    packets::{
+        connack::Connack, connect::Connect, disconnect::Disconnect, pingreq::Pingreq,
+        pingresp::Pingresp, puback::Puback, publish::Publish, suback::Suback, subscribe::Subscribe,
+        unsuback::Unsuback, unsubscribe::Unsubscribe,
+    },
+    qos::QoS,
+    return_codes::connack_return_code::ConnackReturnCode,
 };
 
-mod errors;
+pub mod errors;
 pub mod model;
 
 #[allow(clippy::manual_map)]

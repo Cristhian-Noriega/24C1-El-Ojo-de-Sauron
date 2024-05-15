@@ -1,43 +1,34 @@
 use std::io::Read;
 
-use crate::{
-    errors::error::Error,
-    model::{encoded_string::EncodedString, qos::QoS},
-};
+use crate::{errors::error::Error, model::encoded_string::EncodedString};
 
 #[derive(Debug)]
 pub struct TopicFilter {
+    // TODO: Implement a better way to store topic filter (like an array of enum(word/wildcard) or something like that)
     pub topic_name: EncodedString,
-    pub qos: QoS,
 }
 
 impl TopicFilter {
-    pub fn new(topic_name: EncodedString, qos: QoS) -> Self {
-        Self { topic_name, qos }
+    pub fn new(topic_name: EncodedString) -> Self {
+        Self { topic_name }
     }
 
     pub fn from_bytes(stream: &mut dyn Read) -> Result<Self, Error> {
         let topic_name = EncodedString::from_bytes(stream)?;
+
         if !Self::is_valid_topic_name(&topic_name) {
             return Err(Error::new("Invalid topic name".to_string()));
         }
-        let qos_buffer = &mut [0; 1];
-        stream.read_exact(qos_buffer)?;
-        let qos = QoS::from_byte(qos_buffer[0])?;
 
-        Ok(Self { topic_name, qos })
+        Ok(Self { topic_name })
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::new();
-
-        bytes.extend_from_slice(&self.topic_name.to_bytes());
-        bytes.push(self.qos.to_byte());
-
-        bytes
+        self.topic_name.to_bytes()
     }
 
     pub fn is_valid_topic_name(name: &EncodedString) -> bool {
+        // TODO: check
         let content = &name.content();
         if content.is_empty() {
             return false;
@@ -45,7 +36,7 @@ impl TopicFilter {
         if content.starts_with(&[b'/']) || content.ends_with(&[b'/']) {
             return false;
         }
-        let levels: Vec<&[u8]> = content.split(|&byte| byte == b'/').collect();
+        let levels: Vec<&[u8]> = content.split(|&byte| byte == b'/').collect(); // check to remove type declaration
         for (i, level) in levels.iter().enumerate() {
             if level.contains(&b'+') && level.len() > 1 {
                 return false;
@@ -57,6 +48,15 @@ impl TopicFilter {
             }
         }
         true
+    }
+
+    pub fn test(topic_name: EncodedString) -> bool {
+        print!("{:?}", topic_name.content());
+        todo!()
+    }
+
+    pub fn length(&self) -> usize {
+        self.topic_name.length()
     }
 }
 
@@ -92,10 +92,16 @@ mod test {
 
     #[test]
     fn test_from_bytes_valid() {
-        let mut buffer = Cursor::new(vec![0x00, 0x04, b't', b'e', b's', b't', 0x00]);
+        let mut buffer = Cursor::new(vec![0x00, 0x04, b't', b'e', b's', b't']);
         let topic_filter = TopicFilter::from_bytes(&mut buffer).unwrap();
         assert_eq!(topic_filter.topic_name.content(), &[b't', b'e', b's', b't']);
-        assert_eq!(topic_filter.qos, QoS::AtMost);
+    }
+
+    #[test]
+    fn test_from_bytes_valid_without_qos() {
+        let mut buffer = Cursor::new(vec![0x00, 0x04, b't', b'e', b's', b't']);
+        let topic_filter = TopicFilter::from_bytes(&mut buffer).unwrap();
+        assert_eq!(topic_filter.topic_name.content(), &[b't', b'e', b's', b't']);
     }
 
     #[test]

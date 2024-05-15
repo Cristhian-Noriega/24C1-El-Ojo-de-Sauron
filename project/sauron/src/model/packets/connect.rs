@@ -134,7 +134,7 @@ impl Connect {
 
     pub fn to_bytes(&self) -> Vec<u8> {
         // Payload
-        let mut payload_bytes: Vec<u8> = vec![];
+        let mut payload_bytes = vec![];
 
         payload_bytes.extend(self.client_id.to_bytes());
 

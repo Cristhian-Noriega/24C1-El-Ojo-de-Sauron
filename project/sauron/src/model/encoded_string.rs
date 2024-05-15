@@ -18,7 +18,7 @@ impl EncodedString {
         let mut length_buffer = [0; LENGTH_SIZE];
         stream.read_exact(&mut length_buffer)?;
 
-        let length: u16 = u16::from_be_bytes(length_buffer);
+        let length = u16::from_be_bytes(length_buffer);
 
         let mut content = vec![0; length as usize];
         stream.read_exact(&mut content)?;
@@ -34,7 +34,7 @@ impl EncodedString {
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
-        let mut bytes: Vec<u8> = vec![];
+        let mut bytes = vec![];
         bytes.extend(&self.length.to_be_bytes());
         bytes.extend(&self.content);
 
@@ -47,5 +47,9 @@ impl EncodedString {
 
     pub fn content(&self) -> &Vec<u8> {
         &self.content
+    }
+
+    pub fn encoded_length(&self) -> usize {
+        LENGTH_SIZE + self.length as usize
     }
 }
