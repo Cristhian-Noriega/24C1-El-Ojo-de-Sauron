@@ -1,5 +1,8 @@
-use std::collections::HashMap;
-use std::sync::RwLock;
+use std::collections::HashSet;
+use std::error::Error;
+use std::time::Duration;
+use std::{collections::HashMap, io::Write};
+use std::sync::{mpsc, RwLock};
 
 // Los topics segun MQTT tienen una jerarquia, por ejemplo:
 // home/livingroom/temperature. En este caso, home es el topico padre de livingroom
@@ -7,14 +10,17 @@ use std::sync::RwLock;
 // es decir, hay una estructura de arbol en los topics
 
 
-use sauron::model::{packet::Packet, packets::{connect::Connect, disconnect::Disconnect, pingreq::Pingreq, pingresp::Pingresp, puback::Puback, publish::Publish, subscribe::Subscribe}};
+use sauron::model::{packet::Packet, packets::{connack::Connack, puback::Puback, publish::Publish, subscribe::Subscribe}};
+
+use crate::client::Client;
 
 pub enum TopicHandlerTask {
-    SubscribeClient,
-    UnsubscribeClient,
+    ConnectNewClient(Client),
+    SubscribeClient(Subscribe),
+    UnsubscribeClient(Unsubscribe),
     Publish(Publish),
     RegisterPubAck(Puback),
-    DisconnectClient,
+    DisconnectClient(String),
 }
 
 
@@ -55,18 +61,44 @@ impl Topic {
 pub struct TopicHandler {
     root: Topic,
     client_accions_receiver_channel: mpsc::Receiver<TopicHandlerTask>,
+    clients: HashMap<String, Client>,
+    active_connections: HashSet<i32>,
 }
 
 impl TopicHandler {
     pub fn new(receiver_channel: mpsc::Receiver<TopicHandlerTask>) -> Self {
         TopicHandler {
             root: Topic::new(),
-            client_accions_receiver_channel,
+            client_accions_receiver_channel: receiver_channel,
+            clients: HashMap::new(),
+            active_connections: HashSet::new(),
+        }
+    }
+
+    pub fn run(self) {
+        loop {
+            match self.client_accions_receiver_channel.recv() {
+                Ok(task) => {
+                    match task {
+                        TopicHandlerTask::ConnectNewClient(client) => {self.connect_new_client(client);}
+                        TopicHandlerTask::SubscribeClient(subscribe) => {self.subscribe(subscribe);}
+                        TopicHandlerTask::UnsubscribeClient(unsubscribe) => {self.unsubscribe(unsubscribe);}
+                        TopicHandlerTask::Publish(publish) => {self.publish(publish);}
+                        TopicHandlerTask::RegisterPubAck(puback) => {self.register_puback(puback);}
+                        TopicHandlerTask::DisconnectClient(client_id) => {self.disconnect_client(client_id);}
+                    }
+                }
+                Err(_) => {
+                    std::thread::sleep(Duration::from_secs(1));
+                }
+            }
         }
     }
 
     // Subscribe a client_id into a set of topics given a Subscribe packet
-    pub fn subscribe(&self, client_id: &str, packet: &Subscribe) -> Result<Option<>, Error> {
+    pub fn subscribe(&self, packet: Subscribe)  {
+
+        let client_id = packet.client_id;
         let topics = packet.get_topics();
         for topic in topics {
             let data = SubscriptionData {
@@ -76,6 +108,20 @@ impl TopicHandler {
         }
         Ok(());
     } 
+
+    pub fn connect_new_client(self, client: Client) {
+        if self.active_connections.contains(client.id) {
+            println!("Client already connected: {:?}", client.id);
+            return;
+        }
+        else {
+            self.clients.insert(client.id.to_string(), client);
+            self.active_connections.insert(client.id);
+            println!("New client connected: {:?}", client.id);
+
+            client.stream.write_all(Packet::Connack(Connack::new(true, "CONNECT CODE????").to_bytes()));
+        }
+    }
 }
 
 pub fn subscribe_to_topic(current_topic: &Topic, topics: &str, client_id: &str, data: SubscriptionData) -> Result<(), Error>{

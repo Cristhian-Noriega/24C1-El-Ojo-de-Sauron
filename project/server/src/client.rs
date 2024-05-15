@@ -7,15 +7,15 @@ use std::net::TcpStream;
 // represents the state of the client in the server 
 
 pub struct Client { 
-    id: String,
-    password: String,
-    subscriptions: Vec<String>,
-    alive: AtomicBool,
+    pub id: String,
+    pub password: String,
+    pub subscriptions: Vec<String>,
+    pub alive: AtomicBool,
 
     // the stream represents the communication channel between the client and the server
     // throught the client will received and send data
     // it is wrapped in a mutex for thread safety
-    stream: Mutex<TcpStream>,
+    pub stream: Mutex<TcpStream>,
 }
 
 impl Client {
