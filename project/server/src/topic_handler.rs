@@ -110,6 +110,7 @@ impl TopicHandler {
     } 
 
     pub fn connect_new_client(self, client: Client) {
+        let client_id = client.id;
         if self.active_connections.contains(client.id) {
             println!("Client already connected: {:?}", client.id);
             return;
@@ -122,6 +123,33 @@ impl TopicHandler {
             client.stream.write_all(Packet::Connack(Connack::new(true, "CONNECT CODE????").to_bytes()));
         }
     }
+    pub fn unsubscribe(&self, unsubscribe_packet: Unsubscribe) {
+        let client_id = unsubscribe_packet.client_id;
+        let topics = unsubscribe_packet.get_topics();
+        for topic in topics {
+            unsubscribe_to_topic(&self.root, topic.topic_name, client_id);
+        }
+        Ok(());
+    }
+
+    pub fn publish(&self, publish_packet: Publish) {
+        let topic_name = publish_packet.topic_name;
+        let message = Message {
+            client_id: publish_packet.client_id,
+            packet: publish_packet,
+        };
+        publish_to_topic(&self.root, topic_name, message);
+    }
+
+    pub fn register_puback(&self, puback_packet: Puback) {
+        //TODO: implementar
+    }
+    
+    pub fn disconnect_client(&self, client_id: String) {
+        self.clients.remove(&client_id);
+        self.active_connections.remove(&client_id);
+    }
+
 }
 
 pub fn subscribe_to_topic(current_topic: &Topic, topics: &str, client_id: &str, data: SubscriptionData) -> Result<(), Error>{
