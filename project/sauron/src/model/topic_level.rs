@@ -12,15 +12,11 @@ pub enum TopicLevel {
 
 impl TopicLevel {
     pub fn from_bytes(bytes: Vec<u8>) -> Result<TopicLevel, Error> {
-        if bytes.is_empty() {
-            return Ok(TopicLevel::Literal(bytes.to_vec()));
-        }
-
         if bytes.len() == 1 {
-            return match bytes[0] {
-                MULTI_LEVEL_WILDCARD => Ok(TopicLevel::MultiLevelWildcard),
-                SINGLE_LEVEL_WILDCARD => Ok(TopicLevel::SingleLevelWildcard),
-                _ => Ok(TopicLevel::Literal(bytes.to_vec())),
+            return match bytes.first() {
+                Some(&MULTI_LEVEL_WILDCARD) => Ok(TopicLevel::MultiLevelWildcard),
+                Some(&SINGLE_LEVEL_WILDCARD) => Ok(TopicLevel::SingleLevelWildcard),
+                _ => Ok(TopicLevel::Literal(bytes)),
             };
         }
 
@@ -36,7 +32,7 @@ impl TopicLevel {
             ));
         }
 
-        Ok(TopicLevel::Literal(bytes.to_vec()))
+        Ok(TopicLevel::Literal(bytes))
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {

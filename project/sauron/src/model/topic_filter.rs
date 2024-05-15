@@ -38,8 +38,8 @@ impl TopicFilter {
             .map(|slice| slice.to_vec())
             .collect();
 
-        for (level_index, level_byte) in levels_bytes.iter().enumerate() {
-            let topic_level = TopicLevel::from_bytes(level_byte.to_vec())?;
+        for (level_index, level_bytes) in levels_bytes.iter().enumerate() {
+            let topic_level = TopicLevel::from_bytes(level_bytes.to_vec())?;
 
             if let TopicLevel::MultiLevelWildcard = topic_level {
                 if level_index != levels_bytes.len() - 1 {
@@ -88,7 +88,6 @@ impl TopicFilter {
                             return false;
                         }
                     }
-
                     None => return false,
                 },
             }
