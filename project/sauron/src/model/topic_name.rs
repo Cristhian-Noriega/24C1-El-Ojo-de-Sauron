@@ -5,15 +5,20 @@ use crate::errors::error::Error;
 use super::{encoded_string::EncodedString, topic_level::TopicLevel};
 
 const FORWARD_SLASH: u8 = 0x2F;
+const SERVER_RESERVED: u8 = 0x24;
 
 #[derive(Debug)]
 pub struct TopicName {
     levels: Vec<Vec<u8>>,
+    server_reserved: bool,
 }
 
 impl TopicName {
-    pub fn new(levels: Vec<Vec<u8>>) -> Self {
-        Self { levels }
+    pub fn new(levels: Vec<Vec<u8>>, server_reserved: bool) -> Self {
+        Self {
+            levels,
+            server_reserved,
+        }
     }
 
     pub fn from_bytes(stream: &mut dyn Read) -> Result<Self, Error> {
@@ -23,6 +28,11 @@ impl TopicName {
         if bytes.is_empty() {
             return Err(Error::new("Invalid topic name".to_string()));
         }
+
+        let server_reserved = match bytes.first() {
+            Some(&SERVER_RESERVED) => true,
+            _ => false,
+        };
 
         let levels_bytes: Vec<Vec<u8>> = bytes
             .split(|&byte| byte == FORWARD_SLASH)
@@ -38,7 +48,10 @@ impl TopicName {
             }
         }
 
-        Ok(Self { levels })
+        Ok(Self {
+            levels,
+            server_reserved,
+        })
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
@@ -59,6 +72,10 @@ impl TopicName {
 
     pub fn length(&self) -> usize {
         self.to_bytes().len()
+    }
+
+    pub fn server_reserved(&self) -> bool {
+        self.server_reserved
     }
 }
 
@@ -106,5 +123,20 @@ mod tests {
         let bytes = &mut from_slice(b"/");
         let topic_name = TopicName::from_bytes(bytes).unwrap();
         assert_eq!(topic_name.length(), 3);
+    }
+
+    #[test]
+    fn test_server_reserved() {
+        let bytes = &mut from_slice(b"$home/livingroom");
+        let topic_name = TopicName::from_bytes(bytes).unwrap();
+        assert!(topic_name.server_reserved());
+
+        let bytes = &mut from_slice(b"home/livingroom");
+        let topic_name = TopicName::from_bytes(bytes).unwrap();
+        assert!(!topic_name.server_reserved());
+
+        let bytes = &mut from_slice(b"home/$livingroom");
+        let topic_name = TopicName::from_bytes(bytes).unwrap();
+        assert!(!topic_name.server_reserved());
     }
 }

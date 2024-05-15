@@ -5,15 +5,20 @@ use crate::{errors::error::Error, model::encoded_string::EncodedString};
 use super::{topic_level::TopicLevel, topic_name::TopicName};
 
 const FORWARD_SLASH: u8 = 0x2F;
+const SERVER_RESERVED: u8 = 0x24;
 
 #[derive(Debug)]
 pub struct TopicFilter {
     levels: Vec<TopicLevel>,
+    server_reserved: bool,
 }
 
 impl TopicFilter {
-    pub fn new(levels: Vec<TopicLevel>) -> Self {
-        Self { levels }
+    pub fn new(levels: Vec<TopicLevel>, server_reserved: bool) -> Self {
+        Self {
+            levels,
+            server_reserved,
+        }
     }
 
     pub fn from_bytes(stream: &mut dyn Read) -> Result<Self, Error> {
@@ -23,6 +28,11 @@ impl TopicFilter {
         if bytes.is_empty() {
             return Err(Error::new("Invalid topic name".to_string()));
         }
+
+        let server_reserved = match bytes.first() {
+            Some(&SERVER_RESERVED) => true,
+            _ => false,
+        };
 
         let mut levels = vec![];
 
@@ -45,7 +55,10 @@ impl TopicFilter {
             levels.push(topic_level);
         }
 
-        Ok(Self { levels })
+        Ok(Self {
+            levels,
+            server_reserved,
+        })
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
@@ -61,6 +74,10 @@ impl TopicFilter {
     }
 
     pub fn match_topic_name(&self, topic_name: TopicName) -> bool {
+        if self.server_reserved != topic_name.server_reserved() {
+            return false;
+        }
+
         let name_levels = topic_name.levels();
         let filter_levels = &self.levels;
 
@@ -152,6 +169,29 @@ mod test {
         let topic_filter = TopicFilter::from_bytes(bytes).unwrap();
 
         assert_eq!(topic_filter.length(), 3);
+    }
+
+    #[test]
+    fn test_server_reserved() {
+        let bytes = &mut from_slice(b"$SYS/home/livingroom");
+        let topic_filter = TopicFilter::from_bytes(bytes).unwrap();
+
+        assert!(topic_filter.server_reserved);
+
+        let bytes = &mut from_slice(b"$SYS/#");
+        let topic_filter = TopicFilter::from_bytes(bytes).unwrap();
+
+        assert!(topic_filter.server_reserved);
+
+        let bytes = &mut from_slice(b"SYS/home/livingroom");
+        let topic_filter = TopicFilter::from_bytes(bytes).unwrap();
+
+        assert!(!topic_filter.server_reserved);
+
+        let bytes = &mut from_slice(b"home/$SYS/livingroom");
+        let topic_filter = TopicFilter::from_bytes(bytes).unwrap();
+
+        assert!(!topic_filter.server_reserved);
     }
 
     #[test]
@@ -249,6 +289,24 @@ mod test {
             assert!(topic_filter.match_topic_name(topic_name2));
             assert!(topic_filter.match_topic_name(topic_name3));
         }
+        {
+            let filter_bytes = &mut from_slice(b"$SYS/home/livingroom");
+            let name_bytes = &mut from_slice(b"$SYS/home/livingroom");
+
+            let topic_filter = TopicFilter::from_bytes(filter_bytes).unwrap();
+            let topic_name = TopicName::from_bytes(name_bytes).unwrap();
+
+            assert!(topic_filter.match_topic_name(topic_name));
+        }
+        {
+            let filter_bytes = &mut from_slice(b"$SYS/#");
+            let name_bytes1 = &mut from_slice(b"$SYS/home/livingroom");
+
+            let topic_filter = TopicFilter::from_bytes(filter_bytes).unwrap();
+            let topic_name1 = TopicName::from_bytes(name_bytes1).unwrap();
+
+            assert!(topic_filter.match_topic_name(topic_name1));
+        }
     }
 
     #[test]
@@ -309,6 +367,24 @@ mod test {
         {
             let filter_bytes = &mut from_slice(b"+/+");
             let name_bytes = &mut from_slice(b"livingroom");
+
+            let topic_filter = TopicFilter::from_bytes(filter_bytes).unwrap();
+            let topic_name = TopicName::from_bytes(name_bytes).unwrap();
+
+            assert!(!topic_filter.match_topic_name(topic_name));
+        }
+        {
+            let filter_bytes = &mut from_slice(b"#");
+            let name_bytes = &mut from_slice(b"$SYS/home/livingroom");
+
+            let topic_filter = TopicFilter::from_bytes(filter_bytes).unwrap();
+            let topic_name = TopicName::from_bytes(name_bytes).unwrap();
+
+            assert!(!topic_filter.match_topic_name(topic_name));
+        }
+        {
+            let filter_bytes = &mut from_slice(b"+/home/livingroom");
+            let name_bytes = &mut from_slice(b"$SYS/home/livingroom");
 
             let topic_filter = TopicFilter::from_bytes(filter_bytes).unwrap();
             let topic_name = TopicName::from_bytes(name_bytes).unwrap();
