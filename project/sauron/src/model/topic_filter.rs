@@ -29,10 +29,7 @@ impl TopicFilter {
             return Err(Error::new("Invalid topic name".to_string()));
         }
 
-        let server_reserved = match bytes.first() {
-            Some(&SERVER_RESERVED) => true,
-            _ => false,
-        };
+        let server_reserved = matches!(bytes.first(), Some(&SERVER_RESERVED));
 
         let mut levels = vec![];
 
