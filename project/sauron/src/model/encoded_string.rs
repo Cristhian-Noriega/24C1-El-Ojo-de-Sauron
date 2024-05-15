@@ -10,8 +10,11 @@ pub struct EncodedString {
 }
 
 impl EncodedString {
-    pub fn new(length: u16, content: Vec<u8>) -> Self {
-        Self { length, content }
+    pub fn new(content: Vec<u8>) -> Self {
+        Self {
+            length: content.len() as u16,
+            content,
+        }
     }
 
     pub fn from_bytes(stream: &mut dyn Read) -> Result<Self, Error> {
