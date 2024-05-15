@@ -6,3 +6,5 @@ pub mod qos;
 pub mod remaining_length;
 pub mod return_codes;
 pub mod topic_filter;
+pub mod topic_level;
+pub mod topic_name;
