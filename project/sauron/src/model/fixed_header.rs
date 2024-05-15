@@ -5,8 +5,8 @@ use crate::errors::error::Error;
 use super::remaining_length::RemainingLength;
 
 pub struct FixedHeader {
-    pub first_byte: u8,
-    pub remaining_length: RemainingLength,
+    first_byte: u8,
+    remaining_length: RemainingLength,
 }
 
 impl FixedHeader {
