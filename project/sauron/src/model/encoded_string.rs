@@ -36,6 +36,13 @@ impl EncodedString {
         Self { length, content }
     }
 
+    pub fn to_string(&self) -> String { 
+        match std::str::from_utf8(&self.content) {
+            Ok(string) => string.to_string(),
+            Err(_) => "".to_string(),
+        }
+    }
+
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = vec![];
         bytes.extend(&self.length.to_be_bytes());

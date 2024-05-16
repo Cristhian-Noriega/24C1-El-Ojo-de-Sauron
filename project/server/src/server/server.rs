@@ -1,13 +1,13 @@
 #![allow(dead_code)]
 use std::{
-    io::BufReader, net::{TcpListener, TcpStream}, sync::{mpsc, Arc, Mutex}, thread
+    io::{BufReader, Write, Read}, net::{TcpListener, TcpStream}, sync::{mpsc, Arc, Mutex}, thread
 };
 use crate::{client::Client, config::Config, topic_handler::{TopicHandler, TopicHandlerTask}};
 
-pub use sauron::model::{packet::Packet, packets::{connect::Connect, disconnect::Disconnect, pingresp::Pingresp, puback::Puback, publish::Publish, subscribe::Subscribe}};
+pub use sauron::model::{packet::Packet, packets::{connect::Connect, disconnect::Disconnect, pingresp::Pingresp, puback::Puback, publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe}};
 
 pub struct Server { 
-    config: Config,
+    config: Option<Config>,
     client_actions_sender_channel: mpsc::Sender<TopicHandlerTask>,
     client_actions_receiver_channel: mpsc::Receiver<TopicHandlerTask>,
 }
@@ -23,7 +23,7 @@ impl Server {
     }
 
     pub fn server_run(self, address: &str) -> std::io::Result<()> {
-        let server = Server::new()?;
+        let server = Server::new();
         let listener = TcpListener::bind(address)?;
 
         Self::intialize_topic_handler_thread(self.client_actions_receiver_channel);
@@ -84,7 +84,7 @@ impl Server {
     pub fn create_new_client_thread(sender_to_topics_channel: std::sync::mpsc::Sender<TopicHandlerTask>, mut stream: TcpStream, client_id: Vec<u8>) {
         thread::spawn(move || {
             let address = stream.peer_addr().unwrap().to_string();
-            let mantain_thread = true;
+            let mut mantain_thread = true;
 
             while mantain_thread {
                 let mut reader = BufReader::new(&mut stream);
@@ -116,7 +116,7 @@ pub fn handle_packet(packet: Packet, client_id: Vec<u8>, stream: TcpStream, send
         Packet::Puback(puback_packet) => handle_puback(puback_packet, sender_to_topics_channel, client_id),
         Packet::Subscribe(subscribe_packet) => handle_subscribe(subscribe_packet, sender_to_topics_channel, client_id),
         Packet::Unsubscribe(unsubscribe_packet) => handle_unsubscribe(unsubscribe_packet, sender_to_topics_channel, client_id),
-        Packet::Pingreq(pingreq_packet) => handle_pingreq(pingreq_packet),
+        Packet::Pingreq(pingreq_packet) => handle_pingreq(stream),
         Packet::Disconnect(disconnect_packet) => handle_disconnect(disconnect_packet, sender_to_topics_channel, client_id),
         _ => {
             println!("Unsupported packet type");
@@ -126,52 +126,53 @@ pub fn handle_packet(packet: Packet, client_id: Vec<u8>, stream: TcpStream, send
     mantain_thread
 }
 // Validates that the client_id in the packet is the same as the client_id of the current thread. If it isn't the same, the thread should be killed.
-pub fn validate_client_id(packet: Packet, client_id: Vec<u8>) -> bool {
-    if packet.client_id != client_id{
-        println!("Client ID doesn't match.");
-        return false;
-    }
-    true
-}
+// solo el paquete connect tiene el client id 
+// pub fn validate_client_id(packet: Packet, client_id: Vec<u8>) -> bool {
+//     if packet.client_id != client_id{
+//         println!("Client ID doesn't match.");
+//         return false;
+//     }
+//     true
+// }
 
 pub fn handle_publish(publish_packet: Publish, sender_to_topics_channel: std::sync::mpsc::Sender<TopicHandlerTask>, client_id: Vec<u8>) -> bool {
-    validate_client_id(publish_packet, client_id);
-    sender_to_topics_channel.send(TopicHandlerTask::Publish(publish_packet));
+    //validate_client_id(publish_packet, client_id);
+    sender_to_topics_channel.send(TopicHandlerTask::Publish(publish_packet, client_id));
 
     true
 }
 
 pub fn handle_puback(puback_packet: Puback, sender_to_topics_channel: std::sync::mpsc::Sender<TopicHandlerTask>, client_id: Vec<u8>) -> bool {
-    if !validate_client_id(puback_packet, client_id) {return false};
+    //if !validate_client_id(puback_packet, client_id) {return false};
     sender_to_topics_channel.send(TopicHandlerTask::RegisterPubAck(puback_packet));
 
     true
 }
 
 pub fn handle_subscribe(subscribe_packet: Subscribe, sender_to_topics_channel: std::sync::mpsc::Sender<TopicHandlerTask>, client_id: Vec<u8>) -> bool {
-    if !validate_client_id(subscribe_packet, client_id) {return false};
-    sender_to_topics_channel.send(TopicHandlerTask::SubscribeClient(subscribe_packet));
+    //if !validate_client_id(subscribe_packet, client_id) {return false};
+    sender_to_topics_channel.send(TopicHandlerTask::SubscribeClient(subscribe_packet, client_id));
 
     true
 }
 
 pub fn handle_unsubscribe(unsubscribe_packet: Unsubscribe, sender_to_topics_channel: std::sync::mpsc::Sender<TopicHandlerTask>, client_id: Vec<u8>) -> bool {
-    if !validate_client_id(unsubscribe_packet, client_id) {return false};
-    sender_to_topics_channel.send(TopicHandlerTask::UnsubscribeClient(unsubscribe_packet));
+    //if !validate_client_id(unsubscribe_packet, client_id) {return false};
+    sender_to_topics_channel.send(TopicHandlerTask::UnsubscribeClient(unsubscribe_packet, client_id));
 
     true
 }
 
 pub fn handle_disconnect(packet: Disconnect, sender_to_topics_channel: std::sync::mpsc::Sender<TopicHandlerTask>, client_id: Vec<u8>) -> bool {
-    sender_to_topics_channel.send(TopicHandlerTask::DisconnectClient(client_id));
+    //sender_to_topics_channel.send(TopicHandlerTask::DisconnectClient(client_id));
 
     false
 }
 
-pub fn handle_pingreq(stream: TcpStream) {
+pub fn handle_pingreq(stream: TcpStream) -> bool {
     let pingresp_packet = Pingresp::new();
-    let pingresp_bytes = pingresp_packet.into_bytes();
+    let pingresp_bytes = pingresp_packet.to_bytes();
     stream.write_all(pingresp_bytes);
-    
+
     true
 }

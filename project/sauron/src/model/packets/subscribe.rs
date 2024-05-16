@@ -12,8 +12,8 @@ const RESERVED_FIXED_HEADER_FLAGS: u8 = 0x02;
 
 #[derive(Debug)]
 pub struct Subscribe {
-    packet_identifier: u16,
-    topics: Vec<(TopicFilter, QoS)>,
+    pub packet_identifier: u16,
+    pub topics: Vec<(TopicFilter, QoS)>,
 }
 
 impl Subscribe {

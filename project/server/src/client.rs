@@ -11,10 +11,6 @@ pub struct Client {
     pub password: String,
     pub subscriptions: Vec<String>,
     pub alive: AtomicBool,
-
-    // the stream represents the communication channel between the client and the server
-    // throught the client will received and send data
-    // it is wrapped in a mutex for thread safety
     pub stream: Mutex<TcpStream>,
 }
 
@@ -28,13 +24,11 @@ impl Client {
         // will: Option<(QoS, String, String)>, 
         // user: Option<(String, Option<String>)>
     ) -> Client {
-        //let connect = sauron_connect(id.clone(), clean_session, keep_alive, will, user);
         Client {
             id,
             password,
             subscriptions: Vec::new(),
-            //log: Vec::new(),
-            alive: true,
+            alive: AtomicBool::new(true),
             stream: Mutex::new(stream),
         }
     }

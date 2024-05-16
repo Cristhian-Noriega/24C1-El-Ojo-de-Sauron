@@ -9,7 +9,7 @@ const SERVER_RESERVED: u8 = 0x24;
 
 #[derive(Debug)]
 pub struct TopicFilter {
-    levels: Vec<TopicLevel>,
+    pub levels: Vec<TopicLevel>,
     server_reserved: bool,
 }
 

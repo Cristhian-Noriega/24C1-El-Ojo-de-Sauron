@@ -15,7 +15,7 @@ use crate::{
 pub struct Publish {
     dup: bool,
     qos: QoS,
-    retain: bool,
+    pub retain: bool,
     pub topic_name: EncodedString,
     pub package_identifier: Option<u16>,
     pub payload: Vec<u8>,
