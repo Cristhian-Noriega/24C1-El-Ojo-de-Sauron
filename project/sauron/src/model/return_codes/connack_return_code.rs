@@ -1,4 +1,4 @@
-use crate::errors::error::Error;
+use crate::Error;
 
 #[derive(PartialEq, Debug)]
 pub enum ConnackReturnCode {

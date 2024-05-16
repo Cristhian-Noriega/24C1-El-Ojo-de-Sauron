@@ -1,5 +1,4 @@
-use crate::errors::error::Error;
-use std::io::Read;
+use crate::{Error, Read};
 
 const MAX_MULTIPLIER: u32 = u32::pow(128, 3);
 const MAX_LENGTH: u32 = u32::pow(128, 4); // 268.435.455 bytes

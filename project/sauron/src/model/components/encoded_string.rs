@@ -1,5 +1,4 @@
-use crate::errors::error::Error;
-use std::io::Read;
+use crate::{Error, Read};
 
 const LENGTH_SIZE: usize = 2;
 

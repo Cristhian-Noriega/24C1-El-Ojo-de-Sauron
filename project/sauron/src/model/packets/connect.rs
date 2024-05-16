@@ -1,18 +1,10 @@
+use super::{CONNECT_PACKET_TYPE, RESERVED_FIXED_HEADER_FLAGS};
 use crate::{
-    errors::error::Error,
-    model::{
-        encoded_string::EncodedString, fixed_header::FixedHeader, qos::QoS,
-        remaining_length::RemainingLength,
-    },
+    EncodedString, Error, FixedHeader, Login, QoS, Read, RemainingLength, Will, PROTOCOL_LEVEL,
+    PROTOCOL_NAME,
 };
-use std::io::Read;
-
-const PACKET_TYPE: u8 = 0x01;
-const RESERVED_FIXED_HEADER_FLAGS: u8 = 0x00;
 
 const VARIABLE_HEADER_LENGTH: usize = 10;
-const PROTOCOL_NAME: [u8; 4] = [b'M', b'Q', b'T', b'T'];
-const PROTOCOL_LEVEL: u8 = 0x04;
 
 #[derive(Debug)]
 pub struct Connect {
@@ -22,8 +14,8 @@ pub struct Connect {
 
     // Payload Fields
     client_id: EncodedString,
-    will: Option<(QoS, bool, EncodedString, EncodedString)>, // tendría un struct will
-    user: Option<(EncodedString, Option<EncodedString>)>,    // tendría un struct user
+    will: Option<Will>,
+    login: Option<Login>,
 }
 
 impl Connect {
@@ -32,15 +24,15 @@ impl Connect {
         clean_session: bool,
         keep_alive: u16,
         client_id: EncodedString,
-        will: Option<(QoS, bool, EncodedString, EncodedString)>,
-        user: Option<(EncodedString, Option<EncodedString>)>,
+        will: Option<Will>,
+        login: Option<Login>,
     ) -> Self {
         Self {
             clean_session,
             keep_alive,
             client_id,
             will,
-            user,
+            login,
         }
     }
 
@@ -101,24 +93,13 @@ impl Connect {
         let client_id = EncodedString::from_bytes(stream)?;
 
         let will = if will_flag {
-            let will_topic = EncodedString::from_bytes(stream)?;
-            let will_message = EncodedString::from_bytes(stream)?;
-
-            Some((will_qos, will_retain, will_topic, will_message))
+            Some(Will::from_bytes(stream, will_qos, will_retain)?)
         } else {
             None
         };
 
-        let user = if username_flag {
-            let username = EncodedString::from_bytes(stream)?;
-
-            let password = if password_flag {
-                Some(EncodedString::from_bytes(stream)?)
-            } else {
-                None
-            };
-
-            Some((username, password))
+        let login = if username_flag {
+            Some(Login::from_bytes(stream, password_flag)?)
         } else {
             None
         };
@@ -128,7 +109,7 @@ impl Connect {
             keep_alive,
             client_id,
             will,
-            user,
+            login,
         ))
     }
 
@@ -138,17 +119,12 @@ impl Connect {
 
         payload_bytes.extend(self.client_id.to_bytes());
 
-        if let Some((_, _, will_topic, will_message)) = &self.will {
-            payload_bytes.extend(will_topic.to_bytes());
-            payload_bytes.extend(will_message.to_bytes());
+        if let Some(will) = &self.will {
+            payload_bytes.extend(will.to_bytes());
         }
 
-        if let Some((username, password)) = &self.user {
-            payload_bytes.extend(username.to_bytes());
-
-            if let Some(password) = password {
-                payload_bytes.extend(password.to_bytes());
-            }
+        if let Some(login) = &self.login {
+            payload_bytes.extend(login.to_bytes());
         }
 
         // Variable Header
@@ -157,12 +133,12 @@ impl Connect {
         variable_header_bytes.push(PROTOCOL_LEVEL);
 
         let (will_flag, will_qos, retain_flag) = match &self.will {
-            Some((qos, retain, _, _)) => (true, qos, *retain),
+            Some(will) => (true, will.qos(), will.retain()),
             None => (false, &QoS::AtMost, false),
         };
 
-        let (username_flag, password_flag) = match &self.user {
-            Some((_, password)) => (true, password.is_some()),
+        let (username_flag, password_flag) = match &self.login {
+            Some(login) => (true, login.password().is_some()),
             None => (false, false),
         };
 
@@ -176,7 +152,7 @@ impl Connect {
         variable_header_bytes.push(flags_byte);
         variable_header_bytes.extend(&self.keep_alive.to_be_bytes());
 
-        let mut fixed_header_bytes = vec![PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS];
+        let mut fixed_header_bytes = vec![CONNECT_PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS];
 
         // Fixed Header
         let remaining_length_value =

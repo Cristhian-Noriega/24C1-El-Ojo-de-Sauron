@@ -1,8 +1,4 @@
-use std::{io::Read, vec};
-
-use crate::errors::error::Error;
-
-use super::remaining_length::RemainingLength;
+use crate::{Error, Read, RemainingLength};
 
 pub struct FixedHeader {
     first_byte: u8,
