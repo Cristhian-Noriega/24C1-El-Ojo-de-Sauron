@@ -1,5 +1,5 @@
 use super::PUBLISH_PACKET_TYPE;
-use crate::{EncodedString, Error, FixedHeader, QoS, Read, RemainingLength};
+use crate::{Error, FixedHeader, QoS, Read, RemainingLength, TopicName};
 
 const PACKAGE_IDENTIFIER_LENGTH: usize = 2;
 
@@ -8,7 +8,7 @@ pub struct Publish {
     dup: bool,
     qos: QoS,
     retain: bool,
-    topic_name: EncodedString,
+    topic: TopicName,
     package_identifier: Option<u16>,
     payload: Vec<u8>,
 }
@@ -18,7 +18,7 @@ impl Publish {
         dup: bool,
         qos: QoS,
         retain: bool,
-        topic_name: EncodedString,
+        topic: TopicName,
         package_identifier: Option<u16>,
         payload: Vec<u8>,
     ) -> Self {
@@ -26,7 +26,7 @@ impl Publish {
             dup,
             qos,
             retain,
-            topic_name,
+            topic,
             package_identifier,
             payload,
         }
@@ -45,7 +45,7 @@ impl Publish {
 
         // Variable Header
 
-        let topic_name = EncodedString::from_bytes(stream)?;
+        let topic = TopicName::from_bytes(stream)?;
 
         let package_identifier = match qos {
             QoS::AtMost => None,
@@ -58,7 +58,7 @@ impl Publish {
         };
 
         let variable_header_len =
-            topic_name.length() + package_identifier.map_or(0, |_| PACKAGE_IDENTIFIER_LENGTH);
+            topic.length() + package_identifier.map_or(0, |_| PACKAGE_IDENTIFIER_LENGTH);
 
         // Payload
 
@@ -71,7 +71,7 @@ impl Publish {
             dup,
             qos,
             retain,
-            topic_name,
+            topic,
             package_identifier,
             payload,
         ))
@@ -82,7 +82,7 @@ impl Publish {
 
         let mut variable_header_bytes = vec![];
 
-        variable_header_bytes.extend(self.topic_name.to_bytes());
+        variable_header_bytes.extend(self.topic.to_bytes());
 
         if let Some(package_identifier) = self.package_identifier {
             variable_header_bytes.extend(&package_identifier.to_be_bytes());
