@@ -6,19 +6,19 @@ const PACKAGE_IDENTIFIER_LENGTH: usize = 2;
 use crate::{
     errors::error::Error,
     model::{
-        encoded_string::EncodedString, fixed_header::FixedHeader, qos::QoS,
-        remaining_length::RemainingLength,
+        fixed_header::FixedHeader, qos::QoS,
+        remaining_length::RemainingLength, topic_name::TopicName,
     },
 };
 
 #[derive(Debug)]
 pub struct Publish {
     dup: bool,
-    qos: QoS,
+    pub qos: QoS,
     pub retain: bool,
-    pub topic_name: EncodedString,
-    pub package_identifier: Option<u16>,
-    pub payload: Vec<u8>,
+    pub topic: TopicName,
+    package_identifier: Option<u16>,
+    payload: Vec<u8>,
 }
 
 impl Publish {
@@ -26,7 +26,7 @@ impl Publish {
         dup: bool,
         qos: QoS,
         retain: bool,
-        topic_name: EncodedString,
+        topic: TopicName,
         package_identifier: Option<u16>,
         payload: Vec<u8>,
     ) -> Self {
@@ -34,7 +34,7 @@ impl Publish {
             dup,
             qos,
             retain,
-            topic_name,
+            topic,
             package_identifier,
             payload,
         }
@@ -53,19 +53,20 @@ impl Publish {
 
         // Variable Header
 
-        let topic_name = EncodedString::from_bytes(stream)?;
+        let topic = TopicName::from_bytes(stream)?;
 
-        let package_identifier = if qos != QoS::AtMost {
-            let mut package_identifier_buffer = [0; PACKAGE_IDENTIFIER_LENGTH];
-            stream.read_exact(&mut package_identifier_buffer)?;
+        let package_identifier = match qos {
+            QoS::AtMost => None,
+            _ => {
+                let mut package_identifier_buffer = [0; PACKAGE_IDENTIFIER_LENGTH];
+                stream.read_exact(&mut package_identifier_buffer)?;
 
-            Some(u16::from_be_bytes(package_identifier_buffer))
-        } else {
-            None
+                Some(u16::from_be_bytes(package_identifier_buffer))
+            }
         };
 
         let variable_header_len =
-            topic_name.length() + package_identifier.map_or(0, |_| PACKAGE_IDENTIFIER_LENGTH);
+            topic.length() + package_identifier.map_or(0, |_| PACKAGE_IDENTIFIER_LENGTH);
 
         // Payload
 
@@ -78,7 +79,7 @@ impl Publish {
             dup,
             qos,
             retain,
-            topic_name,
+            topic,
             package_identifier,
             payload,
         ))
@@ -89,7 +90,7 @@ impl Publish {
 
         let mut variable_header_bytes = vec![];
 
-        variable_header_bytes.extend(self.topic_name.to_bytes());
+        variable_header_bytes.extend(self.topic.to_bytes());
 
         if let Some(package_identifier) = self.package_identifier {
             variable_header_bytes.extend(&package_identifier.to_be_bytes());

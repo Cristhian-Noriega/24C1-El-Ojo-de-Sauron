@@ -8,7 +8,7 @@ use model::{
         unsuback::Unsuback, unsubscribe::Unsubscribe,
     },
     qos::QoS,
-    return_codes::connack_return_code::ConnackReturnCode,
+    return_codes::connack_return_code::ConnackReturnCode, topic_name::TopicName,
 };
 
 pub mod errors;
@@ -62,12 +62,10 @@ pub fn publish(
     dup: bool,
     qos: QoS,
     retain: bool,
-    topic_name: String,
+    topic_name: TopicName,
     package_identifier: Option<u16>,
     payload: Vec<u8>,
 ) -> Packet {
-    let topic_name = EncodedString::from_string(&topic_name);
-
     Packet::Publish(Publish::new(
         dup,
         qos,

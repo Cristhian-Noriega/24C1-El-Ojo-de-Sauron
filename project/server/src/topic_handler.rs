@@ -6,7 +6,6 @@ use std::{
 
 use crate::client::Client;
 use sauron::model::{
-    encoded_string::EncodedString,
     packets::{puback::Puback, publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe},
     qos::QoS,
     topic_level::TopicLevel,
@@ -26,7 +25,7 @@ pub struct SubscriptionData {
 }
 
 pub struct Message {
-    pub client_id: EncodedString,
+    pub client_id: Vec<u8>,
     pub packet: Publish,
 }
 
@@ -74,7 +73,7 @@ impl Topic {
 pub struct TopicHandler {
     root: Topic,
     client_accions_receiver_channel: mpsc::Receiver<TopicHandlerTask>,
-    clients: HashMap<String, Client>,
+    clients: HashMap<Vec<u8>, Client>,
     active_connections: HashSet<i32>,
 }
 
@@ -92,9 +91,6 @@ impl TopicHandler {
         loop {
             match self.client_accions_receiver_channel.recv() {
                 Ok(task) => match task {
-                    // TopicHandlerTask::ConnectNewClient(client) => {
-                    //     self.connect_new_client(client);
-                    // }
                     TopicHandlerTask::SubscribeClient(subscribe, client_id) => {
                         self.subscribe(subscribe, client_id);
                     }
@@ -107,11 +103,11 @@ impl TopicHandler {
                     TopicHandlerTask::RegisterPubAck(puback) => {
                         self.register_puback(puback);
                     }
-                    TopicHandlerTask::ClientDisconnected(client_id) => {
-                        self.handle_client_disconnected(client_id);
-                    }
                     TopicHandlerTask::ClientConnected(client) => {
                         self.handle_client_connected(client);
+                    }
+                    TopicHandlerTask::ClientDisconnected(client_id) => {
+                        self.handle_client_disconnected(client_id);
                     }
                 },
                 Err(_) => {
@@ -157,18 +153,40 @@ impl TopicHandler {
 
     // Publish a message to a topic given a Publish packet
     pub fn publish(&self, publish_packet: Publish, client_id: Vec<u8>) {
-        let topic_name = publish_packet.topic_name.to_string();
-        let topic_levels: Vec<&str> = topic_name.split('/').collect();
-        let client_id = String::from_utf8(client_id).unwrap();
+        let topic_name = publish_packet.topic;
+        let topic_levels = topic_name.levels();
 
         let mut current_topic = &self.root;
         for level in topic_levels {
-            current_topic = current_topic.get_or_create_subtopic(level);
+            let level_str = String::from_utf8_lossy(level); 
+            current_topic = current_topic.get_or_create_subtopic(&level_str);
         }
-        let mut subscribers = current_topic.subscribers.write().unwrap();
-        // todo: here i should send the message to the subscribers
+
+        if publish_packet.retain {
+            let retained_message = Message {
+                client_id: client_id.clone(),
+                packet: publish_packet,
+            };
+            current_topic.add_retained_message(retained_message);
+        }
+
+        self.publish_to_subscribers(current_topic, &publish_packet, client_id);
+        
     }
 
+    pub fn publish_to_subscribers(&self, topic: &Topic, publish_packet: &Publish, client_id: Vec<u8>) {
+        let subscribers = topic.subscribers.read().unwrap();
+        for (subscriber_id, subscription_data) in subscribers.iter() {
+            if subscription_data.qos >= publish_packet.qos {
+                if let Some(client) = self.clients.get(subscriber_id) {
+                    client.send_packet(publish_packet);
+                } else {
+                    println!("Client {} not found", String::from_utf8_lossy(subscriber_id));
+                }
+            } 
+
+        }
+    }
 
     pub fn register_puback(&self, puback_packet: Puback) {
         todo!()
@@ -190,5 +208,6 @@ pub fn subscribe_to_all_subtopics(topic: &Topic, client_id: Vec<u8>, data: Subsc
         subscribe_to_all_subtopics(subtopic, client_id.clone(), data);
     }
 }
+
 
 
