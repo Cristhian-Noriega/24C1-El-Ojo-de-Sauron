@@ -1,12 +1,12 @@
 use crate::errors::error::Error;
-use std::io::Read;
+use std::{fmt, io::Read};
 
 const LENGTH_SIZE: usize = 2;
-
-#[derive(Debug)]
+ 
+#[derive(Debug)] 
 pub struct EncodedString {
     length: u16,
-    content: Vec<u8>,
+    pub content: Vec<u8>,
 }
 
 impl EncodedString {
@@ -36,12 +36,6 @@ impl EncodedString {
         Self { length, content }
     }
 
-    pub fn to_string(&self) -> String { 
-        match std::str::from_utf8(&self.content) {
-            Ok(string) => string.to_string(),
-            Err(_) => "".to_string(),
-        }
-    }
 
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = vec![];
@@ -61,5 +55,14 @@ impl EncodedString {
 
     pub fn encoded_length(&self) -> usize {
         LENGTH_SIZE + self.length as usize
+    }
+}
+
+impl fmt::Display for EncodedString {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match std::str::from_utf8(&self.content) {
+            Ok(string) => write!(f, "{}", string),
+            Err(_) => write!(f, "Invalid UTF-8 sequence"),
+        }
     }
 }

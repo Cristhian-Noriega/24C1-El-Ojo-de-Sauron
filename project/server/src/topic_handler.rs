@@ -1,23 +1,24 @@
-use std::error::Error;
-use std::sync::{mpsc, Arc, RwLock};
-use std::time::Duration;
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::{mpsc, RwLock},
+    time::Duration,
+};
 
-use sauron::model::encoded_string::EncodedString;
-use sauron::model::qos::QoS;
-use sauron::model::packets::{puback::Puback, publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe};
-use sauron::model::topic_filter::TopicFilter;
-use sauron::model::topic_level::TopicLevel;
 use crate::client::Client;
+use sauron::model::{
+    encoded_string::EncodedString,
+    packets::{puback::Puback, publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe},
+    qos::QoS,
+    topic_level::TopicLevel,
+};
 
 pub enum TopicHandlerTask {
-    //todo: cambiarlo a nombres con acknoledgement al connect y disconnect
-    //ConnectNewClient(Client), no es responsabilidad del topic handler la conexion
     SubscribeClient(Subscribe, Vec<u8>),
     UnsubscribeClient(Unsubscribe, Vec<u8>),
     Publish(Publish, Vec<u8>),
     RegisterPubAck(Puback),
-    //DisconnectClient(String), no es responsabilidad del topic handler la desconexion
+    ClientConnected(Client),
+    ClientDisconnected(Vec<u8>),
 }
 
 pub struct SubscriptionData {
@@ -29,12 +30,12 @@ pub struct Message {
     pub packet: Publish,
 }
 
-type Suscriber = HashMap<String, SubscriptionData>;
+type Suscriber = HashMap<Vec<u8>, SubscriptionData>;
 type Subtopic = HashMap<String, Topic>;
 
 pub struct Topic {
     subscribers: RwLock<Suscriber>,
-    retained_messages: RwLock<Vec<Message>>, 
+    retained_messages: RwLock<Vec<Message>>,
     subtopics: RwLock<Subtopic>,
 }
 
@@ -49,15 +50,17 @@ impl Topic {
 
     pub fn get_or_create_subtopic(&self, level: &str) -> &Topic {
         let mut subtopics = self.subtopics.write().unwrap();
-        subtopics.entry(level.to_string()).or_insert_with(Topic::new)
+        subtopics
+            .entry(level.to_string())
+            .or_insert_with(Topic::new)
     }
 
-    pub fn add_subscriber(&self, client_id: String, data: SubscriptionData) {
+    pub fn add_subscriber(&self, client_id: Vec<u8>, data: SubscriptionData) {
         let mut subscribers = self.subscribers.write().unwrap();
         subscribers.insert(client_id, data);
     }
 
-    pub fn remove_subscriber(&self, client_id: String) {
+    pub fn remove_subscriber(&self, client_id: Vec<u8>) {
         let mut subscribers = self.subscribers.write().unwrap();
         subscribers.remove(&client_id);
     }
@@ -66,7 +69,6 @@ impl Topic {
         let mut retained_messages = self.retained_messages.write().unwrap();
         retained_messages.push(message);
     }
-
 }
 
 pub struct TopicHandler {
@@ -105,9 +107,12 @@ impl TopicHandler {
                     TopicHandlerTask::RegisterPubAck(puback) => {
                         self.register_puback(puback);
                     }
-                    // TopicHandlerTask::DisconnectClient(client_id) => {
-                    //     self.disconnect_client(client_id);
-                    // }
+                    TopicHandlerTask::ClientDisconnected(client_id) => {
+                        self.handle_client_disconnected(client_id);
+                    }
+                    TopicHandlerTask::ClientConnected(client) => {
+                        self.handle_client_connected(client);
+                    }
                 },
                 Err(_) => {
                     std::thread::sleep(Duration::from_secs(1));
@@ -117,30 +122,34 @@ impl TopicHandler {
     }
 
     // Subscribe a client_id into a set of topics given a Subscribe packet
+    // todo: replace the unwraps
     pub fn subscribe(&self, packet: Subscribe, client_id: Vec<u8>) {
-        //let topics = packet.topics.iter().collect();
-        let client_id = String::from_utf8(client_id).unwrap();
         for (topic_filter, qos) in packet.topics {
             let mut topic = &self.root;
             let data = SubscriptionData { qos };
-            for level in &topic_filter.levels {
+            for level in topic_filter.levels {
                 match level {
                     TopicLevel::Literal(level_bytes) => {
-                        let level = String::from_utf8_lossy(level_bytes);
+                        let level = String::from_utf8(level_bytes).unwrap();
                         topic = topic.get_or_create_subtopic(&level);
                     }
-                    TopicLevel::SingleLevelWildcard  => {
-                        todo!()
+                    TopicLevel::SingleLevelWildcard => {
+                        let subtopics = topic.subtopics.read().unwrap();
+                        for subtopic in subtopics.values() {
+                            subtopic.add_subscriber(client_id.clone(), data);
+                        }
+                        topic = &self.root;
                     }
                     TopicLevel::MultiLevelWildcard => {
-                        todo!()
+                        topic.add_subscriber(client_id.clone(), data);
+                        subscribe_to_all_subtopics(topic, client_id.clone(), data);
                     }
                 }
             }
             topic.add_subscriber(client_id.clone(), data);
         }
     }
-    
+
     // Unsubscribe a client_id from a set of topics given an Unsubscribe packet
     pub fn unsubscribe(&self, unsubscribe_packet: Unsubscribe) {
         todo!()
@@ -156,111 +165,30 @@ impl TopicHandler {
         for level in topic_levels {
             current_topic = current_topic.get_or_create_subtopic(level);
         }
-        // if publish_packet.retain {
-        //     let message = Message {
-        //         client_id,
-        //         packet: publish_packet,
-        //     };
-        //     current_topic.add_retained_message(message);
-        // }
         let mut subscribers = current_topic.subscribers.write().unwrap();
         // todo: here i should send the message to the subscribers
     }
 
-    // Register a Puback packet
+
     pub fn register_puback(&self, puback_packet: Puback) {
         todo!()
     }
 
+    pub fn handle_client_connected(&self, client: Client) {
+        todo!()
+    }
 
+    pub fn handle_client_disconnected(&self, client_id: Vec<u8>) {
+        todo!()
+    }
+}
+
+pub fn subscribe_to_all_subtopics(topic: &Topic, client_id: Vec<u8>, data: SubscriptionData) {
+    topic.add_subscriber(client_id.clone(), data);
+    let subtopics = topic.subtopics.read().unwrap();
+    for subtopic in subtopics.values() {
+        subscribe_to_all_subtopics(subtopic, client_id.clone(), data);
+    }
 }
 
 
-
-//     // Subscribe a client_id into a set of topics given a Subscribe packet
-//     pub fn subscribe(&self, packet: Subscribe) {
-//         let client_id = packet.client_id;
-//         let topics = packet.get_topics();
-//         for topic in topics {
-//             let data = SubscriptionData { qos: topic.qos };
-//             subscribe_to_topic(&self.root, topic.topic_name, client_id, data);
-//         }
-//         Ok(());
-//     }
-
-//     pub fn connect_new_client(self, client: Client) {
-//         let client_id = client.id;
-//         if self.active_connections.contains(client.id) {
-//             println!("Client already connected: {:?}", client.id);
-//             return;
-//         } else {
-//             self.clients.insert(client.id.to_string(), client);
-//             self.active_connections.insert(client.id);
-//             println!("New client connected: {:?}", client.id);
-
-//             client.stream.write_all(Packet::Connack(
-//                 Connack::new(true, "CONNECT CODE????").to_bytes(),
-//             ));
-//         }
-//     }
-//     pub fn unsubscribe(&self, unsubscribe_packet: Unsubscribe) {
-//         let client_id = unsubscribe_packet.client_id;
-//         let topics = unsubscribe_packet.get_topics();
-//         for topic in topics {
-//             unsubscribe_to_topic(&self.root, topic.topic_name, client_id);
-//         }
-//         Ok(());
-//     }
-
-//     pub fn publish(&self, publish_packet: Publish) {
-//         let topic_name = publish_packet.topic_name;
-//         let message = Message {
-//             client_id: publish_packet.client_id,
-//             packet: publish_packet,
-//         };
-//         publish_to_topic(&self.root, topic_name, message);
-//     }
-
-//     pub fn register_puback(&self, puback_packet: Puback) {
-//         //TODO: implementar
-//     }
-
-//     pub fn disconnect_client(&self, client_id: String) {
-//         self.clients.remove(&client_id);
-//         self.active_connections.remove(&client_id);
-//     }
-// }
-
-// pub fn subscribe_to_topic(
-//     current_topic: &Topic,
-//     topics: &str,
-//     client_id: &str,
-//     data: SubscriptionData,
-// )  {
-//     todo!()
-//     // let (topic, rest) = match topics.split_once("/") {
-//     //     Some((topic_name, rest)) => {
-//     //         // uso de write para obtener el rwlock en modo escritura
-//     //         let subtopics = current_topic.subtopics.read()?;
-//     //         if subtopics.get(topic_name).is_none() {
-//     //             drop(subtopics); //libero el lock de escritura antes de obtenerlo en modo escritura
-//     //             let mut subtopics = current_topic.subtopics.write()?;
-//     //             subtopics.insert(topic_name.to_string(), Topic::new());
-
-//     //             (subtopics.get(topic_name)?, rest);
-//     //         } else {
-//     //             //el topic ya existe
-//     //             (subtopics.get(topic_name)?, rest);
-//     //         }
-//     //     }
-//     //     None => {
-//     //         //caso base
-//     //         //si no hay mas subtopics, agrego el client_id a la lista de subscribers
-//     //         let mut subscribers = current_topic.subscribers.write()?;
-//     //         subscribers.insert(client_id.to_string(), data);
-//     //         return Ok(());
-//     //     }
-//     // };
-//     // //llamada recursiva para seguir bajando en la jerarquia de topics
-//     // subscribe_to_topic(topic, rest, client_id, data)
-// }

@@ -4,8 +4,6 @@ mod server;
 
 static SERVER_ARGS: usize = 2;
 
-
-
 pub fn main() -> Result<(), ()> {
     let argv = env::args().collect::<Vec<String>>();
     if argv.len() != SERVER_ARGS {

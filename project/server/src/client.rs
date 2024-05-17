@@ -1,13 +1,13 @@
 #![allow(dead_code)]
 
+use std::net::TcpStream;
 use std::sync::atomic::AtomicBool;
 use std::sync::Mutex;
-use std::net::TcpStream;
 
-// represents the state of the client in the server 
+// represents the state of the client in the server
 
-pub struct Client { 
-    pub id: String,
+pub struct Client {
+    pub id: Vec<u8>,
     pub password: String,
     pub subscriptions: Vec<String>,
     pub alive: AtomicBool,
@@ -16,13 +16,11 @@ pub struct Client {
 
 impl Client {
     pub fn new(
-        id: String, 
-        password: String, 
+        id: Vec<u8>,
+        password: String,
         stream: TcpStream,
         clean_session: bool,
-        keep_alive: u16, 
-        // will: Option<(QoS, String, String)>, 
-        // user: Option<(String, Option<String>)>
+        keep_alive: u16,
     ) -> Client {
         Client {
             id,

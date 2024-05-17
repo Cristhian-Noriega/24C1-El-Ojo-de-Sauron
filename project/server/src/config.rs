@@ -1,17 +1,18 @@
-
-
 //Configuración: debe incluir todos los parámetros necesarios para la ejecución del servidor, como el puerto, direccion IP, etc.
 
 //(no esta permitido definir estos valores mediante constantes en el código)
 // Config contains the configuration for the server to run it
 
-use std::{fs::File, io::{BufRead, BufReader, Read}};
+use std::{
+    fs::File,
+    io::{BufRead, BufReader, Read},
+};
 
 pub struct Config {
-port: u16,
-address: String,
-log_file: String,
-segs_to_disconnect: u32,
+    port: u16,
+    address: String,
+    log_file: String,
+    segs_to_disconnect: u32,
 }
 
 impl Config {
@@ -25,8 +26,9 @@ impl Config {
         let mut port = Self::get_value_from_file(&mut buf_reader, "port")?;
         let mut address = Self::get_value_from_file(&mut buf_reader, "address")?;
         let mut log_file = Self::get_value_from_file(&mut buf_reader, "log_file")?;
-        let mut segs_to_disconnect = Self::get_value_from_file(&mut buf_reader, "segs_to_disconnect")?;
-        
+        let mut segs_to_disconnect =
+            Self::get_value_from_file(&mut buf_reader, "segs_to_disconnect")?;
+
         let segs_to_disconnect = segs_to_disconnect.parse().ok()?;
         let port = port.parse().ok()?;
 
@@ -68,19 +70,13 @@ impl Config {
     }
 }
 
-  
-
 // Tests
-
-  
 
 // #[cfg(test)]
 
 // mod tests {
 
 // use super::*;
-
-  
 
 // #[test]
 
@@ -101,8 +97,6 @@ impl Config {
 // let mut cursor = Cursor::new(config_data);
 
 // let config = Config::from_file(&mut cursor).unwrap();
-
-  
 
 // assert_eq!(config.port, 8080);
 
