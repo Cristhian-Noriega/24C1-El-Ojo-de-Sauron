@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+#![allow(unused_variables)]
 use std::{
     collections::{HashMap, HashSet},
     sync::{mpsc, RwLock},
@@ -19,7 +21,7 @@ pub enum TopicHandlerTask {
     ClientConnected(Client),
     ClientDisconnected(Vec<u8>),
 }
-
+#[derive(Clone)]
 pub struct SubscriptionData {
     qos: QoS,
 }
@@ -29,13 +31,15 @@ pub struct Message {
     pub packet: Publish,
 }
 
-type Suscriber = HashMap<Vec<u8>, SubscriptionData>;
-type Subtopic = HashMap<String, Topic>;
+type Suscribers = HashMap<Vec<u8>, SubscriptionData>;
+type Subtopic = HashMap<Vec<u8>, Topic>;
 
 pub struct Topic {
-    subscribers: RwLock<Suscriber>,
+    subscribers: RwLock<Suscribers>,
     retained_messages: RwLock<Vec<Message>>,
     subtopics: RwLock<Subtopic>,
+    // multi_level_wildcard_subscribers: RwLock<Vec<Vec<u8>>>,
+    // single_level_wildcard_subscribers: RwLock<Vec<Vec<u8>>>,
 }
 
 impl Topic {
@@ -47,11 +51,38 @@ impl Topic {
         }
     }
 
-    pub fn get_or_create_subtopic(&self, level: &str) -> &Topic {
-        let mut subtopics = self.subtopics.write().unwrap();
-        subtopics
-            .entry(level.to_string())
-            .or_insert_with(Topic::new)
+    // todo: replace the unwraps
+    pub fn subscribe(&self, topic: &Topic, mut levels: Vec<TopicLevel>, client_id: Vec<u8>, data: SubscriptionData) {
+        if levels.is_empty() {
+            self.add_subscriber(client_id.clone(), data.clone()c);
+            return;
+        }
+        //let level = &levels[0];
+        let level = levels.remove(0);
+        match level {
+            TopicLevel::Literal(level_bytes) => {
+                let subtopics = self.subtopics.read().unwrap();
+                if let Some(subtopic) = subtopics.get(&level_bytes) {
+                    self.subscribe(subtopic, levels.clone(), client_id, data);
+                } else {
+                    let mut subtopics = self.subtopics.write().unwrap();
+                    subtopics.insert(level_bytes.clone(), Topic::new());
+                    let subtopic = subtopics.get(&level_bytes).unwrap();
+                    self.subscribe(subtopic, levels.clone(), client_id, data);
+                }
+            }
+            TopicLevel::SingleLevelWildcard => {
+                let subtopics = self.subtopics.read().unwrap();
+                for subtopic in subtopics.values() {
+                    self.subscribe(subtopic, levels.clone(), client_id.clone(), data.clone());
+                }
+
+            }
+            TopicLevel::MultiLevelWildcard => { 
+                topic.add_subscriber(client_id.clone(), data.clone());
+                subscribe_to_all_subtopics(topic, client_id, &data)
+            }
+        }
     }
 
     pub fn add_subscriber(&self, client_id: Vec<u8>, data: SubscriptionData) {
@@ -98,7 +129,7 @@ impl TopicHandler {
                         self.unsubscribe(unsubscribe);
                     }
                     TopicHandlerTask::Publish(publish, client_id) => {
-                        self.publish(publish, client_id);
+                        self.publish(&publish, client_id);
                     }
                     TopicHandlerTask::RegisterPubAck(puback) => {
                         self.register_puback(puback);
@@ -118,32 +149,13 @@ impl TopicHandler {
     }
 
     // Subscribe a client_id into a set of topics given a Subscribe packet
-    // todo: replace the unwraps
+    
     pub fn subscribe(&self, packet: Subscribe, client_id: Vec<u8>) {
-        for (topic_filter, qos) in packet.topics {
-            let mut topic = &self.root;
-            let data = SubscriptionData { qos };
-            for level in topic_filter.levels {
-                match level {
-                    TopicLevel::Literal(level_bytes) => {
-                        let level = String::from_utf8(level_bytes).unwrap();
-                        topic = topic.get_or_create_subtopic(&level);
-                    }
-                    TopicLevel::SingleLevelWildcard => {
-                        let subtopics = topic.subtopics.read().unwrap();
-                        for subtopic in subtopics.values() {
-                            subtopic.add_subscriber(client_id.clone(), data);
-                        }
-                        topic = &self.root;
-                    }
-                    TopicLevel::MultiLevelWildcard => {
-                        topic.add_subscriber(client_id.clone(), data);
-                        subscribe_to_all_subtopics(topic, client_id.clone(), data);
-                    }
-                }
-            }
-            topic.add_subscriber(client_id.clone(), data);
-        }
+        let topics = packet.topics;
+        for (topic_filter, qos) in topics {
+            let data = SubscriptionData {qos};
+            
+        };
     }
 
     // Unsubscribe a client_id from a set of topics given an Unsubscribe packet
@@ -151,42 +163,54 @@ impl TopicHandler {
         todo!()
     }
 
-    // Publish a message to a topic given a Publish packet
-    pub fn publish(&self, publish_packet: Publish, client_id: Vec<u8>) {
-        let topic_name = publish_packet.topic;
-        let topic_levels = topic_name.levels();
-
-        let mut current_topic = &self.root;
-        for level in topic_levels {
-            let level_str = String::from_utf8_lossy(level); 
-            current_topic = current_topic.get_or_create_subtopic(&level_str);
-        }
-
-        if publish_packet.retain {
-            let retained_message = Message {
-                client_id: client_id.clone(),
-                packet: publish_packet,
-            };
-            current_topic.add_retained_message(retained_message);
-        }
-
-        self.publish_to_subscribers(current_topic, &publish_packet, client_id);
-        
+    pub fn publish(&self, publish_packet: &Publish, client_id: Vec<u8>) {
+        todo!()
     }
 
-    pub fn publish_to_subscribers(&self, topic: &Topic, publish_packet: &Publish, client_id: Vec<u8>) {
-        let subscribers = topic.subscribers.read().unwrap();
-        for (subscriber_id, subscription_data) in subscribers.iter() {
-            if subscription_data.qos >= publish_packet.qos {
-                if let Some(client) = self.clients.get(subscriber_id) {
-                    client.send_packet(publish_packet);
-                } else {
-                    println!("Client {} not found", String::from_utf8_lossy(subscriber_id));
-                }
-            } 
+    //    // Publish a message to a topic given a Publish packet
+    //    pub fn publish(&self, publish_packet: &Publish, client_id: Vec<u8>) {
+    //     //let publish_packet = publish_packet.clone(); 
+    //     let topic_name = &publish_packet.topic;
+    //     let topic_levels = topic_name.levels();
 
-        }
-    }
+    //     let mut current_topic = &self.root;
+    //     for level in topic_levels {
+    //         let subtopics = current_topic.subtopics.read().unwrap(); // Read lock
+    //         match subtopics.get(level) {
+    //             Some(subtopic) => {
+    //                 current_topic = subtopic;
+    //             }
+    //             None => {
+    //                 let mut subtopics = current_topic.subtopics.write().unwrap(); // Write lock
+    //                 subtopics.insert(level.clone(), Topic::new());
+    //                 //current_topic = subtopics.get(mut level).unwrap();
+    //             }
+    //         }
+    //     }
+
+    //     if publish_packet.retain {
+    //         let retained_message = Message {
+    //             client_id: client_id.clone(),
+    //             packet: publish_packet.clone(),
+    //         };
+    //         current_topic.add_retained_message(retained_message);
+    //     }
+
+    //     self.publish_to_subscribers(current_topic, publish_packet, client_id);
+    // }
+    // pub fn publish_to_subscribers(&self, topic: &Topic, publish_packet: &Publish, client_id: Vec<u8>) {
+    //     let subscribers = topic.subscribers.read().unwrap();
+    //     for (subscriber_id, subscription_data) in subscribers.iter() {
+    //         if subscription_data.qos >= publish_packet.qos {
+    //             if let Some(client) = self.clients.get(subscriber_id) {
+    //                 //client.send_packet(publish_packet);
+    //             } else {
+    //                 println!("Client {} not found", String::from_utf8_lossy(subscriber_id));
+    //             }
+    //         } 
+
+    //     }
+    // }
 
     pub fn register_puback(&self, puback_packet: Puback) {
         todo!()
@@ -201,13 +225,10 @@ impl TopicHandler {
     }
 }
 
-pub fn subscribe_to_all_subtopics(topic: &Topic, client_id: Vec<u8>, data: SubscriptionData) {
-    topic.add_subscriber(client_id.clone(), data);
+pub fn subscribe_to_all_subtopics(topic: &Topic, client_id: Vec<u8>, data: &SubscriptionData) {
+    topic.add_subscriber(client_id.clone(), data.clone());
     let subtopics = topic.subtopics.read().unwrap();
     for subtopic in subtopics.values() {
         subscribe_to_all_subtopics(subtopic, client_id.clone(), data);
     }
 }
-
-
-

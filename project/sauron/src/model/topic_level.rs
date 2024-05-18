@@ -3,7 +3,7 @@ use crate::errors::error::Error;
 const MULTI_LEVEL_WILDCARD: u8 = 0x23;
 const SINGLE_LEVEL_WILDCARD: u8 = 0x2B;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum TopicLevel {
     Literal(Vec<u8>),
     MultiLevelWildcard,

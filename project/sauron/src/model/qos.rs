@@ -1,6 +1,6 @@
 use crate::errors::error::Error;
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone)]
 pub enum QoS {
     AtMost,
     AtLeast,

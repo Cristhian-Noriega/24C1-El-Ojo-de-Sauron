@@ -7,7 +7,7 @@ use super::{encoded_string::EncodedString, topic_level::TopicLevel};
 const FORWARD_SLASH: u8 = 0x2F;
 const SERVER_RESERVED: u8 = 0x24;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TopicName {
     levels: Vec<Vec<u8>>,
     server_reserved: bool,

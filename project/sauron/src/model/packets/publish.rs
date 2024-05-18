@@ -11,7 +11,7 @@ use crate::{
     },
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Publish {
     dup: bool,
     pub qos: QoS,

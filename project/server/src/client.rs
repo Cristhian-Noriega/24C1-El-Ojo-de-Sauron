@@ -4,6 +4,8 @@ use std::net::TcpStream;
 use std::sync::atomic::AtomicBool;
 use std::sync::Mutex;
 
+use sauron::model::packets::publish::Publish;
+
 // represents the state of the client in the server
 
 pub struct Client {
@@ -30,4 +32,5 @@ impl Client {
             stream: Mutex::new(stream),
         }
     }
+    
 }

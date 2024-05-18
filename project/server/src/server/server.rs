@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+#![allow(unused_variables)]
 use crate::{
     client::Client,
     config::Config,
@@ -96,7 +97,7 @@ impl Server {
             .send(TopicHandlerTask::ClientConnected(new_client));
 
         println!("New client connected: {:?}", client_id);
-        self.create_new_client_thread(self.client_actions_sender_channel.clone, mut stream, client_id); 
+        self.create_new_client_thread(self.client_actions_sender_channel, stream, client_id); 
     }
 
     pub fn create_new_client_thread(
