@@ -9,7 +9,7 @@ const SERVER_RESERVED: u8 = 0x24;
 
 #[derive(Debug, Clone)]
 pub struct TopicName {
-    levels: Vec<Vec<u8>>,
+    pub levels: Vec<Vec<u8>>,
     server_reserved: bool,
 }
 

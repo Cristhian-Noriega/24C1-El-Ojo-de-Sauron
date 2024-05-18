@@ -32,5 +32,4 @@ impl Client {
             stream: Mutex::new(stream),
         }
     }
-    
 }

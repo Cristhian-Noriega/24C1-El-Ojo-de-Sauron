@@ -8,7 +8,8 @@ use model::{
         unsuback::Unsuback, unsubscribe::Unsubscribe,
     },
     qos::QoS,
-    return_codes::connack_return_code::ConnackReturnCode, topic_name::TopicName,
+    return_codes::connack_return_code::ConnackReturnCode,
+    topic_name::TopicName,
 };
 
 pub mod errors;

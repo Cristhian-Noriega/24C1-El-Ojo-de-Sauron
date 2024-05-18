@@ -2,8 +2,8 @@ use crate::errors::error::Error;
 use std::{fmt, io::Read};
 
 const LENGTH_SIZE: usize = 2;
- 
-#[derive(Debug)] 
+
+#[derive(Debug)]
 pub struct EncodedString {
     length: u16,
     pub content: Vec<u8>,
@@ -35,7 +35,6 @@ impl EncodedString {
 
         Self { length, content }
     }
-
 
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = vec![];

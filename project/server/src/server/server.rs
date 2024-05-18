@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 use crate::{
-    client::Client,
+    client::{self, Client},
     config::Config,
     topic_handler::{TopicHandler, TopicHandlerTask},
 };
@@ -40,7 +40,7 @@ impl Server {
         let server = Server::new();
         let listener = TcpListener::bind(address)?;
 
-        Server::intialize_topic_handler_thread(server.client_actions_receiver_channel);
+        Server::intialize_topic_handler_thread(server.client_actions_sender_channel, server.client_actions_receiver_channel);
 
         for stream_result in listener.incoming() {
             match stream_result {
@@ -49,8 +49,6 @@ impl Server {
                     println!("Nuevo paquete de la dirección: {:?}", address);
                     let mut reader = BufReader::new(stream);
                     let mut buffer = Vec::new();
-
-
 
                     let mut cursor = std::io::Cursor::new(buffer);
 
@@ -75,6 +73,7 @@ impl Server {
         Ok(())
     }
     pub fn intialize_topic_handler_thread(
+        client_actions_sender_channel: std::sync::mpsc::Sender<TopicHandlerTask>,
         client_actions_receiver_channel: std::sync::mpsc::Receiver<TopicHandlerTask>,
     ) {
         thread::spawn(move || {
@@ -97,7 +96,7 @@ impl Server {
             .send(TopicHandlerTask::ClientConnected(new_client));
 
         println!("New client connected: {:?}", client_id);
-        self.create_new_client_thread(self.client_actions_sender_channel, stream, client_id); 
+        self.create_new_client_thread(self.client_actions_sender_channel, stream, client_id);
     }
 
     pub fn create_new_client_thread(
@@ -175,22 +174,12 @@ pub fn handle_packet(
     };
     mantain_thread
 }
-// Validates that the client_id in the packet is the same as the client_id of the current thread. If it isn't the same, the thread should be killed.
-// solo el paquete connect tiene el client id
-// pub fn validate_client_id(packet: Packet, client_id: Vec<u8>) -> bool {
-//     if packet.client_id != client_id{
-//         println!("Client ID doesn't match.");
-//         return false;
-//     }
-//     true
-// }
 
 pub fn handle_publish(
     publish_packet: Publish,
     sender_to_topics_channel: std::sync::mpsc::Sender<TopicHandlerTask>,
     client_id: Vec<u8>,
 ) -> bool {
-    //validate_client_id(publish_packet, client_id);
     sender_to_topics_channel.send(TopicHandlerTask::Publish(publish_packet, client_id));
 
     true
@@ -201,7 +190,6 @@ pub fn handle_puback(
     sender_to_topics_channel: std::sync::mpsc::Sender<TopicHandlerTask>,
     client_id: Vec<u8>,
 ) -> bool {
-    //if !validate_client_id(puback_packet, client_id) {return false};
     sender_to_topics_channel.send(TopicHandlerTask::RegisterPubAck(puback_packet));
 
     true
@@ -212,7 +200,6 @@ pub fn handle_subscribe(
     sender_to_topics_channel: std::sync::mpsc::Sender<TopicHandlerTask>,
     client_id: Vec<u8>,
 ) -> bool {
-    //if !validate_client_id(subscribe_packet, client_id) {return false};
     sender_to_topics_channel.send(TopicHandlerTask::SubscribeClient(
         subscribe_packet,
         client_id,
@@ -240,7 +227,7 @@ pub fn handle_disconnect(
     sender_to_topics_channel: std::sync::mpsc::Sender<TopicHandlerTask>,
     client_id: Vec<u8>,
 ) -> bool {
-    //sender_to_topics_channel.send(TopicHandlerTask::DisconnectClient(client_id));
+    sender_to_topics_channel.send(TopicHandlerTask::ClientDisconnected(client_id));
 
     false
 }

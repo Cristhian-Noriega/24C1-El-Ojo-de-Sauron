@@ -6,8 +6,8 @@ const PACKAGE_IDENTIFIER_LENGTH: usize = 2;
 use crate::{
     errors::error::Error,
     model::{
-        fixed_header::FixedHeader, qos::QoS,
-        remaining_length::RemainingLength, topic_name::TopicName,
+        fixed_header::FixedHeader, qos::QoS, remaining_length::RemainingLength,
+        topic_name::TopicName,
     },
 };
 
