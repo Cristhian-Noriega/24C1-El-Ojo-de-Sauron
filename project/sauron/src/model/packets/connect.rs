@@ -65,7 +65,7 @@ impl Connect {
         let flags_buffer = &mut [0; 1];
         stream.read_exact(flags_buffer)?;
 
-        let flags_byte = flags_buffer[5];
+        let flags_byte = flags_buffer[0];
 
         let reserved = flags_byte & 0b0000_0001;
         if reserved != 0 {
@@ -180,41 +180,348 @@ impl Connect {
 
         packet_bytes
     }
+
+    pub fn clean_session(&self) -> bool {
+        self.clean_session
+    }
+
+    pub fn keep_alive(&self) -> u16 {
+        self.keep_alive
+    }
+
+    pub fn client_id(&self) -> &EncodedString {
+        &self.client_id
+    }
+
+    pub fn will(&self) -> Option<&Will> {
+        self.will.as_ref()
+    }
+
+    pub fn login(&self) -> Option<&Login> {
+        self.login.as_ref()
+    }
 }
 
 #[cfg(test)]
 mod test {
+    use crate::model::components::{fixed_header, topic_name::TopicName};
+
     use super::*;
 
+    #[allow(dead_code)]
+    fn fixed_header_bytes(remaining_length: RemainingLength) -> Vec<u8> {
+        let fixed_header =
+            fixed_header::FixedHeader::new(CONNECT_PACKET_TYPE << 4, remaining_length);
+
+        fixed_header.to_bytes()
+    }
+
+    #[allow(dead_code)]
+    fn variable_header_bytes(flags: u8, keep_alive: u16) -> Vec<u8> {
+        let protocol_name_bytes = EncodedString::new(PROTOCOL_NAME.to_vec()).to_bytes();
+        let protocol_level_byte = vec![PROTOCOL_LEVEL];
+
+        let keep_alive_bytes = keep_alive.to_be_bytes();
+
+        let mut variable_header_bytes = vec![];
+        variable_header_bytes.extend(protocol_name_bytes);
+        variable_header_bytes.extend(protocol_level_byte);
+        variable_header_bytes.push(flags);
+        variable_header_bytes.extend(keep_alive_bytes);
+
+        variable_header_bytes
+    }
+
+    #[allow(dead_code)]
+    fn header_bytes(remaining_length: RemainingLength, flags: u8, keep_alive: u16) -> Vec<u8> {
+        let fixed_header_bytes = fixed_header_bytes(remaining_length);
+        let variable_header_bytes = variable_header_bytes(flags, keep_alive);
+
+        [&fixed_header_bytes[..], &variable_header_bytes[..]].concat()
+    }
+
     #[test]
-    fn test_connect() {
+    fn test_simple_connect_to_bytes() {
         let clean_session = false;
         let keep_alive = 10;
         let client_id = EncodedString::new(b"a".to_vec());
-        let will = None;
-        let login = None;
 
-        let connect = Connect::new(clean_session, keep_alive, client_id, will, login);
+        let connect = Connect::new(clean_session, keep_alive, client_id, None, None);
         let connect_bytes = connect.to_bytes();
 
-        let expected_bytes = vec![
-            0b0001_0000, // packet type and flags
-            0b0000_1101, // remaining length (13)
-            0b0000_0000, // protocol name length MSB
-            0b0000_0100, // protocol name length LSB
-            0b0100_1101, // M
-            0b0101_0001, // Q
-            0b0101_0100, // T
-            0b0101_0100, // T
-            0b0000_0100, // protocol level
-            0b0000_0000, // flags
-            0b0000_0000, // keep alive MSB
-            0b0000_1010, // keep alive LSB
-            0b0000_0000, // client id length MSB
-            0b0000_0001, // client id length LSB
-            0b0110_0001, // a
-        ];
+        let expected_header_bytes = header_bytes(RemainingLength::new(13), 0b0000_0000, 10);
+        let expected_payload_bytes = EncodedString::new(b"a".to_vec()).to_bytes();
+
+        let expected_bytes = [&expected_header_bytes[..], &expected_payload_bytes[..]].concat();
 
         assert_eq!(connect_bytes, expected_bytes);
+    }
+
+    #[test]
+    fn test_connect_to_bytes_with_will() {
+        let clean_session = false;
+        let keep_alive = 10;
+        let client_id = EncodedString::new(b"a".to_vec());
+        let will = Will::new(
+            QoS::AtLeast,
+            true,
+            TopicName::new(vec![b"home".to_vec(), b"livingroom".to_vec()], false),
+            EncodedString::new(b"message".to_vec()),
+        );
+
+        let expected_will_bytes = will.to_bytes();
+
+        let connect = Connect::new(clean_session, keep_alive, client_id, Some(will), None);
+
+        let connect_bytes = connect.to_bytes();
+
+        let expected_header_bytes = header_bytes(RemainingLength::new(39), 0b0010_1100, 10);
+        let expected_client_id_bytes = EncodedString::new(b"a".to_vec()).to_bytes();
+
+        let expected_payload_bytes =
+            [&expected_client_id_bytes[..], &expected_will_bytes[..]].concat();
+        let expected_bytes = [&expected_header_bytes[..], &expected_payload_bytes[..]].concat();
+
+        assert_eq!(connect_bytes, expected_bytes);
+    }
+
+    #[test]
+    fn test_connect_to_bytes_with_login() {
+        let clean_session = false;
+        let keep_alive = 10;
+        let client_id = EncodedString::new(b"a".to_vec());
+        let login = Login::new(
+            EncodedString::new(b"username".to_vec()),
+            Some(EncodedString::new(b"password".to_vec())),
+        );
+
+        let expected_login_bytes = login.to_bytes();
+
+        let connect = Connect::new(clean_session, keep_alive, client_id, None, Some(login));
+
+        let connect_bytes = connect.to_bytes();
+
+        let expected_header_bytes = header_bytes(RemainingLength::new(33), 0b1100_0000, 10);
+        let expected_client_id_bytes = EncodedString::new(b"a".to_vec()).to_bytes();
+
+        let expected_payload_bytes =
+            [&expected_client_id_bytes[..], &expected_login_bytes[..]].concat();
+        let expected_bytes = [&expected_header_bytes[..], &expected_payload_bytes[..]].concat();
+
+        assert_eq!(connect_bytes, expected_bytes);
+    }
+
+    #[test]
+    fn test_connect_to_bytes_with_clean_session() {
+        let clean_session = true;
+        let keep_alive = 10;
+        let client_id = EncodedString::new(b"a".to_vec());
+
+        let connect = Connect::new(clean_session, keep_alive, client_id, None, None);
+        let connect_bytes = connect.to_bytes();
+
+        let expected_header_bytes = header_bytes(RemainingLength::new(13), 0b0000_0010, 10);
+        let expected_payload_bytes = EncodedString::new(b"a".to_vec()).to_bytes();
+
+        let expected_bytes = [&expected_header_bytes[..], &expected_payload_bytes[..]].concat();
+
+        assert_eq!(connect_bytes, expected_bytes);
+    }
+
+    #[test]
+    fn test_simple_connect_from_bytes() {
+        let header_bytes = variable_header_bytes(0b0000_0000, 10);
+        let client_id_bytes = EncodedString::new(b"a".to_vec()).to_bytes();
+
+        let connect_bytes = [&header_bytes[..], &client_id_bytes[..]].concat();
+
+        let fixed_header = FixedHeader::new(
+            CONNECT_PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS,
+            RemainingLength::new(13),
+        );
+
+        let connect = Connect::from_bytes(fixed_header, &mut connect_bytes.as_slice()).unwrap();
+
+        assert_eq!(connect.clean_session(), false);
+        assert_eq!(connect.keep_alive(), 10);
+        assert_eq!(connect.client_id(), &EncodedString::new(b"a".to_vec()));
+        assert_eq!(connect.will(), None);
+        assert_eq!(connect.login(), None);
+    }
+
+    #[test]
+    fn test_connect_from_bytes_with_will() {
+        let header_bytes = variable_header_bytes(0b0010_1100, 10);
+        let client_id_bytes = EncodedString::new(b"a".to_vec()).to_bytes();
+
+        let will = Will::new(
+            QoS::AtLeast,
+            true,
+            TopicName::new(vec![b"home".to_vec(), b"livingroom".to_vec()], false),
+            EncodedString::new(b"message".to_vec()),
+        );
+
+        let will_bytes = will.to_bytes();
+
+        let connect_bytes = [&header_bytes[..], &client_id_bytes[..], &will_bytes[..]].concat();
+
+        let fixed_header = FixedHeader::new(
+            CONNECT_PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS,
+            RemainingLength::new(39),
+        );
+
+        let connect = Connect::from_bytes(fixed_header, &mut connect_bytes.as_slice()).unwrap();
+
+        assert_eq!(connect.will(), Some(&will));
+    }
+
+    #[test]
+    fn test_connect_from_bytes_with_login() {
+        let header_bytes = variable_header_bytes(0b1100_0000, 10);
+        let client_id_bytes = EncodedString::new(b"a".to_vec()).to_bytes();
+
+        let login = Login::new(
+            EncodedString::new(b"username".to_vec()),
+            Some(EncodedString::new(b"password".to_vec())),
+        );
+
+        let login_bytes = login.to_bytes();
+
+        let connect_bytes = [&header_bytes[..], &client_id_bytes[..], &login_bytes[..]].concat();
+
+        let fixed_header = FixedHeader::new(
+            CONNECT_PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS,
+            RemainingLength::new(33),
+        );
+
+        let connect = Connect::from_bytes(fixed_header, &mut connect_bytes.as_slice()).unwrap();
+
+        assert_eq!(connect.login(), Some(&login));
+    }
+
+    #[test]
+    fn test_connect_from_bytes_with_clean_session() {
+        let header_bytes = variable_header_bytes(0b0000_0010, 10);
+        let client_id_bytes = EncodedString::new(b"a".to_vec()).to_bytes();
+
+        let connect_bytes = [&header_bytes[..], &client_id_bytes[..]].concat();
+
+        let fixed_header = FixedHeader::new(
+            CONNECT_PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS,
+            RemainingLength::new(33),
+        );
+
+        let connect = Connect::from_bytes(fixed_header, &mut connect_bytes.as_slice()).unwrap();
+
+        assert_eq!(connect.clean_session(), true);
+    }
+
+    #[test]
+    fn test_invalid_fixed_header_flags() {
+        let fixed_header = FixedHeader::new(
+            CONNECT_PACKET_TYPE << 4 | 0b0000_0001,
+            RemainingLength::new(13),
+        );
+
+        let connect_bytes = vec![];
+
+        let connect = Connect::from_bytes(fixed_header, &mut connect_bytes.as_slice());
+        assert!(connect.is_err());
+    }
+
+    #[test]
+    fn test_invalid_protocol_name() {
+        let invalid_protocol_name = vec![b'A', b'M', b'Q', b'P'];
+
+        let connect_bytes = EncodedString::new(invalid_protocol_name).to_bytes();
+
+        let fixed_header = FixedHeader::new(
+            CONNECT_PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS,
+            RemainingLength::new(13),
+        );
+
+        let connect = Connect::from_bytes(fixed_header, &mut connect_bytes.as_slice());
+        assert!(connect.is_err());
+    }
+
+    #[test]
+    fn test_invalid_protocol_level() {
+        let protocol_name = EncodedString::new(PROTOCOL_NAME.to_vec()).to_bytes();
+        let protocol_level = vec![0];
+
+        let connect_bytes = [&protocol_name[..], &protocol_level[..]].concat();
+
+        let fixed_header = FixedHeader::new(
+            CONNECT_PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS,
+            RemainingLength::new(13),
+        );
+
+        let connect = Connect::from_bytes(fixed_header, &mut connect_bytes.as_slice());
+        assert!(connect.is_err());
+    }
+
+    #[test]
+    fn test_invalid_flags() {
+        let protocol_name_bytes = EncodedString::new(PROTOCOL_NAME.to_vec()).to_bytes();
+        let protocol_level_byte = vec![PROTOCOL_LEVEL];
+
+        let mut connect_bytes = vec![];
+        connect_bytes.extend(protocol_name_bytes);
+        connect_bytes.extend(protocol_level_byte);
+        {
+            let invalid_flags = 0b0000_0001;
+            let mut connect_bytes = connect_bytes.clone();
+            connect_bytes.push(invalid_flags);
+
+            let fixed_header = FixedHeader::new(
+                CONNECT_PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS,
+                RemainingLength::new(13),
+            );
+
+            let connect = Connect::from_bytes(fixed_header, &mut connect_bytes.as_slice());
+            assert!(connect.is_err());
+        }
+
+        {
+            let invalid_flags = 0b1000_0000;
+            let mut connect_bytes = connect_bytes.clone();
+            connect_bytes.push(invalid_flags);
+
+            let fixed_header = FixedHeader::new(
+                CONNECT_PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS,
+                RemainingLength::new(13),
+            );
+
+            let connect = Connect::from_bytes(fixed_header, &mut connect_bytes.as_slice());
+            assert!(connect.is_err());
+        }
+
+        {
+            let invalid_flags = 0b0000_1000;
+            let mut connect_bytes = connect_bytes.clone();
+            connect_bytes.push(invalid_flags);
+
+            let fixed_header = FixedHeader::new(
+                CONNECT_PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS,
+                RemainingLength::new(13),
+            );
+
+            let connect = Connect::from_bytes(fixed_header, &mut connect_bytes.as_slice());
+            assert!(connect.is_err());
+        }
+
+        {
+            let invalid_flags = 0b0010_0000;
+            let mut connect_bytes = connect_bytes.clone();
+            connect_bytes.push(invalid_flags);
+
+            let fixed_header = FixedHeader::new(
+                CONNECT_PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS,
+                RemainingLength::new(13),
+            );
+
+            let connect = Connect::from_bytes(fixed_header, &mut connect_bytes.as_slice());
+            assert!(connect.is_err());
+        }
     }
 }

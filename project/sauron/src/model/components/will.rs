@@ -1,6 +1,6 @@
 use crate::{EncodedString, Error, QoS, Read, TopicName};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Will {
     qos: QoS,
     retain: bool,
