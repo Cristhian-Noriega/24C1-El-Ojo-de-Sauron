@@ -66,4 +66,12 @@ impl Connack {
 
         packet_bytes
     }
+
+    pub fn session_present(&self) -> bool {
+        self.session_present
+    }
+
+    pub fn connect_return_code(&self) -> &ConnackReturnCode {
+        &self.connect_return_code
+    }
 }
