@@ -14,7 +14,7 @@ pub fn main() -> Result<(), ()> {
     }
 
     let address = "127.0.0.1:".to_owned() + &argv[1]; // HARDCODEADO
-    if let Err(err) = server_run(&address) {
+    if let Err(err) = server::Server::new().server_run(&address) {
         println!("Error al ejecutar el servidor: {:?}", err);
         return Err(());
     }

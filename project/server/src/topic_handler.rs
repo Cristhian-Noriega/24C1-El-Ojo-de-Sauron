@@ -1,12 +1,12 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 use std::{
-    collections::{HashMap, HashSet}, ops::Sub, sync::{mpsc, Arc, RwLock}, time::Duration
+    collections::{HashMap, HashSet}, sync::{mpsc, RwLock}, time::Duration
 };
 
 use crate::client::Client;
 use sauron::model::{
-    packets::{puback::Puback, publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe}, qos::QoS, remaining_length, topic_level::TopicLevel, topic_name::TopicName
+    packets::{puback::Puback, publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe}, qos::QoS, topic_level::TopicLevel, topic_name::TopicName
 };
 
 pub enum TopicHandlerTask {
@@ -148,6 +148,7 @@ impl Topic {
 
 pub struct TopicHandler {
     root: Topic,
+    //client_actions_sender_channel: mpsc::Sender<Message>,
     client_actions_receiver_channel: mpsc::Receiver<TopicHandlerTask>,
     clients: HashMap<Vec<u8>, Client>,
     active_connections: HashSet<i32>,
@@ -157,6 +158,7 @@ impl TopicHandler {
     pub fn new(receiver_channel: mpsc::Receiver<TopicHandlerTask>) -> Self {
         TopicHandler {
             root: Topic::new(),
+            //client_actions_sender_channel: sender_channel,
             client_actions_receiver_channel: receiver_channel,
             clients: HashMap::new(),
             active_connections: HashSet::new(),
