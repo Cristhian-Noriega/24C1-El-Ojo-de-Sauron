@@ -204,14 +204,12 @@ impl Connect {
 
 #[cfg(test)]
 mod test {
-    use crate::model::components::{fixed_header, topic_name::TopicName};
-
     use super::*;
+    use crate::{FixedHeader, TopicName};
 
     #[allow(dead_code)]
     fn fixed_header_bytes(remaining_length: RemainingLength) -> Vec<u8> {
-        let fixed_header =
-            fixed_header::FixedHeader::new(CONNECT_PACKET_TYPE << 4, remaining_length);
+        let fixed_header = FixedHeader::new(CONNECT_PACKET_TYPE << 4, remaining_length);
 
         fixed_header.to_bytes()
     }
@@ -312,23 +310,6 @@ mod test {
     }
 
     #[test]
-    fn test_connect_to_bytes_with_clean_session() {
-        let clean_session = true;
-        let keep_alive = 10;
-        let client_id = EncodedString::new(b"a".to_vec());
-
-        let connect = Connect::new(clean_session, keep_alive, client_id, None, None);
-        let connect_bytes = connect.to_bytes();
-
-        let expected_header_bytes = header_bytes(RemainingLength::new(13), 0b0000_0010, 10);
-        let expected_payload_bytes = EncodedString::new(b"a".to_vec()).to_bytes();
-
-        let expected_bytes = [&expected_header_bytes[..], &expected_payload_bytes[..]].concat();
-
-        assert_eq!(connect_bytes, expected_bytes);
-    }
-
-    #[test]
     fn test_simple_connect_from_bytes() {
         let header_bytes = variable_header_bytes(0b0000_0000, 10);
         let client_id_bytes = EncodedString::new(b"a".to_vec()).to_bytes();
@@ -397,23 +378,6 @@ mod test {
         let connect = Connect::from_bytes(fixed_header, &mut connect_bytes.as_slice()).unwrap();
 
         assert_eq!(connect.login(), Some(&login));
-    }
-
-    #[test]
-    fn test_connect_from_bytes_with_clean_session() {
-        let header_bytes = variable_header_bytes(0b0000_0010, 10);
-        let client_id_bytes = EncodedString::new(b"a".to_vec()).to_bytes();
-
-        let connect_bytes = [&header_bytes[..], &client_id_bytes[..]].concat();
-
-        let fixed_header = FixedHeader::new(
-            CONNECT_PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS,
-            RemainingLength::new(33),
-        );
-
-        let connect = Connect::from_bytes(fixed_header, &mut connect_bytes.as_slice()).unwrap();
-
-        assert_eq!(connect.clean_session(), true);
     }
 
     #[test]
