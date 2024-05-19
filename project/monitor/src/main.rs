@@ -1,3 +1,7 @@
+use crate::ui::ui_handler::UIHandler;
+
+pub mod ui;
+
 fn main() {
-    println!("Hello, world!");
+    UIHandler::start();
 }
