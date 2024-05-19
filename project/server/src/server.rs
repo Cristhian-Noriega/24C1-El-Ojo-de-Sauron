@@ -182,7 +182,6 @@ pub fn handle_publish(
     sender_to_topics_channel
         .send(TopicHandlerTask::Publish(publish_packet, client_id))
         .unwrap();
-
     true
 }
 
@@ -191,9 +190,9 @@ pub fn handle_puback(
     sender_to_topics_channel: std::sync::mpsc::Sender<TopicHandlerTask>,
     client_id: Vec<u8>,
 ) -> bool {
-    sender_to_topics_channel
-        .send(TopicHandlerTask::RegisterPubAck(puback_packet))
-        .unwrap();
+    // sender_to_topics_channel
+    //     .send(TopicHandlerTask::RegisterPubAck(puback_packet))
+    //     .unwrap();
 
     true
 }

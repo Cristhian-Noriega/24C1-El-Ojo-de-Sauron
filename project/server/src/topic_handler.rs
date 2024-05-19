@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 use std::{
-    collections::{HashMap, HashSet}, sync::{mpsc, RwLock}, time::Duration
+    collections::{HashMap, HashSet}, io::Write, sync::{mpsc, RwLock}, time::Duration
 };
 
 use crate::client::Client;
@@ -13,7 +13,6 @@ pub enum TopicHandlerTask {
     SubscribeClient(Subscribe, Vec<u8>),
     UnsubscribeClient(Unsubscribe, Vec<u8>),
     Publish(Publish, Vec<u8>),
-    RegisterPubAck(Puback),
     ClientConnected(Client),
     ClientDisconnected(Vec<u8>),
 }
@@ -86,24 +85,25 @@ impl Topic {
         }
     }
 
-    pub fn publish(&self, topic_name: TopicName, message: Message) {
+    pub fn publish(&self, topic_name: TopicName, message: Message, clients: &HashMap<Vec<u8>, Client>, active_connections: &HashSet<Vec<u8>>) {
         let subscribers = self.get_all_matching_subscriptions(topic_name);
         for subscriber in subscribers {
-            // todo: send the message to the client through a channel
-        }
+            for (client_id, data) in subscriber {
+                // if !active_connections.contains(&client_id){
+                //     clients.get(&client_id).unwrap().unreceived_messages.(message.packet.clone());
+                //     continue;
+                // }
+                let client = clients.get(&client_id).unwrap();
 
-        //todo: handle retained messages
-        
-        // for level in topic_name.levels {
-        //     let subtopics = self.subtopics.read().unwrap();
-        //     match subtopics.get(&level) {
-        //         Some(subtopic) => {
-                    
-        //         }
-        //         None => {}
-        //     }
-        // }
+                let publish_packet = message.packet.clone();
+                let _ = match client.stream.lock().unwrap().write(publish_packet.to_bytes().as_slice()) {
+                    Ok(_) => {},
+                    Err(_) => {}
+                };
+            }
+        }
     }
+    
 
     pub fn get_all_matching_subscriptions(&self, topic_name: TopicName) -> Vec<Subscribers> {
         let mut subscribers = Vec::new();
@@ -151,7 +151,7 @@ pub struct TopicHandler {
     //client_actions_sender_channel: mpsc::Sender<Message>,
     client_actions_receiver_channel: mpsc::Receiver<TopicHandlerTask>,
     clients: HashMap<Vec<u8>, Client>,
-    active_connections: HashSet<i32>,
+    active_connections: HashSet<Vec<u8>>,
 }
 
 impl TopicHandler {
@@ -178,9 +178,9 @@ impl TopicHandler {
                     TopicHandlerTask::Publish(publish, client_id) => {
                         self.publish(&publish, client_id);
                     }
-                    TopicHandlerTask::RegisterPubAck(puback) => {
-                        self.register_puback(puback);
-                    }
+                    // TopicHandlerTask::RegisterPubAck(puback) => {
+                    //     self.register_puback(puback);
+                    // }
                     TopicHandlerTask::ClientConnected(client) => {
                         self.handle_client_connected(client);
                     }
@@ -222,15 +222,7 @@ impl TopicHandler {
             client_id: client_id.clone(),
             packet: publish_packet.clone(),
         };
-        self.root.publish(topic_name, message)
-    }
-
-    pub fn send_publish_to_subscribers(packet: Publish, topic: Topic, client_id: Vec<u8>) {
-
-    }
-
-    pub fn register_puback(&self, puback_packet: Puback) {
-        todo!()
+        self.root.publish(topic_name, message, &self.clients, &self.active_connections);
     }
 
     pub fn handle_client_connected(&self, client: Client) {
