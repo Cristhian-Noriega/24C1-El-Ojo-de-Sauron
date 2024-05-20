@@ -8,9 +8,10 @@ use std::{
 pub use sauron::model::{
     packet::Packet,
     packets::{
-        connect::Connect, disconnect::Disconnect, pingresp::Pingresp, puback::Puback,
+        connect::Connect, connack::Connack, disconnect::Disconnect, pingresp::Pingresp, puback::Puback,
         publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe,
     },
+    return_codes::connect_return_code::ConnectReturnCode,
 };
 
 use super::topic_handler::TopicHandlerTask;
@@ -83,6 +84,7 @@ impl Server {
     }
 
     pub fn connect_new_client(&self, connect_packet: Connect, stream: TcpStream) {
+        println!("Received Connect Package");
         let client_id = connect_packet.client_id.content;
         let (client_sender, client_receiver) = mpsc::channel(); // Create a channel for this client
 
@@ -96,12 +98,20 @@ impl Server {
         //     .unwrap();
 
         println!("New client connected: {:?}", client_id);
+
+
         self.create_new_client_thread(
             self.client_actions_sender.clone(),
             stream,
             client_id,
             client_receiver, 
         );
+
+      
+
+        //let connack_packet = Connack::new(false, ConnectReturnCode::ConnectionAccepted);
+
+        //stream.write(connack_packet.to_bytes().as_slice());
     }
 
     pub fn create_new_client_thread(
@@ -109,9 +119,10 @@ impl Server {
         sender_to_topics_channel: std::sync::mpsc::Sender<TopicHandlerTask>,
         mut stream: TcpStream,
         client_id: Vec<u8>,
-        client_receiver: mpsc::Receiver<Publish>, // Receive Publish packets
+        client_receiver: mpsc::Receiver<Publish>, 
     ) {
         thread::spawn(move || {
+            println!("Welcome to the newly connected client thread");
             let address = stream.peer_addr().unwrap().to_string();
             let mut maintain_thread = true;
 
