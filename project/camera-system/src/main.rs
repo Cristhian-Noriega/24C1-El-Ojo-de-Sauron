@@ -76,16 +76,20 @@ fn client_run(address: &str, from_server_stream: &mut dyn Read) -> std::io::Resu
             let mut topic = String::new();
             std::io::stdin().read_line(&mut topic)?;
     
-            let topic = topic.trim();
-            let levels: Vec<TopicLevel> = topic
-                .split('/')
-                .map(|level| TopicLevel::Literal(level.as_bytes().to_vec()))
-                .collect();
+            // let topic = topic.trim();
+            // let levels: Vec<TopicLevel> = topic
+            //     .split('/')
+            //     .map(|level| TopicLevel::Literal(level.as_bytes().to_vec()))
+            //     .collect();
+            let levels: Vec<TopicLevel> = vec![TopicLevel::Literal(b"h".to_vec())];
             let topic_filter = TopicFilter::new(levels, false);
             let subscribe_packet = Subscribe::new(1, vec![(topic_filter, QoS::AtMost)]);
     
             // Send Subscribe packet
+            println!("Packet ID: {:?}", subscribe_packet.packet_identifier);
+            println!("Topics: {:?}", subscribe_packet.topics);
             let _ = to_server_stream.write(subscribe_packet.to_bytes().as_slice());
+            println!("Sent Subscribe packet");
         } else {
             println!("Enviando: {:?}", line);
             let _ = to_server_stream.write(line.as_bytes());
