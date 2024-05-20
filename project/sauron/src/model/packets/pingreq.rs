@@ -27,7 +27,7 @@ impl Pingreq {
         let remaining_length_value = 0;
         let remaining_length_bytes = RemainingLength::new(remaining_length_value).to_bytes();
         packet_bytes.extend(remaining_length_bytes);
-
+        
         packet_bytes
     }
 }

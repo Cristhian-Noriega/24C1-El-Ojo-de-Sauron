@@ -4,10 +4,10 @@ use crate::{Error, FixedHeader, Read, RemainingLength, TopicFilter};
 #[derive(Debug)]
 pub struct Unsubscribe {
     // Variable Header
-    packet_identifier: u16,
+    pub packet_identifier: u16,
 
     // Payload
-    topics: Vec<TopicFilter>,
+    pub topics: Vec<TopicFilter>,
 }
 
 impl Unsubscribe {

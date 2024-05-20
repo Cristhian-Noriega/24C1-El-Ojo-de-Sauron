@@ -3,12 +3,12 @@ use crate::{Error, FixedHeader, QoS, Read, RemainingLength, TopicName};
 
 #[derive(Debug, Clone)]
 pub struct Publish {
-    dup: bool,
+    pub dup: bool,
     pub qos: QoS,
     pub retain: bool,
     pub topic: TopicName,
-    package_identifier: Option<u16>,
-    payload: Vec<u8>,
+    pub package_identifier: Option<u16>,
+    pub message: Vec<u8>,
 }
 
 impl Publish {
@@ -18,7 +18,7 @@ impl Publish {
         retain: bool,
         topic: TopicName,
         package_identifier: Option<u16>,
-        payload: Vec<u8>,
+        message: Vec<u8>,
     ) -> Self {
         Self {
             dup,
@@ -26,7 +26,7 @@ impl Publish {
             retain,
             topic,
             package_identifier,
-            payload,
+            message,
         }
     }
 
@@ -62,8 +62,8 @@ impl Publish {
 
         let payload_len = remaining_length - variable_header_len;
 
-        let mut payload = vec![0; payload_len];
-        stream.read_exact(&mut payload)?;
+        let mut message = vec![0; payload_len];
+        stream.read_exact(&mut message)?;
 
         Ok(Publish::new(
             dup,
@@ -71,11 +71,14 @@ impl Publish {
             retain,
             topic,
             package_identifier,
-            payload,
+            message,
         ))
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
+        // Payload
+        let payload_bytes = &self.message;
+        
         // Variable Header
 
         let mut variable_header_bytes = vec![];
@@ -94,7 +97,7 @@ impl Publish {
 
         let mut fixed_header_bytes = vec![PUBLISH_PACKET_TYPE << 4 | fixed_header_flags];
 
-        let remaining_length_value = variable_header_bytes.len() as u32 + self.payload.len() as u32;
+        let remaining_length_value = variable_header_bytes.len() as u32 + payload_bytes.len() as u32;
         let remaining_length_bytes = RemainingLength::new(remaining_length_value).to_bytes();
         fixed_header_bytes.extend(remaining_length_bytes);
 
@@ -102,8 +105,12 @@ impl Publish {
 
         packet_bytes.extend(fixed_header_bytes);
         packet_bytes.extend(variable_header_bytes);
-        packet_bytes.extend(&self.payload);
+        packet_bytes.extend(payload_bytes);
 
         packet_bytes
+    }
+
+    pub fn message(&self) -> &Vec<u8> {
+        &self.message
     }
 }

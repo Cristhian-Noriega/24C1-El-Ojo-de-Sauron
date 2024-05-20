@@ -136,34 +136,30 @@ impl Server {
     ) {
         thread::spawn(move || {
             println!("Welcome to the newly connected client thread\n");
-            let address = stream.peer_addr().unwrap().to_string();
-            let mut maintain_thread = true;
 
-            while maintain_thread {
-
-                let _ = match Packet::from_bytes(&mut stream) {
+            loop {
+                let packet = Packet::from_bytes(&mut stream);
+                match packet {
                     Ok(packet) => {
-                        println!("Received packet");
-                        maintain_thread = handle_packet(
+                        println!("Received packet: {:?}", packet);
+                        
+                        let handling_result = handle_packet(
                             packet,
                             client_id.clone(),
-                            stream.try_clone().unwrap(), // Clone the stream for sending
-                            sender_to_topics_channel.clone(), // Clone the sender channel
+                            &mut stream,
+                            sender_to_topics_channel.clone(),
                         );
+
+                        if !handling_result {
+                            println!("Connection closed");
+                            break;
+                        };
                     }
                     Err(err) => {
-                        println!("Error reading packet: {:?}", err);
+                        println!("Error parsing packet: {:?}", err);
+                        println!("Connection closed");
                         break;
                     }
-                };
-
-                match client_receiver.try_recv() {
-                    Ok(publish_packet) => {
-                        println!("Received publish packet: {:?}", publish_packet);
-                        // Send the Publish packet back to the client
-                        stream.write_all(&publish_packet.to_bytes()).unwrap();
-                    }
-                    Err(_) => {}
                 }
             }
         });
@@ -173,9 +169,10 @@ impl Server {
 pub fn handle_packet(
     packet: Packet,
     client_id: Vec<u8>,
-    stream: TcpStream,
+    stream: &mut TcpStream,
     sender_to_topics_channel: std::sync::mpsc::Sender<TopicHandlerTask>,
 ) -> bool {
+    println!("packet {:?}", packet);
     let maintain_thread = match packet {
         Packet::Publish(publish_packet) => {
             handle_publish(publish_packet, sender_to_topics_channel, client_id)
@@ -268,10 +265,10 @@ pub fn handle_disconnect(
     false
 }
 
-pub fn handle_pingreq(stream: TcpStream) -> bool {
+pub fn handle_pingreq(stream: &mut TcpStream) -> bool {
+    println!("Received Pingreq packet");
     let pingresp_packet = Pingresp::new();
     let pingresp_bytes = pingresp_packet.to_bytes();
-    //stream.write_all(&pingresp_bytes).unwrap();
-
+    stream.write_all(&pingresp_bytes).unwrap();
     true
 }

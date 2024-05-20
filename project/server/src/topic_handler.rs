@@ -185,12 +185,15 @@ impl TopicHandler {
             match self.client_actions_receiver_channel.recv() {
                 Ok(task) => match task {
                     TopicHandlerTask::SubscribeClient(subscribe, client_id) => {
+                        println!("Topic Handler received task: subscribe Client: {:?}", client_id);
                         self.subscribe(subscribe, client_id);
                     }
                     TopicHandlerTask::UnsubscribeClient(unsubscribe, client_id) => {
+                        println!("Topic Handler received task: unsubscribe Client: {:?}", client_id);
                         self.unsubscribe(unsubscribe);
                     }
                     TopicHandlerTask::Publish(publish, client_id) => {
+                        println!("Topic Handler received task: Publish message: {:?}", publish);
                         self.publish(&publish, client_id);
                     }
                     // TopicHandlerTask::RegisterPubAck(puback) => {
