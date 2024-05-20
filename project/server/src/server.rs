@@ -1,3 +1,6 @@
+#![allow(dead_code)]
+#![allow(unused_variables)]
+
 use std::{
     collections::HashMap, io::Write, net::{TcpListener, TcpStream}, sync::{mpsc, RwLock}, thread
 };

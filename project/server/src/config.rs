@@ -1,7 +1,5 @@
-//Configuración: debe incluir todos los parámetros necesarios para la ejecución del servidor, como el puerto, direccion IP, etc.
-
-//(no esta permitido definir estos valores mediante constantes en el código)
-// Config contains the configuration for the server to run it
+#![allow(dead_code)]
+#![allow(unused_variables)]
 
 use std::{
     fs::File,
@@ -23,10 +21,10 @@ impl Config {
 
     pub fn from_file<R: Read>(config_file: R) -> Option<Config> {
         let mut buf_reader = BufReader::new(config_file);
-        let mut port = Self::get_value_from_file(&mut buf_reader, "port")?;
-        let mut address = Self::get_value_from_file(&mut buf_reader, "address")?;
-        let mut log_file = Self::get_value_from_file(&mut buf_reader, "log_file")?;
-        let mut segs_to_disconnect =
+        let port = Self::get_value_from_file(&mut buf_reader, "port")?;
+        let address = Self::get_value_from_file(&mut buf_reader, "address")?;
+        let log_file = Self::get_value_from_file(&mut buf_reader, "log_file")?;
+        let segs_to_disconnect =
             Self::get_value_from_file(&mut buf_reader, "segs_to_disconnect")?;
 
         let segs_to_disconnect = segs_to_disconnect.parse().ok()?;
@@ -70,42 +68,4 @@ impl Config {
     }
 }
 
-// Tests
 
-// #[cfg(test)]
-
-// mod tests {
-
-// use super::*;
-
-// #[test]
-
-// fn test_valid_config_file() {
-
-// let config_data = r#"
-
-// port=8080
-
-// address=127.0.0.1
-
-// log_file=/var/log/server.log
-
-// segs_to_disconnect=5
-
-// "#;
-
-// let mut cursor = Cursor::new(config_data);
-
-// let config = Config::from_file(&mut cursor).unwrap();
-
-// assert_eq!(config.port, 8080);
-
-// assert_eq!(config.address, "127.0.0.1");
-
-// assert_eq!(config.log_file, "/var/log/server.log");
-
-// assert_eq!(config.segs_to_disconnect, 5);
-
-// }
-
-// }

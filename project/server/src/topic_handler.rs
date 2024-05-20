@@ -7,7 +7,7 @@ use std::{
 use crate::client::Client;
 use sauron::model::{
     components::{qos::QoS, topic_level::TopicLevel, topic_name::TopicName},
-    packets::{puback::Puback, publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe}, 
+    packets::{publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe}, 
 };
 
 pub enum TopicHandlerTask {
