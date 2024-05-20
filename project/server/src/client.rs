@@ -5,8 +5,6 @@ use std::sync::atomic::AtomicBool;
 use std::sync::Mutex;
 use std::collections::VecDeque;
 
-
-
 use sauron::model::packets::publish::Publish;
 
 // represents the state of the client in the server
