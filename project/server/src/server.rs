@@ -39,6 +39,7 @@ impl Server {
     }
 
     pub fn server_run(&self, address: &str) -> std::io::Result<()> {
+        println!("Server running on address: {}", address); 
         let server = Server::new();
         let listener = TcpListener::bind(address)?; 
         Server::initialize_topic_handler_thread(server.client_actions_receiver);
@@ -46,6 +47,7 @@ impl Server {
         for stream_result in listener.incoming() {
             match stream_result {
                 Ok(stream) => {
+                    println!("New connection");
                     self.handle_new_connection(stream)?;
                 }
                 Err(err) => {
@@ -60,7 +62,7 @@ impl Server {
     pub fn handle_new_connection(&self, mut stream: TcpStream) -> std::io::Result<()> {
         
         let packet = match Packet::from_bytes(&mut stream) {
-            Ok(packet) => packet,
+            Ok(packet) => self.handle_incoming_packet(packet, stream),
             Err(err) => {
                 println!("Error reading packet: {:?}", err);
                 return Ok(());
@@ -72,6 +74,7 @@ impl Server {
     pub fn initialize_topic_handler_thread(client_actions_receiver: mpsc::Receiver<TopicHandlerTask>) {
         thread::spawn(move || {
             let topic_handler = TopicHandler::new(client_actions_receiver);
+            println!("Starting topic handler thread");
             topic_handler.run();
         });
     }
@@ -97,7 +100,7 @@ impl Server {
         //     .send(TopicHandlerTask::ClientConnected(new_client))
         //     .unwrap();
 
-        println!("New client connected: {:?}", client_id);
+        println!("New client connected: {:?}", String::from_utf8_lossy(&client_id));
 
 
         self.create_new_client_thread(
@@ -151,7 +154,7 @@ impl Server {
                         // Send the Publish packet back to the client
                         stream.write_all(&publish_packet.to_bytes()).unwrap();
                     }
-                    Err(_) => {} // Do nothing if there is no message to receive
+                    Err(_) => {} 
                 }
             }
         });
