@@ -1,15 +1,5 @@
-use std::io::Read;
-
-const PACKET_TYPE: u8 = 0x03;
-const PACKAGE_IDENTIFIER_LENGTH: usize = 2;
-
-use crate::{
-    errors::error::Error,
-    model::{
-        fixed_header::FixedHeader, qos::QoS, remaining_length::RemainingLength,
-        topic_name::TopicName,
-    },
-};
+use super::{DEFAULT_VARIABLE_HEADER_LENGTH, PUBLISH_PACKET_TYPE};
+use crate::{Error, FixedHeader, QoS, Read, RemainingLength, TopicName};
 
 #[derive(Debug, Clone)]
 pub struct Publish {
@@ -58,7 +48,7 @@ impl Publish {
         let package_identifier = match qos {
             QoS::AtMost => None,
             _ => {
-                let mut package_identifier_buffer = [0; PACKAGE_IDENTIFIER_LENGTH];
+                let mut package_identifier_buffer = [0; DEFAULT_VARIABLE_HEADER_LENGTH];
                 stream.read_exact(&mut package_identifier_buffer)?;
 
                 Some(u16::from_be_bytes(package_identifier_buffer))
@@ -66,7 +56,7 @@ impl Publish {
         };
 
         let variable_header_len =
-            topic.length() + package_identifier.map_or(0, |_| PACKAGE_IDENTIFIER_LENGTH);
+            topic.length() + package_identifier.map_or(0, |_| DEFAULT_VARIABLE_HEADER_LENGTH);
 
         // Payload
 
@@ -102,7 +92,7 @@ impl Publish {
             | (self.qos.to_byte() << 1)
             | (if self.retain { 1 } else { 0 });
 
-        let mut fixed_header_bytes = vec![PACKET_TYPE << 4 | fixed_header_flags];
+        let mut fixed_header_bytes = vec![PUBLISH_PACKET_TYPE << 4 | fixed_header_flags];
 
         let remaining_length_value = variable_header_bytes.len() as u32 + self.payload.len() as u32;
         let remaining_length_bytes = RemainingLength::new(remaining_length_value).to_bytes();

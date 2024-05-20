@@ -1,4 +1,4 @@
-use crate::errors::error::Error;
+use crate::Error;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone)]
 pub enum QoS {

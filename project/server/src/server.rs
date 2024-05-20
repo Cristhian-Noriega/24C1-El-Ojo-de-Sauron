@@ -10,8 +10,9 @@ pub use sauron::model::{
     },
 };
 
-use crate::{config::Config, topic_handler::{TopicHandler, TopicHandlerTask}};
-
+use super::topic_handler::TopicHandlerTask;
+use super::config::Config;
+use super::topic_handler::TopicHandler;
 
 pub struct Server {
     config: Option<Config>,

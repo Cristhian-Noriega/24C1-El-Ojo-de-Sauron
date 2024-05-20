@@ -1,14 +1,5 @@
-use crate::{
-    errors::error::Error,
-    model::{
-        fixed_header::FixedHeader, qos::QoS, remaining_length::RemainingLength,
-        topic_filter::TopicFilter,
-    },
-};
-use std::io::Read;
-
-const PACKET_TYPE: u8 = 0x08;
-const RESERVED_FIXED_HEADER_FLAGS: u8 = 0x02;
+use super::{RESERVED_FIXED_HEADER_FLAGS, SUBSCRIBE_PACKET_TYPE};
+use crate::{Error, FixedHeader, QoS, Read, RemainingLength, TopicFilter};
 
 #[derive(Debug)]
 pub struct Subscribe {
@@ -80,7 +71,7 @@ impl Subscribe {
         }
 
         // Fixed Header
-        let mut fixed_header_bytes = vec![PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS];
+        let mut fixed_header_bytes = vec![SUBSCRIBE_PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS];
 
         let remaining_length_value =
             variable_header_bytes.len() as u32 + payload_bytes.len() as u32;

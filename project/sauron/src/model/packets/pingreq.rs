@@ -1,10 +1,5 @@
-use crate::{
-    errors::error::Error,
-    model::{fixed_header::FixedHeader, remaining_length::RemainingLength},
-};
-
-const PACKET_TYPE: u8 = 0x12;
-const RESERVED_FIXED_HEADER_FLAGS: u8 = 0x00;
+use super::{PINGREQ_PACKET_TYPE, RESERVED_FIXED_HEADER_FLAGS};
+use crate::{Error, FixedHeader, RemainingLength};
 
 #[derive(Debug, Default)]
 pub struct Pingreq;
@@ -27,9 +22,9 @@ impl Pingreq {
 
     pub fn to_bytes(&self) -> Vec<u8> {
         // Fixed Header
-        let mut packet_bytes = vec![PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS];
+        let mut packet_bytes = vec![PINGREQ_PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS];
 
-        let remaining_length_value = 0_u32;
+        let remaining_length_value = 0;
         let remaining_length_bytes = RemainingLength::new(remaining_length_value).to_bytes();
         packet_bytes.extend(remaining_length_bytes);
 

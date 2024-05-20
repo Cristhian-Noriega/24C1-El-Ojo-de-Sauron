@@ -1,13 +1,7 @@
-use std::io::Read;
+use super::{FORWARD_SLASH, SERVER_RESERVED};
+use crate::{EncodedString, Error, Read, TopicLevel};
 
-use crate::errors::error::Error;
-
-use super::{encoded_string::EncodedString, topic_level::TopicLevel};
-
-const FORWARD_SLASH: u8 = 0x2F;
-const SERVER_RESERVED: u8 = 0x24;
-
-#[derive(Debug, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct TopicName {
     pub levels: Vec<Vec<u8>>,
     server_reserved: bool,
@@ -33,7 +27,7 @@ impl TopicName {
 
         let levels_bytes: Vec<Vec<u8>> = bytes
             .split(|&byte| byte == FORWARD_SLASH)
-            .map(|slice| slice.to_vec())
+            .map(|slice: &[u8]| slice.to_vec())
             .collect();
 
         let mut levels = vec![];
@@ -52,13 +46,15 @@ impl TopicName {
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
-        let topic_bytes = self
-            .levels
-            .iter()
-            .map(|level| level.to_vec())
-            .chain(std::iter::once(vec![FORWARD_SLASH]))
-            .flatten()
-            .collect();
+        let mut topic_bytes = vec![];
+
+        for (i, level) in self.levels.iter().enumerate() {
+            topic_bytes.extend(level);
+
+            if i < self.levels.len() - 1 {
+                topic_bytes.push(FORWARD_SLASH);
+            }
+        }
 
         EncodedString::new(topic_bytes).to_bytes()
     }

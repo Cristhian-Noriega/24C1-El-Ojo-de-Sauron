@@ -6,7 +6,8 @@ use std::{
 
 use crate::client::Client;
 use sauron::model::{
-    packets::{puback::Puback, publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe}, qos::QoS, topic_level::TopicLevel, topic_name::TopicName
+    components::{qos::QoS, topic_level::TopicLevel, topic_name::TopicName},
+    packets::{puback::Puback, publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe}, 
 };
 
 pub enum TopicHandlerTask {
@@ -152,6 +153,7 @@ pub struct TopicHandler {
     client_actions_receiver_channel: mpsc::Receiver<TopicHandlerTask>,
     clients: HashMap<Vec<u8>, Client>,
     active_connections: HashSet<Vec<u8>>,
+    retained_messages: HashMap<Vec<u8>, Publish>,
 }
 
 impl TopicHandler {
@@ -162,6 +164,7 @@ impl TopicHandler {
             client_actions_receiver_channel: receiver_channel,
             clients: HashMap::new(),
             active_connections: HashSet::new(),
+            retained_messages: HashMap::new(),
         }
     }
 

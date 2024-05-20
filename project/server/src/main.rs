@@ -1,6 +1,9 @@
 use std::env;
 
+mod config;
 mod server;
+mod topic_handler;
+mod client;
 
 static SERVER_ARGS: usize = 2;
 

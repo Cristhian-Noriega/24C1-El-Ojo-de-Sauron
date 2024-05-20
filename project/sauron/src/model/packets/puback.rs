@@ -1,17 +1,11 @@
-use crate::errors::error::Error;
-use crate::model::fixed_header::FixedHeader;
-use crate::model::remaining_length::RemainingLength;
-use std::io::Read;
+use super::{PUBACK_PACKET_TYPE, RESERVED_FIXED_HEADER_FLAGS};
+use crate::{Error, FixedHeader, Read, RemainingLength};
 
-const RESERVED_FIXED_HEADER_FLAGS: u8 = 0x00;
-const PACKET_TYPE: u8 = 0x04;
 const PACKAGE_IDENTIFIER_LENGTH: usize = 2;
 
 #[derive(Debug)]
 pub struct Puback {
-    // Variable Header Field:
     packet_identifier: Option<u16>,
-    // Puback has no payload
 }
 
 impl Puback {
@@ -46,7 +40,7 @@ impl Puback {
         }
 
         // Fixed Header
-        let mut fixed_header_bytes = vec![PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS];
+        let mut fixed_header_bytes = vec![PUBACK_PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS];
 
         let remaining_length_value = variable_header_bytes.len() as u32;
         let remaining_length_bytes = RemainingLength::new(remaining_length_value).to_bytes();

@@ -3,8 +3,9 @@
 use std::net::TcpStream;
 use std::sync::atomic::AtomicBool;
 use std::sync::Mutex;
-
 use std::collections::VecDeque;
+
+
 
 use sauron::model::packets::publish::Publish;
 
@@ -16,7 +17,6 @@ pub struct Client {
     pub subscriptions: Vec<String>,
     pub alive: AtomicBool,
     pub stream: Mutex<TcpStream>,
-    pub unreceived_messages: VecDeque<Publish>,
 }
 
 impl Client {
@@ -33,7 +33,6 @@ impl Client {
             subscriptions: Vec::new(),
             alive: AtomicBool::new(true),
             stream: Mutex::new(stream),
-            unreceived_messages: VecDeque::new(),
         }
     }
 }
