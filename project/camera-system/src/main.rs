@@ -11,7 +11,7 @@ pub use sauron::model::{
         connect::Connect, disconnect::Disconnect, pingresp::Pingresp, puback::Puback,
         publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe,
     },
-    components::{qos::QoS,topic_filter::TopicFilter},
+    components::{qos::QoS,topic_filter::TopicFilter, topic_level::TopicLevel},
 };
 
 static CLIENT_ARGS: usize = 3;
@@ -76,10 +76,12 @@ fn client_run(address: &str, from_server_stream: &mut dyn Read) -> std::io::Resu
             let mut topic = String::new();
             std::io::stdin().read_line(&mut topic)?;
     
-            let topic_bytes: Vec<u8> = topic.trim().bytes().collect();
-
-            let mut topic_bytes = topic_bytes.as_slice();
-            let topic_filter = TopicFilter::from_bytes(&mut topic_bytes).unwrap();
+            let topic = topic.trim();
+            let levels: Vec<TopicLevel> = topic
+                .split('/')
+                .map(|level| TopicLevel::Literal(level.as_bytes().to_vec()))
+                .collect();
+            let topic_filter = TopicFilter::new(levels, false);
             let subscribe_packet = Subscribe::new(1, vec![(topic_filter, QoS::AtMost)]);
     
             // Send Subscribe packet

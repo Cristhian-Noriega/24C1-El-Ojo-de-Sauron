@@ -87,6 +87,7 @@ impl Server {
     pub fn handle_incoming_packet(&self, packet: Packet, stream: TcpStream) {
         match packet {
             Packet::Connect(connect_packet) => self.connect_new_client(connect_packet, stream),
+            //Packet::Subscribe(subscribe_packet) => handle_packet(subscribe_packet, stream),
             _ => println!("Unsupported packet type"),
         }
     }
@@ -139,10 +140,10 @@ impl Server {
             let mut maintain_thread = true;
 
             while maintain_thread {
-                //let packet = Packet::from_bytes(&mut stream);
 
                 let _ = match Packet::from_bytes(&mut stream) {
                     Ok(packet) => {
+                        println!("Received packet");
                         maintain_thread = handle_packet(
                             packet,
                             client_id.clone(),
@@ -183,6 +184,7 @@ pub fn handle_packet(
             handle_puback(puback_packet, sender_to_topics_channel, client_id)
         }
         Packet::Subscribe(subscribe_packet) => {
+            println!("Received Subscribe packet");
             handle_subscribe(subscribe_packet, sender_to_topics_channel, client_id)
         }
         Packet::Unsubscribe(unsubscribe_packet) => {
