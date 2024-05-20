@@ -11,6 +11,7 @@ pub use sauron::model::{
         connect::Connect, disconnect::Disconnect, pingresp::Pingresp, puback::Puback,
         publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe,
     },
+    components::{qos::QoS,topic_filter::TopicFilter},
 };
 
 static CLIENT_ARGS: usize = 3;
@@ -69,9 +70,25 @@ fn client_run(address: &str, from_server_stream: &mut dyn Read) -> std::io::Resu
     }
 
     for line in reader.lines().map_while(Result::ok) {
-        println!("Enviando: {:?}", line);
-        let _ = to_server_stream.write(line.as_bytes());
-        let _ = to_server_stream.write("\n".as_bytes());
+        let command = line.trim();
+        if command == "subscribe" {
+            println!("Enter the topic to subscribe to:");
+            let mut topic = String::new();
+            std::io::stdin().read_line(&mut topic)?;
+    
+            let topic_bytes: Vec<u8> = topic.trim().bytes().collect();
+
+            let mut topic_bytes = topic_bytes.as_slice();
+            let topic_filter = TopicFilter::from_bytes(&mut topic_bytes).unwrap();
+            let subscribe_packet = Subscribe::new(1, vec![(topic_filter, QoS::AtMost)]);
+    
+            // Send Subscribe packet
+            let _ = to_server_stream.write(subscribe_packet.to_bytes().as_slice());
+        } else {
+            println!("Enviando: {:?}", line);
+            let _ = to_server_stream.write(line.as_bytes());
+            let _ = to_server_stream.write("\n".as_bytes());
+        }
     }
 
     // let reader = BufReader::new(from_server_stream);
