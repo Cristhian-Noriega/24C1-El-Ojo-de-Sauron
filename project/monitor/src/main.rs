@@ -13,7 +13,6 @@ pub use sauron::model::{
     },
 };
 
-
 static CLIENT_ARGS: usize = 3;
 
 fn main() -> Result<(), ()> {
@@ -42,22 +41,39 @@ fn client_run(address: &str, from_server_stream: &mut dyn Read) -> std::io::Resu
     let reader = BufReader::new(from_server_stream);
 
     //client id: monitor app
-    let client_id_bytes :Vec<u8> = vec![b'm', b'o', b'n', b'i', b't', b'o', b'r', b' ', b'a', b'p', b'p'];
+    let client_id_bytes: Vec<u8> = vec![
+        b'm', b'o', b'n', b'i', b't', b'o', b'r', b' ', b'a', b'p', b'p',
+    ];
     let client_id = EncodedString::new(client_id_bytes);
-    let will = None; 
+    let will = None;
     let login = None;
     let connect_package = Connect::new(false, 0, client_id, will, login);
-    
+
     let _ = to_server_stream.write(connect_package.to_bytes().as_slice());
-    
-    for line  in reader.lines().map_while(Result::ok) {
+
+    // Read the Connack packet from the server
+    let mut buffer = [0; 1024];
+    let _ = to_server_stream.read(&mut buffer);
+    let packet = Packet::from_bytes(&mut buffer.as_slice()).unwrap();
+
+    match packet {
+        Packet::Connack(connack) => {
+            println!(
+                "Received Connack packet with return code: {:?} and sessionPresent: {:?}",
+                connack.connect_return_code(),
+                connack.session_present()
+            );
+        }
+        _ => println!("Received unsupported packet type"),
+    }
+
+    for line in reader.lines().map_while(Result::ok) {
         println!("Enviando: {:?}", line);
         let _ = to_server_stream.write(line.as_bytes());
         let _ = to_server_stream.write("\n".as_bytes());
-    } 
-    
-    // let reader = BufReader::new(from_server_stream);
+    }
 
+    // let reader = BufReader::new(from_server_stream);
 
     Ok(())
 }

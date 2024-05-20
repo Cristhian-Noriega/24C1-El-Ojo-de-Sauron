@@ -2,21 +2,25 @@
 #![allow(unused_variables)]
 
 use std::{
-    collections::HashMap, io::Write, net::{TcpListener, TcpStream}, sync::{mpsc, RwLock}, thread
+    collections::HashMap,
+    io::Write,
+    net::{TcpListener, TcpStream},
+    sync::{mpsc, RwLock},
+    thread,
 };
 
 pub use sauron::model::{
     packet::Packet,
     packets::{
-        connect::Connect, connack::Connack, disconnect::Disconnect, pingresp::Pingresp, puback::Puback,
-        publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe,
+        connack::Connack, connect::Connect, disconnect::Disconnect, pingresp::Pingresp,
+        puback::Puback, publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe,
     },
     return_codes::connect_return_code::ConnectReturnCode,
 };
 
-use super::topic_handler::TopicHandlerTask;
 use super::config::Config;
 use super::topic_handler::TopicHandler;
+use super::topic_handler::TopicHandlerTask;
 
 pub struct Server {
     config: Option<Config>,
@@ -39,9 +43,9 @@ impl Server {
     }
 
     pub fn server_run(&self, address: &str) -> std::io::Result<()> {
-        println!("Server running on address: {}", address); 
+        println!("Server running on address: {}", address);
         let server = Server::new();
-        let listener = TcpListener::bind(address)?; 
+        let listener = TcpListener::bind(address)?;
         Server::initialize_topic_handler_thread(server.client_actions_receiver);
 
         for stream_result in listener.incoming() {
@@ -60,7 +64,6 @@ impl Server {
     }
 
     pub fn handle_new_connection(&self, mut stream: TcpStream) -> std::io::Result<()> {
-        
         let packet = match Packet::from_bytes(&mut stream) {
             Ok(packet) => self.handle_incoming_packet(packet, stream),
             Err(err) => {
@@ -71,10 +74,12 @@ impl Server {
         Ok(())
     }
 
-    pub fn initialize_topic_handler_thread(client_actions_receiver: mpsc::Receiver<TopicHandlerTask>) {
+    pub fn initialize_topic_handler_thread(
+        client_actions_receiver: mpsc::Receiver<TopicHandlerTask>,
+    ) {
         thread::spawn(move || {
             let topic_handler = TopicHandler::new(client_actions_receiver);
-            println!("Starting topic handler thread");
+            println!("Starting topic handler thread\n");
             topic_handler.run();
         });
     }
@@ -86,7 +91,7 @@ impl Server {
         }
     }
 
-    pub fn connect_new_client(&self, connect_packet: Connect, stream: TcpStream) {
+    pub fn connect_new_client(&self, connect_packet: Connect, mut stream: TcpStream) {
         println!("Received Connect Package");
         let client_id = connect_packet.client_id.content;
         let (client_sender, client_receiver) = mpsc::channel(); // Create a channel for this client
@@ -95,22 +100,26 @@ impl Server {
         client_senders.insert(client_id.clone(), client_sender);
 
         //let new_client = Client::new(client_id.clone(), "PASSWORD".to_string(), stream, true, 0);
-    
+
         // self.client_actions_sender
         //     .send(TopicHandlerTask::ClientConnected(new_client))
         //     .unwrap();
 
-        println!("New client connected: {:?}", String::from_utf8_lossy(&client_id));
+        println!(
+            "New client connected: {:?}",
+            String::from_utf8_lossy(&client_id)
+        );
 
+        //now i should send to the client connected a connack packet with the return code
+        let connack_packet = Connack::new(false, ConnectReturnCode::ConnectionAccepted);
+        let _ = stream.write(connack_packet.to_bytes().as_slice());
 
         self.create_new_client_thread(
             self.client_actions_sender.clone(),
             stream,
             client_id,
-            client_receiver, 
+            client_receiver,
         );
-
-      
 
         //let connack_packet = Connack::new(false, ConnectReturnCode::ConnectionAccepted);
 
@@ -122,15 +131,14 @@ impl Server {
         sender_to_topics_channel: std::sync::mpsc::Sender<TopicHandlerTask>,
         mut stream: TcpStream,
         client_id: Vec<u8>,
-        client_receiver: mpsc::Receiver<Publish>, 
+        client_receiver: mpsc::Receiver<Publish>,
     ) {
         thread::spawn(move || {
-            println!("Welcome to the newly connected client thread");
+            println!("Welcome to the newly connected client thread\n");
             let address = stream.peer_addr().unwrap().to_string();
             let mut maintain_thread = true;
 
             while maintain_thread {
-                
                 //let packet = Packet::from_bytes(&mut stream);
 
                 let _ = match Packet::from_bytes(&mut stream) {
@@ -141,7 +149,7 @@ impl Server {
                             stream.try_clone().unwrap(), // Clone the stream for sending
                             sender_to_topics_channel.clone(), // Clone the sender channel
                         );
-                    },
+                    }
                     Err(err) => {
                         println!("Error reading packet: {:?}", err);
                         break;
@@ -154,7 +162,7 @@ impl Server {
                         // Send the Publish packet back to the client
                         stream.write_all(&publish_packet.to_bytes()).unwrap();
                     }
-                    Err(_) => {} 
+                    Err(_) => {}
                 }
             }
         });

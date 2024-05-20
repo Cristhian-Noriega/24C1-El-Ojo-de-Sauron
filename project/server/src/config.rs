@@ -24,8 +24,7 @@ impl Config {
         let port = Self::get_value_from_file(&mut buf_reader, "port")?;
         let address = Self::get_value_from_file(&mut buf_reader, "address")?;
         let log_file = Self::get_value_from_file(&mut buf_reader, "log_file")?;
-        let segs_to_disconnect =
-            Self::get_value_from_file(&mut buf_reader, "segs_to_disconnect")?;
+        let segs_to_disconnect = Self::get_value_from_file(&mut buf_reader, "segs_to_disconnect")?;
 
         let segs_to_disconnect = segs_to_disconnect.parse().ok()?;
         let port = port.parse().ok()?;
@@ -67,5 +66,3 @@ impl Config {
         self.segs_to_disconnect
     }
 }
-
-

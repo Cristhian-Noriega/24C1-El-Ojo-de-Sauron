@@ -15,7 +15,6 @@ use {
             connect_return_code::ConnectReturnCode, suback_return_code::SubackReturnCode,
         },
     },
-
     std::io::Read,
 };
 
@@ -24,4 +23,3 @@ pub mod model;
 
 const PROTOCOL_NAME: [u8; 4] = [b'M', b'Q', b'T', b'T'];
 const PROTOCOL_LEVEL: u8 = 0x04;
-

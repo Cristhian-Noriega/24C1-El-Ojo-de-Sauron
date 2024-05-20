@@ -1,13 +1,16 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 use std::{
-    collections::{HashMap, HashSet}, io::Write, sync::{mpsc, RwLock}, time::Duration
+    collections::{HashMap, HashSet},
+    io::Write,
+    sync::{mpsc, RwLock},
+    time::Duration,
 };
 
 use crate::client::Client;
 use sauron::model::{
     components::{qos::QoS, topic_level::TopicLevel, topic_name::TopicName},
-    packets::{publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe}, 
+    packets::{publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe},
 };
 
 pub enum TopicHandlerTask {
@@ -86,7 +89,13 @@ impl Topic {
         }
     }
 
-    pub fn publish(&self, topic_name: TopicName, message: Message, clients: &HashMap<Vec<u8>, Client>, active_connections: &HashSet<Vec<u8>>) {
+    pub fn publish(
+        &self,
+        topic_name: TopicName,
+        message: Message,
+        clients: &HashMap<Vec<u8>, Client>,
+        active_connections: &HashSet<Vec<u8>>,
+    ) {
         let subscribers = self.get_all_matching_subscriptions(topic_name);
         for subscriber in subscribers {
             for (client_id, data) in subscriber {
@@ -97,14 +106,18 @@ impl Topic {
                 let client = clients.get(&client_id).unwrap();
 
                 let publish_packet = message.packet.clone();
-                let _ = match client.stream.lock().unwrap().write(publish_packet.to_bytes().as_slice()) {
-                    Ok(_) => {},
+                let _ = match client
+                    .stream
+                    .lock()
+                    .unwrap()
+                    .write(publish_packet.to_bytes().as_slice())
+                {
+                    Ok(_) => {}
                     Err(_) => {}
                 };
             }
         }
     }
-    
 
     pub fn get_all_matching_subscriptions(&self, topic_name: TopicName) -> Vec<Subscribers> {
         let mut subscribers = Vec::new();
@@ -115,7 +128,7 @@ impl Topic {
     pub fn collect_matching_subscriptions(
         &self,
         subscribers: &mut Vec<Subscribers>,
-        levels: Vec<Vec<u8>>
+        levels: Vec<Vec<u8>>,
     ) {
         if levels.is_empty() {
             subscribers.push(self.subscribers.read().unwrap().clone());
@@ -123,12 +136,11 @@ impl Topic {
         }
         let current_level = &levels[0];
         let remaining_levels = levels[1..].to_vec();
-        
+
         let subtopics = self.subtopics.read().unwrap();
         if let Some(subtopic) = subtopics.get(current_level) {
             subtopic.collect_matching_subscriptions(subscribers, remaining_levels);
         }
-        
     }
 
     pub fn add_subscriber(&self, client_id: Vec<u8>, data: SubscriptionData) {
@@ -225,7 +237,8 @@ impl TopicHandler {
             client_id: client_id.clone(),
             packet: publish_packet.clone(),
         };
-        self.root.publish(topic_name, message, &self.clients, &self.active_connections);
+        self.root
+            .publish(topic_name, message, &self.clients, &self.active_connections);
     }
 
     pub fn handle_client_connected(&self, client: Client) {
