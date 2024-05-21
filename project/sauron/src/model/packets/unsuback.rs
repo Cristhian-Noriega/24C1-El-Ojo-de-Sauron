@@ -20,7 +20,7 @@ impl Unsuback {
         }
 
         // Variable Header
-        let mut variable_header_buffer = vec![0; DEFAULT_VARIABLE_HEADER_LENGTH];
+        let mut variable_header_buffer = [0; DEFAULT_VARIABLE_HEADER_LENGTH];
         stream.read_exact(&mut variable_header_buffer)?;
 
         let packet_identifier =
