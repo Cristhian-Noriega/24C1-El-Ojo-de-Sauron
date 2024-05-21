@@ -1,11 +1,5 @@
-use std::io::Read;
-
-use crate::errors::error::Error;
-
-use super::{encoded_string::EncodedString, topic_level::TopicLevel};
-
-const FORWARD_SLASH: u8 = 0x2F;
-const SERVER_RESERVED: u8 = 0x24;
+use super::{FORWARD_SLASH, SERVER_RESERVED};
+use crate::{EncodedString, Error, Read, TopicLevel};
 
 #[derive(Debug)]
 pub struct TopicName {

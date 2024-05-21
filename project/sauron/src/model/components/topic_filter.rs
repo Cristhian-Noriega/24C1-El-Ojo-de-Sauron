@@ -1,11 +1,5 @@
-use std::io::Read;
-
-use crate::{errors::error::Error, model::encoded_string::EncodedString};
-
-use super::{topic_level::TopicLevel, topic_name::TopicName};
-
-const FORWARD_SLASH: u8 = 0x2F;
-const SERVER_RESERVED: u8 = 0x24;
+use super::{FORWARD_SLASH, SERVER_RESERVED};
+use crate::{EncodedString, Error, Read, TopicLevel, TopicName};
 
 #[derive(Debug)]
 pub struct TopicFilter {
@@ -103,7 +97,7 @@ impl TopicFilter {
 
 mod test {
     use super::*;
-    use crate::model::encoded_string::EncodedString;
+    use crate::EncodedString;
     use std::io::Cursor;
 
     #[allow(dead_code)]

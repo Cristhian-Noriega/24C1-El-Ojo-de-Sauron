@@ -1,4 +1,4 @@
-use crate::errors::error::Error;
+use crate::Error;
 
 const MULTI_LEVEL_WILDCARD: u8 = 0x23;
 const SINGLE_LEVEL_WILDCARD: u8 = 0x2B;
