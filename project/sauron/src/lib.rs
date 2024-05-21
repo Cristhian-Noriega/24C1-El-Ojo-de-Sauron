@@ -12,7 +12,7 @@ use {
             subscribe::Subscribe, unsuback::Unsuback, unsubscribe::Unsubscribe,
         },
         return_codes::{
-            connack_return_code::ConnackReturnCode, suback_return_code::SubackReturnCode,
+            connect_return_code::ConnectReturnCode, suback_return_code::SubackReturnCode,
         },
     },
     std::io::Read,

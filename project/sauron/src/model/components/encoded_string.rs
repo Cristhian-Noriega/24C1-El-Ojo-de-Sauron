@@ -2,7 +2,7 @@ use crate::{Error, Read};
 
 const LENGTH_SIZE: usize = 2;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct EncodedString {
     length: u16,
     content: Vec<u8>,
@@ -44,14 +44,10 @@ impl EncodedString {
     }
 
     pub fn length(&self) -> usize {
-        self.length as usize
+        LENGTH_SIZE + self.length as usize
     }
 
     pub fn content(&self) -> &Vec<u8> {
         &self.content
-    }
-
-    pub fn encoded_length(&self) -> usize {
-        LENGTH_SIZE + self.length as usize
     }
 }

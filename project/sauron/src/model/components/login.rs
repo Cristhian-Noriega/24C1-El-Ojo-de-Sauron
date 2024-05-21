@@ -1,6 +1,6 @@
 use crate::{EncodedString, Error, Read};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Login {
     pub username: EncodedString,
     pub password: Option<EncodedString>,

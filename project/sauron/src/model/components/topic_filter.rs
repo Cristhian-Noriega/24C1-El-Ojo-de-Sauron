@@ -53,13 +53,15 @@ impl TopicFilter {
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
-        let topic_bytes = self
-            .levels
-            .iter()
-            .map(|level| level.to_bytes())
-            .chain(std::iter::once(vec![FORWARD_SLASH]))
-            .flatten()
-            .collect();
+        let mut topic_bytes = vec![];
+
+        for (i, level) in self.levels.iter().enumerate() {
+            topic_bytes.extend(level.to_bytes());
+
+            if i < self.levels.len() - 1 {
+                topic_bytes.push(FORWARD_SLASH);
+            }
+        }
 
         EncodedString::new(topic_bytes).to_bytes()
     }
