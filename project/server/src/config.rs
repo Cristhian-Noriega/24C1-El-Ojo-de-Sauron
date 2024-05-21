@@ -15,7 +15,7 @@ pub struct Config {
 
 impl Config {
     pub fn new(path_file: &str) -> Option<Config> {
-        let config_file = File::open(&path_file).ok()?;
+        let config_file = File::open(path_file).ok()?;
         Config::from_file(config_file)
     }
 

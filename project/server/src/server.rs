@@ -64,13 +64,13 @@ impl Server {
     }
 
     pub fn handle_new_connection(&self, mut stream: TcpStream) -> std::io::Result<()> {
-        let _ = match Packet::from_bytes(&mut stream) {
+        match Packet::from_bytes(&mut stream) {
             Ok(packet) => self.handle_incoming_packet(packet, stream),
             Err(err) => {
-                println!("Error reading packet: {:?}", err);
+                println!("Error parsing packet: {:?}", err);
                 return Ok(());
             }
-        };
+        }
         Ok(())
     }
 
@@ -170,8 +170,9 @@ pub fn handle_packet(
     sender_to_topics_channel: std::sync::mpsc::Sender<Task>,
 ) -> bool {
     println!("packet {:?}", packet);
-    let maintain_thread = match packet {
+    match packet {
         Packet::Publish(publish_packet) => {
+            println!("Received Publish packet");
             handle_publish(publish_packet, sender_to_topics_channel, client_id)
         }
         Packet::Puback(puback_packet) => {
@@ -182,6 +183,7 @@ pub fn handle_packet(
             handle_subscribe(subscribe_packet, sender_to_topics_channel, client_id)
         }
         Packet::Unsubscribe(unsubscribe_packet) => {
+            println!("Received Unsubscribe packet");
             handle_unsubscribe(unsubscribe_packet, sender_to_topics_channel, client_id)
         }
         Packet::Pingreq(pingreq_packet) => handle_pingreq(stream),
@@ -192,8 +194,7 @@ pub fn handle_packet(
             println!("Unsupported packet type");
             false
         }
-    };
-    maintain_thread
+    }
 }
 
 pub fn handle_publish(

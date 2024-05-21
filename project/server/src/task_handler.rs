@@ -106,15 +106,11 @@ impl Topic {
                 let client = clients.get(&client_id).unwrap();
 
                 let publish_packet = message.packet.clone();
-                let _ = match client
+                if client
                     .stream
                     .lock()
                     .unwrap()
-                    .write(publish_packet.to_bytes().as_slice())
-                {
-                    Ok(_) => {}
-                    Err(_) => {}
-                };
+                    .write(publish_packet.to_bytes().as_slice()).is_ok() {};
             }
         }
     }

@@ -76,7 +76,7 @@ fn client_run(address: &str, from_server_stream: &mut dyn Read) -> std::io::Resu
             std::io::stdin().read_line(&mut topic)?;
 
             let mut levels = vec![];
-            for level in topic.split(" ") {
+            for level in topic.split(' ') {
                 if let Ok(topic_level) = TopicLevel::from_bytes(level.as_bytes().to_vec()) {
                     levels.push(topic_level);
                 }
@@ -107,14 +107,9 @@ fn client_run(address: &str, from_server_stream: &mut dyn Read) -> std::io::Resu
 
             let mut levels = vec![];
 
-            for level in topic.split(" ") {
-                if let Ok(topic_level) = TopicLevel::from_bytes(level.as_bytes().to_vec()) {
-                    match topic_level {
-                        TopicLevel::Literal(literal) => {
-                            levels.push(literal);
-                        }
-                        _ => {}
-                    }
+            for level in topic.split(' ') {
+                if let Ok(TopicLevel::Literal(literal)) = TopicLevel::from_bytes(level.as_bytes().to_vec()) {
+                    levels.push(literal);
                 }
             }
 
@@ -146,7 +141,7 @@ fn client_run(address: &str, from_server_stream: &mut dyn Read) -> std::io::Resu
             std::io::stdin().read_line(&mut topic)?;
 
             let mut levels = vec![];
-            for level in topic.split(" ") {
+            for level in topic.split(' ') {
                 if let Ok(topic_level) = TopicLevel::from_bytes(level.as_bytes().to_vec()) {
                     levels.push(topic_level);
                 }
