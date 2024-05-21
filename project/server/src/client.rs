@@ -12,7 +12,7 @@ pub struct Client {
     pub password: String,
     pub subscriptions: Vec<String>,
     pub alive: AtomicBool,
-    pub stream: Mutex<TcpStream>,
+    pub stream: Mutex<TcpStream>, // ARC MUTEX TCP STREAM
 }
 
 impl Client {
