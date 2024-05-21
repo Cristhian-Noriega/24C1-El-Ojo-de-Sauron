@@ -106,7 +106,7 @@ impl Server {
 
         println!(
             "New client connected: {:?}",
-            String::from_utf8_lossy(&client_id)
+            String::from_utf8_lossy(client_id)
         );
 
         let connack_packet = Connack::new(false, ConnectReturnCode::ConnectionAccepted);
