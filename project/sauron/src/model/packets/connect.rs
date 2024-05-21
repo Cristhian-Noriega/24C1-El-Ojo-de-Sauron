@@ -11,7 +11,7 @@ pub struct Connect {
     keep_alive: u16,
 
     // Payload Fields
-    pub client_id: EncodedString,
+    client_id: EncodedString,
     will: Option<Will>,
     login: Option<Login>,
 }

@@ -91,8 +91,8 @@ fn client_run(address: &str, from_server_stream: &mut dyn Read) -> std::io::Resu
             let subscribe_packet = Subscribe::new(packet_id, topics_filters);
 
             // Send Subscribe packet
-            println!("Packet ID: {:?}", subscribe_packet.packet_identifier);
-            println!("Topics: {:?}", subscribe_packet.topics);
+            println!("Packet ID: {:?}", subscribe_packet.packet_identifier());
+            println!("Topics: {:?}", subscribe_packet.topics());
             let _ = to_server_stream.write(subscribe_packet.to_bytes().as_slice());
             println!("Sent Subscribe packet");
         }

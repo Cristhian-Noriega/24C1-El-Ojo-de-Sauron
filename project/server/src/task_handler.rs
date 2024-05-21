@@ -110,7 +110,9 @@ impl Topic {
                     .stream
                     .lock()
                     .unwrap()
-                    .write(publish_packet.to_bytes().as_slice()).is_ok() {};
+                    .write(publish_packet.to_bytes().as_slice())
+                    .is_ok()
+                {};
             }
         }
     }
@@ -221,7 +223,7 @@ impl TaskHandler {
     // Subscribe a client_id into a set of topics given a Subscribe packet
 
     pub fn subscribe(&self, subscribe_packet: Subscribe, client_id: Vec<u8>) {
-        let topics = subscribe_packet.topics;
+        let topics = subscribe_packet.topics();
         for (topic_filter, qos) in topics {
             let data = SubscriptionData { qos };
             self.root.subscribe(
@@ -240,13 +242,17 @@ impl TaskHandler {
 
     /*publish uses a publish method of the topic struct and also sends to the clients subscribed to the topic the message*/
     pub fn publish(&self, publish_packet: &Publish, client_id: Vec<u8>) {
-        let topic_name = publish_packet.topic.clone();
+        let topic_name = publish_packet.topic();
         let message = Message {
             client_id: client_id.clone(),
             packet: publish_packet.clone(),
         };
-        self.root
-            .publish(topic_name, message, &self.clients, &self.active_connections);
+        self.root.publish(
+            topic_name.clone(),
+            message,
+            &self.clients,
+            &self.active_connections,
+        );
     }
 
     pub fn handle_client_connected(&self, client: Client) {

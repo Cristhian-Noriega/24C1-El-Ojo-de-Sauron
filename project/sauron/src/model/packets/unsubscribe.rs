@@ -5,7 +5,6 @@ use crate::{Error, FixedHeader, Read, RemainingLength, TopicFilter};
 pub struct Unsubscribe {
     // Variable Header
     pub packet_identifier: u16,
-
     // Payload
     pub topics: Vec<TopicFilter>,
 }
@@ -83,5 +82,13 @@ impl Unsubscribe {
         packet_bytes.extend(variable_header_bytes);
 
         packet_bytes
+    }
+
+    pub fn packet_identifier(&self) -> u16 {
+        self.packet_identifier
+    }
+
+    pub fn topics(&self) -> &Vec<TopicFilter> {
+        &self.topics
     }
 }

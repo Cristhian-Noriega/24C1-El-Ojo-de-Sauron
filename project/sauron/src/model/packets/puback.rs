@@ -54,4 +54,8 @@ impl Puback {
 
         packet_bytes
     }
+
+    pub fn packet_identifier(&self) -> Option<u16> {
+        self.packet_identifier
+    }
 }

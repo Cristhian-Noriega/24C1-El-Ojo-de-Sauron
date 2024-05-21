@@ -47,4 +47,8 @@ impl Unsuback {
 
         packet_bytes
     }
+
+    pub fn packet_identifier(&self) -> u16 {
+        self.packet_identifier
+    }
 }

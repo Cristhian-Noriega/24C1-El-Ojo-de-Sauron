@@ -69,4 +69,12 @@ impl Suback {
 
         packet_bytes
     }
+
+    pub fn packet_identifier(&self) -> u16 {
+        self.packet_identifier
+    }
+
+    pub fn suback_return_codes(&self) -> &Vec<SubackReturnCode> {
+        &self.suback_return_codes
+    }
 }

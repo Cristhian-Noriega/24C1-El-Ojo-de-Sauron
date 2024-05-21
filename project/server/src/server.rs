@@ -92,7 +92,7 @@ impl Server {
 
     pub fn connect_new_client(&self, connect_packet: Connect, mut stream: TcpStream) {
         println!("Received Connect Package");
-        let client_id = connect_packet.client_id.content;
+        let client_id = connect_packet.client_id().content();
         let (client_sender, client_receiver) = mpsc::channel(); // Create a channel for this client
 
         let mut client_senders = self.client_senders.write().unwrap();
@@ -115,7 +115,7 @@ impl Server {
         self.create_new_client_thread(
             self.client_actions_sender.clone(),
             stream,
-            client_id,
+            client_id.clone(),
             client_receiver,
         );
 
@@ -237,7 +237,6 @@ pub fn handle_unsubscribe(
     sender_to_task_channel: std::sync::mpsc::Sender<Task>,
     client_id: Vec<u8>,
 ) -> bool {
-    //if !validate_client_id(unsubscribe_packet, client_id) {return false};
     sender_to_task_channel
         .send(Task::UnsubscribeClient(unsubscribe_packet, client_id))
         .unwrap();

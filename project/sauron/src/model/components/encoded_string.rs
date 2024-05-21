@@ -51,12 +51,3 @@ impl EncodedString {
         &self.content
     }
 }
-
-// impl fmt::Display for EncodedString {
-//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//         match std::str::from_utf8(&self.content) {
-//             Ok(string) => write!(f, "{}", string),
-//             Err(_) => write!(f, "Invalid UTF-8 sequence"),
-//         }
-//     }
-// }

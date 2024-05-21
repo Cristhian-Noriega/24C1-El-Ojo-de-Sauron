@@ -3,8 +3,8 @@ use crate::{Error, FixedHeader, QoS, Read, RemainingLength, TopicFilter};
 
 #[derive(Debug)]
 pub struct Subscribe {
-    pub packet_identifier: u16,
-    pub topics: Vec<(TopicFilter, QoS)>,
+    packet_identifier: u16,
+    topics: Vec<(TopicFilter, QoS)>,
 }
 
 impl Subscribe {
@@ -85,5 +85,13 @@ impl Subscribe {
         packet_bytes.extend(payload_bytes);
 
         packet_bytes
+    }
+
+    pub fn packet_identifier(&self) -> u16 {
+        self.packet_identifier
+    }
+
+    pub fn topics(&self) -> Vec<(TopicFilter, QoS)> {
+        self.topics.clone()
     }
 }

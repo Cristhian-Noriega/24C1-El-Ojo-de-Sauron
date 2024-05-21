@@ -3,12 +3,12 @@ use crate::{Error, FixedHeader, QoS, Read, RemainingLength, TopicName};
 
 #[derive(Debug, Clone)]
 pub struct Publish {
-    pub dup: bool,
-    pub qos: QoS,
-    pub retain: bool,
-    pub topic: TopicName,
-    pub package_identifier: Option<u16>,
-    pub message: Vec<u8>,
+    dup: bool,
+    qos: QoS,
+    retain: bool,
+    topic: TopicName,
+    package_identifier: Option<u16>,
+    message: Vec<u8>,
 }
 
 impl Publish {
@@ -109,6 +109,26 @@ impl Publish {
         packet_bytes.extend(payload_bytes);
 
         packet_bytes
+    }
+
+    pub fn dup(&self) -> bool {
+        self.dup
+    }
+
+    pub fn qos(&self) -> &QoS {
+        &self.qos
+    }
+
+    pub fn retain(&self) -> bool {
+        self.retain
+    }
+
+    pub fn topic(&self) -> &TopicName {
+        &self.topic
+    }
+
+    pub fn package_identifier(&self) -> Option<u16> {
+        self.package_identifier
     }
 
     pub fn message(&self) -> &Vec<u8> {
