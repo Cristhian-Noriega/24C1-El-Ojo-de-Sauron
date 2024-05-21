@@ -1,7 +1,8 @@
+#![allow(unused_variables)]
 use std::env::args;
 use std::io::stdin;
+use std::io::Read;
 use std::io::Write;
-use std::io::{BufRead, BufReader, Read};
 use std::net::TcpStream;
 
 use sauron::model::components::encoded_string::EncodedString;
@@ -39,7 +40,6 @@ fn main() -> Result<(), ()> {
 
 fn client_run(address: &str, from_server_stream: &mut dyn Read) -> std::io::Result<()> {
     let mut to_server_stream = TcpStream::connect(address)?;
-    let reader = BufReader::new(from_server_stream);
 
     //client id: monitor app
     let client_id_bytes = b"monitor app".to_vec();
@@ -155,5 +155,4 @@ fn client_run(address: &str, from_server_stream: &mut dyn Read) -> std::io::Resu
             }
         }
     }
-
 }

@@ -13,7 +13,7 @@ use sauron::model::{
     packets::{publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe},
 };
 
-pub enum TopicHandlerTask {
+pub enum Task {
     SubscribeClient(Subscribe, Vec<u8>),
     UnsubscribeClient(Unsubscribe, Vec<u8>),
     Publish(Publish, Vec<u8>),
@@ -159,18 +159,18 @@ impl Topic {
     }
 }
 
-pub struct TopicHandler {
+pub struct TaskHandler {
     root: Topic,
     //client_actions_sender_channel: mpsc::Sender<Message>,
-    client_actions_receiver_channel: mpsc::Receiver<TopicHandlerTask>,
+    client_actions_receiver_channel: mpsc::Receiver<Task>,
     clients: HashMap<Vec<u8>, Client>,
     active_connections: HashSet<Vec<u8>>,
     retained_messages: HashMap<Vec<u8>, Publish>,
 }
 
-impl TopicHandler {
-    pub fn new(receiver_channel: mpsc::Receiver<TopicHandlerTask>) -> Self {
-        TopicHandler {
+impl TaskHandler {
+    pub fn new(receiver_channel: mpsc::Receiver<Task>) -> Self {
+        TaskHandler {
             root: Topic::new(),
             //client_actions_sender_channel: sender_channel,
             client_actions_receiver_channel: receiver_channel,
@@ -184,25 +184,34 @@ impl TopicHandler {
         loop {
             match self.client_actions_receiver_channel.recv() {
                 Ok(task) => match task {
-                    TopicHandlerTask::SubscribeClient(subscribe, client_id) => {
-                        println!("Topic Handler received task: subscribe Client: {:?}", client_id);
+                    Task::SubscribeClient(subscribe, client_id) => {
+                        println!(
+                            "Topic Handler received task: subscribe Client: {:?}",
+                            client_id
+                        );
                         self.subscribe(subscribe, client_id);
                     }
-                    TopicHandlerTask::UnsubscribeClient(unsubscribe, client_id) => {
-                        println!("Topic Handler received task: unsubscribe Client: {:?}", client_id);
+                    Task::UnsubscribeClient(unsubscribe, client_id) => {
+                        println!(
+                            "Topic Handler received task: unsubscribe Client: {:?}",
+                            client_id
+                        );
                         self.unsubscribe(unsubscribe);
                     }
-                    TopicHandlerTask::Publish(publish, client_id) => {
-                        println!("Topic Handler received task: Publish message: {:?}", publish);
+                    Task::Publish(publish, client_id) => {
+                        println!(
+                            "Topic Handler received task: Publish message: {:?}",
+                            publish
+                        );
                         self.publish(&publish, client_id);
                     }
                     // TopicHandlerTask::RegisterPubAck(puback) => {
                     //     self.register_puback(puback);
                     // }
-                    TopicHandlerTask::ClientConnected(client) => {
+                    Task::ClientConnected(client) => {
                         self.handle_client_connected(client);
                     }
-                    TopicHandlerTask::ClientDisconnected(client_id) => {
+                    Task::ClientDisconnected(client_id) => {
                         self.handle_client_disconnected(client_id);
                     }
                 },

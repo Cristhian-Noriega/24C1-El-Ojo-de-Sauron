@@ -78,7 +78,7 @@ impl Publish {
     pub fn to_bytes(&self) -> Vec<u8> {
         // Payload
         let payload_bytes = &self.message;
-        
+
         // Variable Header
 
         let mut variable_header_bytes = vec![];
@@ -97,7 +97,8 @@ impl Publish {
 
         let mut fixed_header_bytes = vec![PUBLISH_PACKET_TYPE << 4 | fixed_header_flags];
 
-        let remaining_length_value = variable_header_bytes.len() as u32 + payload_bytes.len() as u32;
+        let remaining_length_value =
+            variable_header_bytes.len() as u32 + payload_bytes.len() as u32;
         let remaining_length_bytes = RemainingLength::new(remaining_length_value).to_bytes();
         fixed_header_bytes.extend(remaining_length_bytes);
 

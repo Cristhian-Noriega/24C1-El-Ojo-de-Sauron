@@ -1,5 +1,5 @@
-#![allow(dead_code)]
 #![allow(unused_variables)]
+#![allow(dead_code)]
 
 use std::{
     collections::HashMap,
@@ -19,14 +19,14 @@ pub use sauron::model::{
 };
 
 use super::config::Config;
-use super::topic_handler::TopicHandler;
-use super::topic_handler::TopicHandlerTask;
+use super::task_handler::Task;
+use super::task_handler::TaskHandler;
 
 pub struct Server {
     config: Option<Config>,
     // Channel for client actions
-    client_actions_sender: mpsc::Sender<TopicHandlerTask>,
-    client_actions_receiver: mpsc::Receiver<TopicHandlerTask>,
+    client_actions_sender: mpsc::Sender<Task>,
+    client_actions_receiver: mpsc::Receiver<Task>,
     // Map to store client senders for communication
     client_senders: RwLock<HashMap<Vec<u8>, mpsc::Sender<Publish>>>,
 }
@@ -46,7 +46,7 @@ impl Server {
         println!("Server running on address: {}", address);
         let server = Server::new();
         let listener = TcpListener::bind(address)?;
-        Server::initialize_topic_handler_thread(server.client_actions_receiver);
+        Server::initialize_task_handler_thread(server.client_actions_receiver);
 
         for stream_result in listener.incoming() {
             match stream_result {
@@ -64,7 +64,7 @@ impl Server {
     }
 
     pub fn handle_new_connection(&self, mut stream: TcpStream) -> std::io::Result<()> {
-        let packet = match Packet::from_bytes(&mut stream) {
+        let _ = match Packet::from_bytes(&mut stream) {
             Ok(packet) => self.handle_incoming_packet(packet, stream),
             Err(err) => {
                 println!("Error reading packet: {:?}", err);
@@ -74,11 +74,9 @@ impl Server {
         Ok(())
     }
 
-    pub fn initialize_topic_handler_thread(
-        client_actions_receiver: mpsc::Receiver<TopicHandlerTask>,
-    ) {
+    pub fn initialize_task_handler_thread(client_actions_receiver: mpsc::Receiver<Task>) {
         thread::spawn(move || {
-            let topic_handler = TopicHandler::new(client_actions_receiver);
+            let topic_handler = TaskHandler::new(client_actions_receiver);
             println!("Starting topic handler thread\n");
             topic_handler.run();
         });
@@ -111,7 +109,6 @@ impl Server {
             String::from_utf8_lossy(&client_id)
         );
 
-        //now i should send to the client connected a connack packet with the return code
         let connack_packet = Connack::new(false, ConnectReturnCode::ConnectionAccepted);
         let _ = stream.write(connack_packet.to_bytes().as_slice());
 
@@ -129,7 +126,7 @@ impl Server {
 
     pub fn create_new_client_thread(
         &self,
-        sender_to_topics_channel: std::sync::mpsc::Sender<TopicHandlerTask>,
+        sender_to_task_channel: std::sync::mpsc::Sender<Task>,
         mut stream: TcpStream,
         client_id: Vec<u8>,
         client_receiver: mpsc::Receiver<Publish>,
@@ -142,12 +139,12 @@ impl Server {
                 match packet {
                     Ok(packet) => {
                         println!("Received packet: {:?}", packet);
-                        
+
                         let handling_result = handle_packet(
                             packet,
                             client_id.clone(),
                             &mut stream,
-                            sender_to_topics_channel.clone(),
+                            sender_to_task_channel.clone(),
                         );
 
                         if !handling_result {
@@ -170,7 +167,7 @@ pub fn handle_packet(
     packet: Packet,
     client_id: Vec<u8>,
     stream: &mut TcpStream,
-    sender_to_topics_channel: std::sync::mpsc::Sender<TopicHandlerTask>,
+    sender_to_topics_channel: std::sync::mpsc::Sender<Task>,
 ) -> bool {
     println!("packet {:?}", packet);
     let maintain_thread = match packet {
@@ -201,18 +198,18 @@ pub fn handle_packet(
 
 pub fn handle_publish(
     publish_packet: Publish,
-    sender_to_topics_channel: std::sync::mpsc::Sender<TopicHandlerTask>,
+    sender_to_topics_channel: std::sync::mpsc::Sender<Task>,
     client_id: Vec<u8>,
 ) -> bool {
     sender_to_topics_channel
-        .send(TopicHandlerTask::Publish(publish_packet, client_id))
+        .send(Task::Publish(publish_packet, client_id))
         .unwrap();
     true
 }
 
 pub fn handle_puback(
     puback_packet: Puback,
-    sender_to_topics_channel: std::sync::mpsc::Sender<TopicHandlerTask>,
+    sender_to_topics_channel: std::sync::mpsc::Sender<Task>,
     client_id: Vec<u8>,
 ) -> bool {
     // sender_to_topics_channel
@@ -224,14 +221,11 @@ pub fn handle_puback(
 
 pub fn handle_subscribe(
     subscribe_packet: Subscribe,
-    sender_to_topics_channel: std::sync::mpsc::Sender<TopicHandlerTask>,
+    sender_to_task_channel: std::sync::mpsc::Sender<Task>,
     client_id: Vec<u8>,
 ) -> bool {
-    sender_to_topics_channel
-        .send(TopicHandlerTask::SubscribeClient(
-            subscribe_packet,
-            client_id,
-        ))
+    sender_to_task_channel
+        .send(Task::SubscribeClient(subscribe_packet, client_id))
         .unwrap();
 
     true
@@ -239,15 +233,12 @@ pub fn handle_subscribe(
 
 pub fn handle_unsubscribe(
     unsubscribe_packet: Unsubscribe,
-    sender_to_topics_channel: std::sync::mpsc::Sender<TopicHandlerTask>,
+    sender_to_task_channel: std::sync::mpsc::Sender<Task>,
     client_id: Vec<u8>,
 ) -> bool {
     //if !validate_client_id(unsubscribe_packet, client_id) {return false};
-    sender_to_topics_channel
-        .send(TopicHandlerTask::UnsubscribeClient(
-            unsubscribe_packet,
-            client_id,
-        ))
+    sender_to_task_channel
+        .send(Task::UnsubscribeClient(unsubscribe_packet, client_id))
         .unwrap();
 
     true
@@ -255,11 +246,11 @@ pub fn handle_unsubscribe(
 
 pub fn handle_disconnect(
     packet: Disconnect,
-    sender_to_topics_channel: std::sync::mpsc::Sender<TopicHandlerTask>,
+    sender_to_task_channel: std::sync::mpsc::Sender<Task>,
     client_id: Vec<u8>,
 ) -> bool {
-    sender_to_topics_channel
-        .send(TopicHandlerTask::ClientDisconnected(client_id))
+    sender_to_task_channel
+        .send(Task::ClientDisconnected(client_id))
         .unwrap();
 
     false
