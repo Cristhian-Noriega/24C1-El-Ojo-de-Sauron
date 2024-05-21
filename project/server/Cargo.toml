@@ -8,9 +8,6 @@ edition = "2021"
 [dependencies]
 sauron = { path = "../sauron"} 
 
-# [[bin]]
-# name = "client"
-# path = "src/server/client/client.rs"
 
 [[bin]]
 name = "server"

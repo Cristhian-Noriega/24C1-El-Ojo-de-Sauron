@@ -108,7 +108,9 @@ fn client_run(address: &str, from_server_stream: &mut dyn Read) -> std::io::Resu
             let mut levels = vec![];
 
             for level in topic.split(' ') {
-                if let Ok(TopicLevel::Literal(literal)) = TopicLevel::from_bytes(level.as_bytes().to_vec()) {
+                if let Ok(TopicLevel::Literal(literal)) =
+                    TopicLevel::from_bytes(level.as_bytes().to_vec())
+                {
                     levels.push(literal);
                 }
             }
