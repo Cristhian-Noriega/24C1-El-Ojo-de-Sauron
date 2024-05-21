@@ -323,7 +323,7 @@ mod test {
 
         let connect = Connect::from_bytes(fixed_header, &mut connect_bytes.as_slice()).unwrap();
 
-        assert_eq!(connect.clean_session(), false);
+        assert!(!connect.clean_session());
         assert_eq!(connect.keep_alive(), 10);
         assert_eq!(connect.client_id(), &EncodedString::new(b"a".to_vec()));
         assert_eq!(connect.will(), None);
@@ -411,7 +411,7 @@ mod test {
     #[test]
     fn test_invalid_protocol_level() {
         let protocol_name = EncodedString::new(PROTOCOL_NAME.to_vec()).to_bytes();
-        let protocol_level = vec![0];
+        let protocol_level = [0];
 
         let connect_bytes = [&protocol_name[..], &protocol_level[..]].concat();
 

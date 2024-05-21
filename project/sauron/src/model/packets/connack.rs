@@ -105,7 +105,7 @@ mod test {
         let fixed_header_bytes = fixed_header_bytes();
         let variable_header_bytes = variable_header_bytes(session_present, connect_return_code);
 
-        vec![&fixed_header_bytes[..], &variable_header_bytes[..]].concat()
+        [&fixed_header_bytes[..], &variable_header_bytes[..]].concat()
     }
 
     #[test]
@@ -129,7 +129,7 @@ mod test {
 
         let connack = Connack::from_bytes(fixed_header, &mut connack_bytes.as_slice()).unwrap();
 
-        assert_eq!(connack.session_present(), false);
+        assert!(!connack.session_present());
         assert_eq!(
             connack.connect_return_code(),
             &ConnectReturnCode::ConnectionAccepted
