@@ -1,4 +1,4 @@
-use super::{RESERVED_FIXED_HEADER_FLAGS, SUBSCRIBE_PACKET_TYPE};
+use super::{DEFAULT_VARIABLE_HEADER_LENGTH, RESERVED_FIXED_HEADER_FLAGS, SUBSCRIBE_PACKET_TYPE};
 use crate::{Error, FixedHeader, QoS, Read, RemainingLength, TopicFilter};
 
 #[derive(Debug)]
@@ -24,7 +24,7 @@ impl Subscribe {
         }
 
         // Variable Header
-        let mut variable_header_buffer = [0; 2];
+        let mut variable_header_buffer = [0; DEFAULT_VARIABLE_HEADER_LENGTH];
         stream.read_exact(&mut variable_header_buffer)?;
 
         let packet_identifier = u16::from_be_bytes(variable_header_buffer);
@@ -82,7 +82,16 @@ impl Subscribe {
 
         packet_bytes.extend(fixed_header_bytes);
         packet_bytes.extend(variable_header_bytes);
+        packet_bytes.extend(payload_bytes);
 
         packet_bytes
+    }
+
+    pub fn packet_identifier(&self) -> u16 {
+        self.packet_identifier
+    }
+
+    pub fn topics(&self) -> Vec<(TopicFilter, QoS)> {
+        self.topics.clone()
     }
 }

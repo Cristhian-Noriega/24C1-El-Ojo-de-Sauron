@@ -1,9 +1,9 @@
 use super::{FORWARD_SLASH, SERVER_RESERVED};
 use crate::{EncodedString, Error, Read, TopicLevel};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct TopicName {
-    levels: Vec<Vec<u8>>,
+    pub levels: Vec<Vec<u8>>,
     server_reserved: bool,
 }
 

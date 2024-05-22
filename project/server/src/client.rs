@@ -1,40 +1,34 @@
-use std::env::args;
-use std::io::stdin;
-use std::io::Write;
-use std::io::{BufRead, BufReader, Read};
+#![allow(dead_code)]
+#![allow(unused_variables)]
+
 use std::net::TcpStream;
+use std::sync::atomic::AtomicBool;
+use std::sync::Mutex;
 
-static CLIENT_ARGS: usize = 3;
+// represents the state of the client in the server
 
-fn main() -> Result<(), ()> {
-    let argv = args().collect::<Vec<String>>();
-    if argv.len() != CLIENT_ARGS {
-        println!("Cantidad de argumentos inválido");
-        let app_name = &argv[0];
-        println!("{:?} <host> <puerto>", app_name);
-        return Err(());
-    }
-
-    let address = argv[1].clone() + ":" + &argv[2];
-    println!("Conectándome a {:?}", address);
-
-    match client_run(&address, &mut stdin()) {
-        Ok(_) => Ok(()),
-        Err(e) => {
-            println!("Error: {:?}", e);
-            Err(())
-        }
-    }
+pub struct Client {
+    pub id: Vec<u8>,
+    pub password: String,
+    pub subscriptions: Vec<String>,
+    pub alive: AtomicBool,
+    pub stream: Mutex<TcpStream>, // ARC MUTEX TCP STREAM
 }
 
-fn client_run(address: &str, stream: &mut dyn Read) -> std::io::Result<()> {
-    let reader = BufReader::new(stream);
-    let mut socket = TcpStream::connect(address)?;
-
-    for line in reader.lines().map_while(Result::ok) {
-        println!("Enviando: {:?}", line);
-        let _ = socket.write(line.as_bytes());
-        let _ = socket.write("\n".as_bytes());
+impl Client {
+    pub fn new(
+        id: Vec<u8>,
+        password: String,
+        stream: TcpStream,
+        clean_session: bool,
+        keep_alive: u16,
+    ) -> Client {
+        Client {
+            id,
+            password,
+            subscriptions: Vec::new(),
+            alive: AtomicBool::new(true),
+            stream: Mutex::new(stream),
+        }
     }
-    Ok(())
 }

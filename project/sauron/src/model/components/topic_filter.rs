@@ -1,9 +1,9 @@
 use super::{FORWARD_SLASH, SERVER_RESERVED};
 use crate::{EncodedString, Error, Read, TopicLevel, TopicName};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TopicFilter {
-    levels: Vec<TopicLevel>,
+    pub levels: Vec<TopicLevel>,
     server_reserved: bool,
 }
 
@@ -97,6 +97,7 @@ impl TopicFilter {
     }
 }
 
+#[cfg(test)]
 mod test {
     use super::*;
     use crate::EncodedString;
