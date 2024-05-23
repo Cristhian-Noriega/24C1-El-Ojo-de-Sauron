@@ -23,7 +23,7 @@ use super::task_handler::Task;
 use super::task_handler::TaskHandler;
 
 pub struct Server {
-    config: Option<Config>,
+    config: Config,
     // Channel for client actions
     client_actions_sender: mpsc::Sender<Task>,
     client_actions_receiver: mpsc::Receiver<Task>,
@@ -32,20 +32,21 @@ pub struct Server {
 }
 
 impl Server {
-    pub fn new() -> Self {
+    pub fn new(config: Config) -> Self {
         let (client_actions_sender, client_actions_receiver) = mpsc::channel();
         Server {
-            config: Config::new("/."),
+            config,
             client_actions_sender,
             client_actions_receiver,
             client_senders: RwLock::new(HashMap::new()),
         }
     }
 
-    pub fn server_run(&self, address: &str) -> std::io::Result<()> {
+    pub fn server_run(&self) -> std::io::Result<()> {
+        let address = format!("{}:{}", self.config.get_address(), self.config.get_port());
         println!("Server running on address: {}", address);
-        let server = Server::new();
-        let listener = TcpListener::bind(address)?;
+        let server = Server::new(self.config.clone());
+        let listener = TcpListener::bind(&address)?;
         Server::initialize_task_handler_thread(server.client_actions_receiver);
 
         for stream_result in listener.incoming() {
@@ -77,7 +78,7 @@ impl Server {
     pub fn initialize_task_handler_thread(client_actions_receiver: mpsc::Receiver<Task>) {
         thread::spawn(move || {
             let topic_handler = TaskHandler::new(client_actions_receiver);
-            println!("Starting topic handler thread\n");
+            println!("Starting task handler thread\n");
             topic_handler.run();
         });
     }

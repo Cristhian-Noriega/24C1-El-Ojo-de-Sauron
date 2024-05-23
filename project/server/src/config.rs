@@ -6,6 +6,7 @@ use std::{
     io::{BufRead, BufReader, Read},
 };
 
+#[derive(Debug, Clone)]
 pub struct Config {
     port: u16,
     address: String,
