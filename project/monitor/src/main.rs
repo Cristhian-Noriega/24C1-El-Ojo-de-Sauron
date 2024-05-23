@@ -1,7 +1,7 @@
-use crate::ui::ui_handler::UIHandler;
+use crate::ui::ui_application::UIApplication;
 
 pub mod ui;
 
 fn main() {
-    UIHandler::start();
+    UIApplication::start();
 }

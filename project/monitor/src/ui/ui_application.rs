@@ -1,61 +1,60 @@
-use gtk::prelude::*;
-use gtk::{Application, ApplicationWindow, Button, Box, Orientation};
+use gtk::{
+    prelude::*, ButtonsType, ComboBoxText, DialogFlags, Entry, Fixed, ListStore, MenuItem,
+    MessageDialog, MessageType, ScrolledWindow, SpinButton, TreePath, TreeView, WindowType, ProgressBar,
+};
+use gtk::{Adjustment, Builder, Button, Label, Window};
 
-const DEFAULT_WINDOW_WIDTH: i32 = 1200;
-const DEFAULT_WINDOW_HEIGHT: i32 = 700;
+pub struct UIApplication {
+    builder: Builder,
+}
 
-pub struct UIApplication {}
+impl Default for UIApplication {
+    fn default() -> Self {
+        if let Err(err) = gtk::init() {
+            eprintln!("Error initializing GTK: {}", err);
+        }
+        let builder = Builder::from_file("monitor/src/ui/view.glade");
+        UIApplication { builder }
+    }
+}
 
 impl UIApplication {
     pub fn start() {
-        let app = Application::builder()
-            .application_id("com.fiuba.monitor")
-            .build();
-        app.connect_activate(build_home_window);
-        app.run();
+        let mut window = UIApplication::default();
+        window.show_window();
+    }
+
+    pub fn show_window(&mut self) {
+        let window: Option<Window> = self.builder.get_object("window");
+
+        println!("{:?}", window);
+
+        if let Some(w) = window {
+            self.connect_button();
+            w.show_all();
+        };
+        gtk::main();
+    }
+
+    fn connect_button(&mut self) {
+        let button_connect: Option<Button> = self.builder.get_object("button_connect");
+        let builder = self.builder.clone();
+
+        println!("{:?}", button_connect);
+
+        if let Some(b) = button_connect {
+            b.connect_clicked(move |_| {
+                // Aca deberia realizar el connect y obtener la respuesta
+                Self::set_label(&builder, "label_response", "Connected!");
+            });
+        }
+    }
+
+    fn set_label(builder: &Builder, key: &str, value: &str) {
+        let label: Option<Label> = builder.get_object(key);
+        if let Some(l) = label {
+            l.set_text(value);
+        }
     }
     
 }
-
-fn build_home_window(app: &Application){
-    // Configuro ventana del homepage
-    let home_window = ApplicationWindow::new(app);
-
-    home_window.set_title("Monitor");
-
-    home_window.set_default_size(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
-
-    let home_box = Box::new(Orientation::Vertical, 0);
-    let title_label = gtk::Label::new(None);
-    let map_button = Button::with_label("Map");
-    let incident_button = Button::with_label("Incidents");
-
-    title_label.set_markup("<span size='xx-large'>Monitor</span>");
-    map_button.set_size_request(200, 50);
-    incident_button.set_size_request(200, 50);
-
-    home_box.pack_start(&title_label, false, false, 10);
-    home_box.pack_start(&map_button, false, false, 20);
-    home_box.pack_start(&incident_button, false, false, 20);
-
-    home_window.set_child(Some(&home_box));
-
-    home_window.show_all();
-}
-
-// fn build_map_window(app: &Application){
-//     let window = ApplicationWindow::new(app);
-//     window.set_title("Map");
-//     window.set_default_size(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
-
-//     let map_box = Box::new(Orientation::Vertical, 0);
-//     let home_button = Button::with_label("Home");
-//     let image = Image::from_file("monitor/src/ui/images/map.png");
-
-//     map_box.pack_start(&home_button, false, false, 10);
-//     map_box.pack_start(&image, false, false, 20);
-
-//     window.set_child(Some(&map_box));   
-
-//     window.show_all(); 
-// }

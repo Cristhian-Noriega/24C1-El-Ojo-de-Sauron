@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Generated with glade 3.40.0 -->
+<interface>
+  <requires lib="gtk+" version="3.24"/>
+  <object class="GtkWindow" id="window">
+    <property name="can-focus">False</property>
+    <child>
+      <object class="GtkFixed" id="fixed1">
+        <property name="visible">True</property>
+        <property name="can-focus">False</property>
+        <child>
+          <object class="GtkButton" id="button_connect">
+            <property name="label" translatable="yes">Connect</property>
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="receives-default">True</property>
+          </object>
+          <packing>
+            <property name="x">65</property>
+            <property name="y">64</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkLabel" id="response_title">
+            <property name="width-request">100</property>
+            <property name="height-request">24</property>
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="label" translatable="yes">Response</property>
+          </object>
+          <packing>
+            <property name="x">272</property>
+            <property name="y">41</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkLabel" id="label_response">
+            <property name="width-request">199</property>
+            <property name="height-request">137</property>
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+          </object>
+          <packing>
+            <property name="x">222</property>
+            <property name="y">71</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>
