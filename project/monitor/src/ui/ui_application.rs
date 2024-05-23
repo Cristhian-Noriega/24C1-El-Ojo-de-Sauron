@@ -1,8 +1,5 @@
-use gtk::{
-    prelude::*, ButtonsType, ComboBoxText, DialogFlags, Entry, Fixed, ListStore, MenuItem,
-    MessageDialog, MessageType, ScrolledWindow, SpinButton, TreePath, TreeView, WindowType, ProgressBar,
-};
-use gtk::{Adjustment, Builder, Button, Label, Window};
+use gtk::prelude::*;
+use gtk::{Builder, Button, Label, Window};
 
 pub struct UIApplication {
     builder: Builder,
