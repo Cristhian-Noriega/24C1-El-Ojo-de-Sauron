@@ -2,8 +2,7 @@
 #![allow(unused_variables)]
 
 use std::{
-    fs::File,
-    io::{BufRead, BufReader, Read},
+    collections::HashMap, fs::File, io::{BufRead, BufReader, Read}
 };
 
 #[derive(Debug, Clone)]
@@ -21,14 +20,13 @@ impl Config {
     }
 
     pub fn from_file<R: Read>(config_file: R) -> Option<Config> {
-        let mut buf_reader = BufReader::new(config_file);
-        let port = Self::get_value_from_file(&mut buf_reader, "port")?;
-        let address = Self::get_value_from_file(&mut buf_reader, "address")?;
-        let log_file = Self::get_value_from_file(&mut buf_reader, "log_file")?;
-        let segs_to_disconnect = Self::get_value_from_file(&mut buf_reader, "segs_to_disconnect")?;
+        let buf_reader = BufReader::new(config_file);
+        let config_map = Self::parse_file_to_map(buf_reader)?;
 
-        let segs_to_disconnect = segs_to_disconnect.parse().ok()?;
-        let port = port.parse().ok()?;
+        let port = config_map.get("port")?.parse().ok()?;
+        let address = config_map.get("address")?.clone();
+        let log_file = config_map.get("log_file")?.clone();
+        let segs_to_disconnect = config_map.get("segs_to_disconnect")?.parse().ok()?;
 
         Some(Config {
             port,
@@ -38,18 +36,18 @@ impl Config {
         })
     }
 
-    fn get_value_from_file<R: BufRead>(reader: &mut R, key: &str) -> Option<String> {
+    fn parse_file_to_map<R: BufRead>(reader: R) -> Option<HashMap<String, String>> {
+        let mut config_map = HashMap::new();
         for line in reader.lines() {
             let line = line.ok()?;
             let mut parts = line.splitn(2, '=');
             if let (Some(k), Some(value)) = (parts.next(), parts.next()) {
-                if k.trim() == key {
-                    return Some(value.trim().to_string());
-                }
+                config_map.insert(k.trim().to_string(), value.trim().to_string());
             }
         }
-        None
+        Some(config_map)
     }
+
 
     pub fn get_port(&self) -> u16 {
         self.port

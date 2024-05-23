@@ -215,6 +215,7 @@ impl TaskHandler {
                 },
                 Err(_) => {
                     std::thread::sleep(Duration::from_secs(1));
+                    continue;
                 }
             }
         }
@@ -262,6 +263,7 @@ impl TaskHandler {
     pub fn handle_client_disconnected(&self, client_id: Vec<u8>) {
         todo!()
     }
+
 }
 
 pub fn subscribe_to_all_subtopics(topic: &Topic, client_id: Vec<u8>, data: &SubscriptionData) {
