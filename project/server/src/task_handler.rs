@@ -178,29 +178,27 @@ impl TaskHandler {
                 Ok(task) => match task {
                     Task::SubscribeClient(subscribe, client_id) => {
                         println!(
-                            "Topic Handler received task: subscribe Client: {:?}",
+                            "Task Handler received task: subscribe Client: {:?}",
                             std::str::from_utf8(&client_id).unwrap()
                         );
                         self.subscribe(subscribe, client_id);
                     }
                     Task::UnsubscribeClient(unsubscribe, client_id) => {
                         println!(
-                            "Topic Handler received task: unsubscribe Client: {:?}",
+                            "Task Handler received task: unsubscribe Client: {:?}",
                             client_id
                         );
                         self.unsubscribe(unsubscribe);
                     }
                     Task::Publish(publish, client_id) => {
                         println!(
-                            "Topic Handler received task: Publish message: {:?}",
+                            "Task Handler received task: Publish message: {:?}",
                             publish
                         );
                         self.publish(&publish, client_id);
                     }
-                    // TopicHandlerTask::RegisterPubAck(puback) => {
-                    //     self.register_puback(puback);
-                    // }
                     Task::ClientConnected(client) => {
+                        println!("Task Handler received task: Client Connected");
                         self.handle_new_client_connection(client);
                     }
                     Task::ClientDisconnected(client_id) => {
@@ -231,12 +229,10 @@ impl TaskHandler {
                         .entry(topic_name.clone())
                         .or_insert(Vec::new())
                         .push(client_id.clone());
-                    // You might want to do something with `qos` here
                 }
                 println!("{:?}", &self);
             },
             None => {
-                // Handle the case where the client does not exist
                 println!("Client does not exist");
             }
         }
@@ -257,7 +253,7 @@ impl TaskHandler {
     }
 
     pub fn handle_new_client_connection(&self, client: Client) {
-        println!("HOLAAAA");
+
         let connack_packet = Connack::new(true, ConnectReturnCode::ConnectionAccepted);
         let connack_packet_vec = connack_packet.to_bytes();
         let connack_packet_bytes = connack_packet_vec.as_slice();
@@ -269,7 +265,7 @@ impl TaskHandler {
         //insert the client id as key and the client as value in clients in the rwlockwriteguard
         clients.entry(client_id.clone()).or_insert(client);
         
-
+        println!("hash de clientes: {:?}", clients);
         let mut stream = match clients.get(&client_id).unwrap().stream.lock() {
             Ok(stream) => stream,
             Err(_) => {

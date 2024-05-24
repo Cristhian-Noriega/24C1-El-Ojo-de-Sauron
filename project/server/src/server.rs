@@ -103,10 +103,10 @@ impl Server {
         let mut client_senders = self.client_senders.write().unwrap();
         client_senders.insert(client_id.clone(), client_sender);
 
-        //let new_client = Client::new(client_id.clone(), "PASSWORD".to_string(), stream, true, 0);
-
+        let new_client = Client::new(client_id.clone(), "PASSWORD".to_string(), stream.try_clone().unwrap(), true, 0);
+        handle_connect(self.client_actions_sender.clone(), new_client);
         // self.client_actions_sender
-        //     .send(TopicHandlerTask::ClientConnected(new_client))
+        //     .send(Task::ClientConnected(new_client))
         //     .unwrap();
 
         println!(
