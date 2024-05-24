@@ -1,13 +1,17 @@
 use eframe::egui;
+use crate::client::Client;
+
 
 pub struct UIApplication {
     response: String,
+    client: Client
 }
 
 impl Default for UIApplication {
     fn default() -> Self {
         Self {
             response: "no response".to_owned(),
+            client: Client::new()
         }
     }
 }
@@ -18,7 +22,8 @@ impl eframe::App for UIApplication {
             ui.heading("Monitor");
             ui.horizontal(|ui| {
                 if ui.button("Connect").clicked() {
-                    self.response = "Connected!".to_owned();
+                    self.client.send_connect();
+                    self.response = self.client.response.clone();
                 }
                 ui.vertical_centered(|ui| {
                     ui.label("Response");

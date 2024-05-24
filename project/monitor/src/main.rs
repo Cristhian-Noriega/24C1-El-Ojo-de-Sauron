@@ -1,12 +1,15 @@
-use crate::ui::ui_application::UIApplication;
+use ui_application::UIApplication;
 
-pub mod ui;
+mod ui_application;
+mod client;
 
-fn main() -> Result<(), eframe::Error>{
+
+fn main() -> Result<(), eframe::Error>{    
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default(),
         ..Default::default()
     };
+
     eframe::run_native(
         "Monitor",
         options,
