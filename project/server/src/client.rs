@@ -3,9 +3,12 @@
 
 use std::net::TcpStream;
 use std::sync::atomic::AtomicBool;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
+use std::io::Write;
 
 use sauron::model::components::topic_name::TopicName;
+
+use crate::task_handler::Message;
 
 // represents the state of the client in the server
 #[derive(Debug)]
@@ -14,7 +17,7 @@ pub struct Client {
     pub password: String,
     pub subscriptions: Vec<TopicName>,
     pub alive: AtomicBool,
-    pub stream: Mutex<TcpStream>, // ARC MUTEX TCP STREAM
+    pub stream: Arc<Mutex<TcpStream>>, // ARC MUTEX TCP STREAM
 }
 
 impl Client {
@@ -30,7 +33,7 @@ impl Client {
             password,
             subscriptions: Vec::new(),
             alive: AtomicBool::new(true),
-            stream: Mutex::new(stream),
+            stream: Arc::new(Mutex::new(stream)),
         }
     }
 
@@ -38,5 +41,13 @@ impl Client {
         let client_id = String::from_utf8(self.id.clone()).unwrap();
         println!("Client with client id {:?} subscribed to {:?}\n", client_id, topic.clone().to_string());
         self.subscriptions.push(topic);
+    }
+
+    pub fn send_message(&self, message: Message) {
+        let mut stream = self.stream.lock().unwrap();
+        match stream.write_all(message.packet().to_bytes().as_slice()) {
+            Ok(_) => println!("Message sent to client"),
+            Err(e) => println!("Failed to send message: {}", e),
+        }        
     }
 }

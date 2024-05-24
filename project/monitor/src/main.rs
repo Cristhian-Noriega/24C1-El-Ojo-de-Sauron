@@ -111,22 +111,23 @@ fn client_run(address: &str, from_server_stream: &mut dyn Read) -> std::io::Resu
     // Read the Puback packet from the server
 
     let packet = Packet::from_bytes(&mut to_server_stream).unwrap();
+    println!("LLEGO ACA");
 
-    match packet {
-        Packet::Puback(puback) => {
-            println!(
-                "Received Puback packet with package identifier: {:?}",
-                puback
-            );
-        }
-        _ => {
-            println!("Received unsupported packet type");
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "Received unsupported packet type",
-            ));
-        }
-    }
+    // match packet {
+    //     Packet::Puback(puback) => {
+    //         println!(
+    //             "Received Puback packet with package identifier: {:?}",
+    //             puback
+    //         );
+    //     }
+    //     _ => {
+    //         println!("Received unsupported packet type");
+    //         return Err(std::io::Error::new(
+    //             std::io::ErrorKind::InvalidData,
+    //             "Received unsupported packet type",
+    //         ));
+    //     }
+    // }
 
     // Loop to read packets from the server
 

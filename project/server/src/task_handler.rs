@@ -31,6 +31,20 @@ pub struct Message {
     pub packet: Publish,
 }
 
+impl Message {
+    pub fn new(client_id: Vec<u8>, packet: Publish) -> Self {
+        Self { client_id, packet }
+    }
+
+    pub fn client_id(&self) -> &Vec<u8> {
+        &self.client_id
+    }
+
+    pub fn packet(&self) -> &Publish {
+        &self.packet
+    }
+}
+
 type Subscribers = HashMap<Vec<u8>, SubscriptionData>; // key : client_id , value: SubscriptionData
 type Subtopic = HashMap<Vec<u8>, Topic>; // key: level, value: Topic
 type Subscriptions = HashMap<TopicName, SubscriptionData>; // key: topic_name, value: SubscriptionData
@@ -243,10 +257,23 @@ impl TaskHandler {
     /*publish uses a publish method of the topic struct and also sends to the clients subscribed to the topic the message*/
     pub fn publish(&self, publish_packet: &Publish, client_id: Vec<u8>) {
         let topic_name = publish_packet.topic();
-        let message = Message {
-            client_id: client_id.clone(),
-            packet: publish_packet.clone(),
+    
+        let binding = self.topics.read().unwrap();
+        let clients = match binding.get(topic_name) {
+            Some(clients) => clients,
+            None => {
+                println!("No clients subscribed to topic: {:?}", topic_name);
+                return;
+            }
         };
+    
+        let message = Message::new(client_id.clone(), publish_packet.clone());
+    
+        for client_id in clients {
+            if let Some(client) = self.clients.read().unwrap().get(client_id) {
+                client.send_message(message.clone());
+            }
+        }
     }
 
     pub fn handle_new_client_connection(&self, client: Client) {

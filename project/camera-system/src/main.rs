@@ -3,6 +3,7 @@ use std::io::stdin;
 use std::io::Write;
 use std::io::{BufRead, BufReader, Read};
 use std::net::TcpStream;
+use std::thread;
 
 use sauron::model::components::encoded_string::EncodedString;
 use sauron::model::components::topic_name::TopicName;
@@ -53,20 +54,57 @@ fn client_run(address: &str, from_server_stream: &mut dyn Read) -> std::io::Resu
     let _ = to_server_stream.write(connect_package.to_bytes().as_slice());
 
     // Read the Connack packet from the server
-    let mut buffer = [0; 1024];
-    let _ = to_server_stream.read(&mut buffer);
-    let packet = Packet::from_bytes(&mut buffer.as_slice()).unwrap();
+    // let mut buffer = [0; 1024];
+    // let _ = to_server_stream.read(&mut buffer);
+    // let packet = Packet::from_bytes(&mut buffer.as_slice()).unwrap();
 
-    match packet {
-        Packet::Connack(connack) => {
-            println!(
-                "Received Connack packet with return code: {:?} and sessionPresent: {:?}",
-                connack.connect_return_code(),
-                connack.session_present()
-            );
+    // match packet {
+    //     Packet::Connack(connack) => {
+    //         println!(
+    //             "Received Connack packet with return code: {:?} and sessionPresent: {:?}",
+    //             connack.connect_return_code(),
+    //             connack.session_present()
+    //         );
+    //     }
+    //     Packet::Publish(publish) => {
+    //         println!("Received Publish packet {:?}", publish);
+
+    //         let message = publish.message();
+    //         let message_str = String::from_utf8_lossy(message).to_string();
+
+    //         println!("Message: {:?}", message_str);
+    //     }
+    //     _ => println!("Received unsupported packet type"),
+    // }
+
+    let mut to_server_stream_clone = to_server_stream.try_clone()?;
+    thread::spawn(move || {
+        loop {
+            let mut buffer = [0; 1024];
+            let _ = to_server_stream_clone.read(&mut buffer);
+            let packet = Packet::from_bytes(&mut buffer.as_slice()).unwrap();
+
+            match packet {
+                Packet::Connack(connack) => {
+                    println!(
+                        "Received Connack packet with return code: {:?} and sessionPresent: {:?}",
+                        connack.connect_return_code(),
+                        connack.session_present()
+                    );
+                }
+                Packet::Publish(publish) => {
+                    println!("Received Publish packet {:?}", publish);
+
+                    let message = publish.message();
+                    let message_str = String::from_utf8_lossy(message).to_string();
+
+                    println!("Message: {:?}", message_str);
+                }
+                _ => println!("Received unsupported packet type"),
+            }
         }
-        _ => println!("Received unsupported packet type"),
-    }
+    });
+
 
     for line in reader.lines().map_while(Result::ok) {
         let command = line.trim();
