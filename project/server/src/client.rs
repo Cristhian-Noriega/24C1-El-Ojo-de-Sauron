@@ -6,7 +6,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::Mutex;
 
 // represents the state of the client in the server
-
+#[derive(Debug)]
 pub struct Client {
     pub id: Vec<u8>,
     pub password: String,

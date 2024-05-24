@@ -10,7 +10,7 @@ use std::{
 use crate::client::Client;
 use sauron::model::{
     components::{qos::QoS, topic_level::TopicLevel, topic_name::TopicName},
-    packets::{publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe},
+    packets::{connack::Connack, publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe}, return_codes::connect_return_code::ConnectReturnCode,
 };
 
 pub enum Task {
@@ -20,11 +20,11 @@ pub enum Task {
     ClientConnected(Client),
     ClientDisconnected(Vec<u8>),
 }
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SubscriptionData {
     qos: QoS,
 }
-
+#[derive(Clone, Debug)]
 pub struct Message {
     pub client_id: Vec<u8>,
     pub packet: Publish,
@@ -33,13 +33,16 @@ pub struct Message {
 type Subscribers = HashMap<Vec<u8>, SubscriptionData>; // key : client_id , value: SubscriptionData
 type Subtopic = HashMap<Vec<u8>, Topic>; // key: level, value: Topic
 type Subscriptions = HashMap<TopicName, SubscriptionData>; // key: topic_name, value: SubscriptionData
+type ClientId = Vec<u8>;
 
+#[derive(Debug)]
 pub struct Topic {
     subscribers: RwLock<Subscribers>,
     retained_messages: RwLock<Vec<Message>>,
     subtopics: RwLock<Subtopic>,
     subscriptions: RwLock<Subscriptions>,
 }
+
 
 impl Topic {
     pub fn new() -> Self {
@@ -59,34 +62,19 @@ impl Topic {
         client_id: Vec<u8>,
         data: SubscriptionData,
     ) {
+        
         if levels.is_empty() {
-            self.add_subscriber(client_id.clone(), data.clone());
+            self.add_subscriber(client_id, data);
             return;
         }
-        let level = levels.remove(0);
-        match level {
-            TopicLevel::Literal(level_bytes) => {
-                let subtopics = self.subtopics.read().unwrap();
-                if let Some(subtopic) = subtopics.get(&level_bytes) {
-                    self.subscribe(subtopic, levels.clone(), client_id, data);
-                } else {
-                    let mut subtopics = self.subtopics.write().unwrap();
-                    subtopics.insert(level_bytes.clone(), Topic::new());
-                    let subtopic = subtopics.get(&level_bytes).unwrap();
-                    self.subscribe(subtopic, levels.clone(), client_id, data);
-                }
-            }
-            TopicLevel::SingleLevelWildcard => {
-                let subtopics = self.subtopics.read().unwrap();
-                for subtopic in subtopics.values() {
-                    self.subscribe(subtopic, levels.clone(), client_id.clone(), data.clone());
-                }
-            }
-            TopicLevel::MultiLevelWildcard => {
-                topic.add_subscriber(client_id.clone(), data.clone());
-                subscribe_to_all_subtopics(topic, client_id, &data)
-            }
-        }
+        let current_level = levels.remove(0);
+        let mut subtopics = self.subtopics.write().unwrap();
+        let subtopic = subtopics
+            .entry(current_level.to_bytes())
+            .or_insert(Topic::new());
+        subtopic.subscribe(subtopic, levels, client_id, data);
+        
+        
     }
 
     pub fn publish(
@@ -157,25 +145,31 @@ impl Topic {
     }
 }
 
+#[derive(Debug)]
 pub struct TaskHandler {
-    root: Topic,
-    //client_actions_sender_channel: mpsc::Sender<Message>,
     client_actions_receiver_channel: mpsc::Receiver<Task>,
-    clients: HashMap<Vec<u8>, Client>,
-    active_connections: HashSet<Vec<u8>>,
-    retained_messages: HashMap<Vec<u8>, Publish>,
+    clients: RwLock<HashMap<Vec<u8>, Client>>,
+    active_connections: RwLock<HashSet<Vec<u8>>>,
+    retained_messages: RwLock<HashMap<Vec<u8>, Publish>>,
+    topics: RwLock<HashMap<TopicName, Vec<ClientId>>>,
 }
 
 impl TaskHandler {
     pub fn new(receiver_channel: mpsc::Receiver<Task>) -> Self {
         TaskHandler {
-            root: Topic::new(),
-            //client_actions_sender_channel: sender_channel,
             client_actions_receiver_channel: receiver_channel,
-            clients: HashMap::new(),
-            active_connections: HashSet::new(),
-            retained_messages: HashMap::new(),
+            clients: RwLock::new(HashMap::new()),
+            active_connections: RwLock::new(HashSet::new()),
+            retained_messages: RwLock::new(HashMap::new()),
+            topics: RwLock::new(HashMap::new()),
         }
+    }
+
+    pub fn initialize_task_handler_thread(self) {
+        println!("Starting task handler thread\n");
+        std::thread::spawn(move || {
+            self.run();
+        });
     }
 
     pub fn run(self) {
@@ -185,7 +179,7 @@ impl TaskHandler {
                     Task::SubscribeClient(subscribe, client_id) => {
                         println!(
                             "Topic Handler received task: subscribe Client: {:?}",
-                            client_id
+                            std::str::from_utf8(&client_id).unwrap()
                         );
                         self.subscribe(subscribe, client_id);
                     }
@@ -207,7 +201,7 @@ impl TaskHandler {
                     //     self.register_puback(puback);
                     // }
                     Task::ClientConnected(client) => {
-                        self.handle_client_connected(client);
+                        self.handle_new_client_connection(client);
                     }
                     Task::ClientDisconnected(client_id) => {
                         self.handle_client_disconnected(client_id);
@@ -224,15 +218,27 @@ impl TaskHandler {
     // Subscribe a client_id into a set of topics given a Subscribe packet
 
     pub fn subscribe(&self, subscribe_packet: Subscribe, client_id: Vec<u8>) {
-        let topics = subscribe_packet.topics();
-        for (topic_filter, qos) in topics {
-            let data = SubscriptionData { qos };
-            self.root.subscribe(
-                &self.root,
-                topic_filter.levels,
-                client_id.clone(),
-                data.clone(),
-            )
+        match self.clients.read().unwrap().get(&client_id) {
+            Some(client) => {
+                for (topic_filter, qos) in subscribe_packet.topics() {
+                    let mut levels: Vec<Vec<u8>> = vec![];
+                    for level in topic_filter.levels() {
+                        levels.push(level.to_bytes());
+                    }
+                    let topic_name = TopicName::new(levels, false);
+                    let mut topics = self.topics.write().unwrap();
+                    topics
+                        .entry(topic_name.clone())
+                        .or_insert(Vec::new())
+                        .push(client_id.clone());
+                    // You might want to do something with `qos` here
+                }
+                println!("{:?}", &self);
+            },
+            None => {
+                // Handle the case where the client does not exist
+                println!("Client does not exist");
+            }
         }
     }
 
@@ -248,16 +254,41 @@ impl TaskHandler {
             client_id: client_id.clone(),
             packet: publish_packet.clone(),
         };
-        self.root.publish(
-            topic_name.clone(),
-            message,
-            &self.clients,
-            &self.active_connections,
-        );
     }
 
-    pub fn handle_client_connected(&self, client: Client) {
-        todo!()
+    pub fn handle_new_client_connection(&self, client: Client) {
+        println!("HOLAAAA");
+        let connack_packet = Connack::new(true, ConnectReturnCode::ConnectionAccepted);
+        let connack_packet_vec = connack_packet.to_bytes();
+        let connack_packet_bytes = connack_packet_vec.as_slice();
+        
+        let client_id = client.id.clone();
+ 
+        let mut clients = self.clients.write().unwrap();
+        let active_connections = self.active_connections.write().unwrap();
+        //insert the client id as key and the client as value in clients in the rwlockwriteguard
+        clients.entry(client_id.clone()).or_insert(client);
+        
+
+        let mut stream = match clients.get(&client_id).unwrap().stream.lock() {
+            Ok(stream) => stream,
+            Err(_) => {
+                println!("Error getting new client's stream. Connection will not be accepted.");
+                return;
+            },
+        };
+        
+        match stream.write(connack_packet_bytes) {
+            Ok(_) => {
+                drop(active_connections);
+                println!("New client connected! ID number: {:?}", client_id);
+            }
+            Err(_) => {
+                println!("Error sending ping response to client: {:?}", client_id);
+                return;
+            }
+            
+        };
     }
 
     pub fn handle_client_disconnected(&self, client_id: Vec<u8>) {

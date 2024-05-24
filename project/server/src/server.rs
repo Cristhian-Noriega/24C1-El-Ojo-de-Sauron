@@ -18,6 +18,8 @@ pub use sauron::model::{
     return_codes::connect_return_code::ConnectReturnCode,
 };
 
+use crate::client::Client;
+
 use super::config::Config;
 use super::task_handler::Task;
 use super::task_handler::TaskHandler;
@@ -26,19 +28,22 @@ pub struct Server {
     config: Config,
     // Channel for client actions
     client_actions_sender: mpsc::Sender<Task>,
-    client_actions_receiver: mpsc::Receiver<Task>,
     // Map to store client senders for communication
     client_senders: RwLock<HashMap<Vec<u8>, mpsc::Sender<Publish>>>,
+    // Task handler to handle client actions
+    // task_handler: TaskHandler,
 }
 
 impl Server {
     pub fn new(config: Config) -> Self {
         let (client_actions_sender, client_actions_receiver) = mpsc::channel();
+        let task_handler = TaskHandler::new(client_actions_receiver);
+        task_handler.initialize_task_handler_thread();
         Server {
             config,
             client_actions_sender,
-            client_actions_receiver,
             client_senders: RwLock::new(HashMap::new()),
+            
         }
     }
 
@@ -47,7 +52,7 @@ impl Server {
         println!("Server running on address: {}", address);
         let server = Server::new(self.config.clone());
         let listener = TcpListener::bind(&address)?;
-        Server::initialize_task_handler_thread(server.client_actions_receiver);
+        //Server::initialize_task_handler_thread(self.task_handler);
 
         for stream_result in listener.incoming() {
             match stream_result {
@@ -75,11 +80,10 @@ impl Server {
         Ok(())
     }
 
-    pub fn initialize_task_handler_thread(client_actions_receiver: mpsc::Receiver<Task>) {
-        thread::spawn(move || {
-            let topic_handler = TaskHandler::new(client_actions_receiver);
-            println!("Starting task handler thread\n");
-            topic_handler.run();
+    pub fn initialize_task_handler_thread(task_handler: TaskHandler) {
+        println!("Starting task handler thread\n");
+        std::thread::spawn(move || {
+            task_handler.run();
         });
     }
 
@@ -119,10 +123,6 @@ impl Server {
             client_id.clone(),
             client_receiver,
         );
-
-        //let connack_packet = Connack::new(false, ConnectReturnCode::ConnectionAccepted);
-
-        //stream.write(connack_packet.to_bytes().as_slice());
     }
 
     pub fn create_new_client_thread(
@@ -196,6 +196,13 @@ pub fn handle_packet(
             false
         }
     }
+}
+
+pub fn handle_connect(sender_to_topics_channel: std::sync::mpsc::Sender<Task>, client: Client) -> bool {
+    sender_to_topics_channel
+        .send(Task::ClientConnected(client))
+        .unwrap();
+    true
 }
 
 pub fn handle_publish(
