@@ -10,16 +10,17 @@ use std::{
 use crate::client::Client;
 use sauron::model::{
     components::{qos::QoS, topic_level::TopicLevel, topic_name::TopicName},
-    packets::{connack::Connack, publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe},
-    return_codes::connect_return_code::ConnectReturnCode,
+    packets::{connack::Connack, publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe, pingresp::Pingresp, puback::Puback},
+    return_codes::connect_return_code::ConnectReturnCode, 
 };
 
 pub enum Task {
     SubscribeClient(Subscribe, Vec<u8>),
     UnsubscribeClient(Unsubscribe, Vec<u8>),
     Publish(Publish, Vec<u8>),
-    ClientConnected(Client),
-    ClientDisconnected(Vec<u8>),
+    ConnectClient(Client),
+    DisconnectClient(Vec<u8>),
+    RespondPing(Vec<u8>),
 }
 #[derive(Clone, Debug)]
 pub struct SubscriptionData {
@@ -46,115 +47,115 @@ impl Message {
 }
 
 type Subscribers = HashMap<Vec<u8>, SubscriptionData>; // key : client_id , value: SubscriptionData
-type Subtopic = HashMap<Vec<u8>, Topic>; // key: level, value: Topic
+// type Subtopic = HashMap<Vec<u8>, Topic>; // key: level, value: Topic
 type Subscriptions = HashMap<TopicName, SubscriptionData>; // key: topic_name, value: SubscriptionData
 type ClientId = Vec<u8>;
 
-#[derive(Debug)]
-pub struct Topic {
-    subscribers: RwLock<Subscribers>,
-    retained_messages: RwLock<Vec<Message>>,
-    subtopics: RwLock<Subtopic>,
-    subscriptions: RwLock<Subscriptions>,
-}
+// #[derive(Debug)]
+// pub struct Topic {
+//     subscribers: RwLock<Subscribers>,
+//     retained_messages: RwLock<Vec<Message>>,
+//     subtopics: RwLock<Subtopic>,
+//     subscriptions: RwLock<Subscriptions>,
+// }
 
-impl Topic {
-    pub fn new() -> Self {
-        Topic {
-            subscribers: RwLock::new(HashMap::new()),
-            retained_messages: RwLock::new(Vec::new()),
-            subtopics: RwLock::new(HashMap::new()),
-            subscriptions: RwLock::new(HashMap::new()),
-        }
-    }
+// impl Topic {
+//     pub fn new() -> Self {
+//         Topic {
+//             subscribers: RwLock::new(HashMap::new()),
+//             retained_messages: RwLock::new(Vec::new()),
+//             subtopics: RwLock::new(HashMap::new()),
+//             subscriptions: RwLock::new(HashMap::new()),
+//         }
+//     }
 
-    // todo: replace the unwraps
-    pub fn subscribe(
-        &self,
-        topic: &Topic,
-        mut levels: Vec<TopicLevel>,
-        client_id: Vec<u8>,
-        data: SubscriptionData,
-    ) {
-        if levels.is_empty() {
-            self.add_subscriber(client_id, data);
-            return;
-        }
-        let current_level = levels.remove(0);
-        let mut subtopics = self.subtopics.write().unwrap();
-        let subtopic = subtopics
-            .entry(current_level.to_bytes())
-            .or_insert(Topic::new());
-        subtopic.subscribe(subtopic, levels, client_id, data);
-    }
+//     // todo: replace the unwraps
+//     pub fn subscribe(
+//         &self,
+//         topic: &Topic,
+//         mut levels: Vec<TopicLevel>,
+//         client_id: Vec<u8>,
+//         data: SubscriptionData,
+//     ) {
+//         if levels.is_empty() {
+//             self.add_subscriber(client_id, data);
+//             return;
+//         }
+//         let current_level = levels.remove(0);
+//         let mut subtopics = self.subtopics.write().unwrap();
+//         let subtopic = subtopics
+//             .entry(current_level.to_bytes())
+//             .or_insert(Topic::new());
+//         subtopic.subscribe(subtopic, levels, client_id, data);
+//     }
 
-    pub fn publish(
-        &self,
-        topic_name: TopicName,
-        message: Message,
-        clients: &HashMap<Vec<u8>, Client>,
-        active_connections: &HashSet<Vec<u8>>,
-    ) {
-        let subscribers = self.get_all_matching_subscriptions(topic_name);
-        for subscriber in subscribers {
-            for (client_id, data) in subscriber {
-                // if !active_connections.contains(&client_id){
-                //     clients.get(&client_id).unwrap().unreceived_messages.(message.packet.clone());
-                //     continue;
-                // }
-                let client = clients.get(&client_id).unwrap();
+//     pub fn publish(
+//         &self,
+//         topic_name: TopicName,
+//         message: Message,
+//         clients: &HashMap<Vec<u8>, Client>,
+//         active_connections: &HashSet<Vec<u8>>,
+//     ) {
+//         let subscribers = self.get_all_matching_subscriptions(topic_name);
+//         for subscriber in subscribers {
+//             for (client_id, data) in subscriber {
+//                 // if !active_connections.contains(&client_id){
+//                 //     clients.get(&client_id).unwrap().unreceived_messages.(message.packet.clone());
+//                 //     continue;
+//                 // }
+//                 let client = clients.get(&client_id).unwrap();
 
-                let publish_packet = message.packet.clone();
-                if client
-                    .stream
-                    .lock()
-                    .unwrap()
-                    .write(publish_packet.to_bytes().as_slice())
-                    .is_ok()
-                {};
-            }
-        }
-    }
+//                 let publish_packet = message.packet.clone();
+//                 if client
+//                     .stream
+//                     .lock()
+//                     .unwrap()
+//                     .write(publish_packet.to_bytes().as_slice())
+//                     .is_ok()
+//                 {};
+//             }
+//         }
+//     }
 
-    pub fn get_all_matching_subscriptions(&self, topic_name: TopicName) -> Vec<Subscribers> {
-        let mut subscribers = Vec::new();
-        self.collect_matching_subscriptions(&mut subscribers, topic_name.levels);
-        subscribers
-    }
+//     pub fn get_all_matching_subscriptions(&self, topic_name: TopicName) -> Vec<Subscribers> {
+//         let mut subscribers = Vec::new();
+//         self.collect_matching_subscriptions(&mut subscribers, topic_name.levels);
+//         subscribers
+//     }
 
-    pub fn collect_matching_subscriptions(
-        &self,
-        subscribers: &mut Vec<Subscribers>,
-        levels: Vec<Vec<u8>>,
-    ) {
-        if levels.is_empty() {
-            subscribers.push(self.subscribers.read().unwrap().clone());
-            return;
-        }
-        let current_level = &levels[0];
-        let remaining_levels = levels[1..].to_vec();
+//     pub fn collect_matching_subscriptions(
+//         &self,
+//         subscribers: &mut Vec<Subscribers>,
+//         levels: Vec<Vec<u8>>,
+//     ) {
+//         if levels.is_empty() {
+//             subscribers.push(self.subscribers.read().unwrap().clone());
+//             return;
+//         }
+//         let current_level = &levels[0];
+//         let remaining_levels = levels[1..].to_vec();
 
-        let subtopics = self.subtopics.read().unwrap();
-        if let Some(subtopic) = subtopics.get(current_level) {
-            subtopic.collect_matching_subscriptions(subscribers, remaining_levels);
-        }
-    }
+//         let subtopics = self.subtopics.read().unwrap();
+//         if let Some(subtopic) = subtopics.get(current_level) {
+//             subtopic.collect_matching_subscriptions(subscribers, remaining_levels);
+//         }
+//     }
 
-    pub fn add_subscriber(&self, client_id: Vec<u8>, data: SubscriptionData) {
-        let mut subscribers = self.subscribers.write().unwrap();
-        subscribers.insert(client_id, data);
-    }
+//     pub fn add_subscriber(&self, client_id: Vec<u8>, data: SubscriptionData) {
+//         let mut subscribers = self.subscribers.write().unwrap();
+//         subscribers.insert(client_id, data);
+//     }
 
-    pub fn remove_subscriber(&self, client_id: Vec<u8>) {
-        let mut subscribers = self.subscribers.write().unwrap();
-        subscribers.remove(&client_id);
-    }
+//     pub fn remove_subscriber(&self, client_id: Vec<u8>) {
+//         let mut subscribers = self.subscribers.write().unwrap();
+//         subscribers.remove(&client_id);
+//     }
 
-    pub fn add_retained_message(&self, message: Message) {
-        let mut retained_messages = self.retained_messages.write().unwrap();
-        retained_messages.push(message);
-    }
-}
+//     pub fn add_retained_message(&self, message: Message) {
+//         let mut retained_messages = self.retained_messages.write().unwrap();
+//         retained_messages.push(message);
+//     }
+// }
 
 #[derive(Debug)]
 pub struct TaskHandler {
@@ -183,7 +184,7 @@ impl TaskHandler {
         });
     }
 
-    pub fn run(self) {
+    pub fn run(mut self) {
         loop {
             match self.client_actions_receiver_channel.recv() {
                 Ok(task) => match task {
@@ -205,12 +206,16 @@ impl TaskHandler {
                         println!("Task Handler received task: Publish message: {:?}\n", publish);
                         self.publish(&publish, client_id);
                     }
-                    Task::ClientConnected(client) => {
+                    Task::ConnectClient(client) => {
                         println!("Task Handler received task: Client Connected");
                         self.handle_new_client_connection(client);
                     }
-                    Task::ClientDisconnected(client_id) => {
+                    Task::DisconnectClient(client_id) => {
                         self.handle_client_disconnected(client_id);
+                    }
+                    Task::RespondPing(client_id) => {
+                        println!("Task Handler received task: Respond Ping");
+                        self.respond_ping(client_id);
                     }
                 },
                 Err(_) => {
@@ -274,6 +279,8 @@ impl TaskHandler {
                 client.send_message(message.clone());
             }
         }
+        
+        //self.puback(publish_packet.package_identifier(), client_id.clone());
     }
 
     pub fn handle_new_client_connection(&self, client: Client) {
@@ -308,15 +315,86 @@ impl TaskHandler {
         };
     }
 
-    pub fn handle_client_disconnected(&self, client_id: Vec<u8>) {
-        todo!()
-    }
-}
+    pub fn puback(&self, package_identifier: Option<u16>, client_id: Vec<u8>) {
+        let puback_packet = Puback::new(package_identifier);
+        let puback_packet_vec = puback_packet.to_bytes();
+        let puback_packet_bytes = puback_packet_vec.as_slice();
 
-pub fn subscribe_to_all_subtopics(topic: &Topic, client_id: Vec<u8>, data: &SubscriptionData) {
-    topic.add_subscriber(client_id.clone(), data.clone());
-    let subtopics = topic.subtopics.read().unwrap();
-    for subtopic in subtopics.values() {
-        subscribe_to_all_subtopics(subtopic, client_id.clone(), data);
+        let clients = self.clients.write().unwrap();
+
+        let client = match clients.get(&client_id) {
+            Some(client) => client,
+            None => {
+                println!("Error: client not found in client list!");
+                return;
+            },
+        
+        };
+
+        let mut stream = match client.stream.lock() {
+            Ok(stream) => stream,
+            Err(_) => {
+                println!("Error getting stream, puback will not be sent to client.");
+                return;
+            },
+        };
+
+        match stream.write(puback_packet_bytes) {
+            Ok(_) => {
+                println!("Puback sent to client: {:?}", client_id);
+            }
+            Err(_) => {
+                println!("Error sending puback to client: {:?}", client_id);
+            }
+        };
+    }
+
+    pub fn respond_ping(&self, client_id: Vec<u8>) {
+        let clients = self.clients.write().unwrap();
+
+        let client = clients.get(&client_id).unwrap();
+        let pingresp_packet = Pingresp::new();
+        let pingresp_packet_vec = pingresp_packet.to_bytes();
+        let pingresp_packet_bytes = pingresp_packet_vec.as_slice();
+
+        let mut stream = match client.stream.lock() {
+            Ok(stream) => stream,
+            Err(_) => {
+                println!("Error getting stream, ping will not be responded to client");
+                return;
+            },
+        };
+
+        match stream.write(pingresp_packet_bytes) {
+            Ok(_) => {
+                println!("Ping response sent to client: {:?}", client_id);
+            }
+            Err(_) => {
+                println!("Error sending ping response to client: {:?}", client_id);
+            }
+        
+        };
+    }
+
+    pub fn handle_client_disconnected(&mut self, client_id: Vec<u8>) {
+        //self.active_connections.remove(&client_id);
+        let mut active_connections = self.active_connections.write().unwrap();
+        active_connections.remove(&client_id);
+    }
+
+    pub fn register_puback(&mut self, puback: Puback) {
+        let message_id = match puback.packet_identifier() {
+            Some(id) => id,
+            None => {
+                println!("Error: Puback packet does not have a packet identifier.");
+                return;
+            },
+        
+        };
+        let message_id_bytes = message_id.to_be_bytes().to_vec();
+
+        let mut retained_messages = self.retained_messages.write().unwrap();
+
+        retained_messages.remove(&message_id_bytes);
     }
 }

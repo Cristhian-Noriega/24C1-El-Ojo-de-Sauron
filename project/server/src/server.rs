@@ -12,7 +12,7 @@ use std::{
 pub use sauron::model::{
     packet::Packet,
     packets::{
-        connack::Connack, connect::Connect, disconnect::Disconnect, pingresp::Pingresp,
+        connack::Connack, connect::Connect, disconnect::Disconnect,
         puback::Puback, publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe,
     },
     return_codes::connect_return_code::ConnectReturnCode,
@@ -49,9 +49,7 @@ impl Server {
     pub fn server_run(&self) -> std::io::Result<()> {
         let address = format!("{}:{}", self.config.get_address(), self.config.get_port());
         println!("Server running on address: {}", address);
-        let server = Server::new(self.config.clone());
         let listener = TcpListener::bind(&address)?;
-        //Server::initialize_task_handler_thread(self.task_handler);
 
         for stream_result in listener.incoming() {
             match stream_result {
@@ -97,10 +95,6 @@ impl Server {
     pub fn connect_new_client(&self, connect_packet: Connect, mut stream: TcpStream) {
         println!("Received Connect Package");
         let client_id = connect_packet.client_id().content();
-        let (client_sender, client_receiver) = mpsc::channel(); // Create a channel for this client
-
-        let mut client_senders = self.client_senders.write().unwrap();
-        client_senders.insert(client_id.clone(), client_sender);
 
         let new_client = Client::new(
             client_id.clone(),
@@ -110,9 +104,6 @@ impl Server {
             0,
         );
         handle_connect(self.client_actions_sender.clone(), new_client);
-        // self.client_actions_sender
-        //     .send(Task::ClientConnected(new_client))
-        //     .unwrap();
 
         println!(
             "New client connected: {:?}",
@@ -126,7 +117,6 @@ impl Server {
             self.client_actions_sender.clone(),
             stream,
             client_id.clone(),
-            client_receiver,
         );
     }
 
@@ -135,7 +125,6 @@ impl Server {
         sender_to_task_channel: std::sync::mpsc::Sender<Task>,
         mut stream: TcpStream,
         client_id: Vec<u8>,
-        client_receiver: mpsc::Receiver<Publish>,
     ) {
         thread::spawn(move || {
             println!("Welcome to the newly connected client thread\n");
@@ -192,7 +181,7 @@ pub fn handle_packet(
             println!("Received Unsubscribe packet");
             handle_unsubscribe(unsubscribe_packet, sender_to_topics_channel, client_id)
         }
-        Packet::Pingreq(pingreq_packet) => handle_pingreq(stream),
+        Packet::Pingreq(pingreq_packet) => handle_pingreq(sender_to_topics_channel, client_id),
         Packet::Disconnect(disconnect_packet) => {
             handle_disconnect(disconnect_packet, sender_to_topics_channel, client_id)
         }
@@ -208,7 +197,7 @@ pub fn handle_connect(
     client: Client,
 ) -> bool {
     sender_to_topics_channel
-        .send(Task::ClientConnected(client))
+        .send(Task::ConnectClient(client))
         .unwrap();
     true
 }
@@ -266,16 +255,20 @@ pub fn handle_disconnect(
     client_id: Vec<u8>,
 ) -> bool {
     sender_to_task_channel
-        .send(Task::ClientDisconnected(client_id))
+        .send(Task::DisconnectClient(client_id))
         .unwrap();
 
     false
 }
 
-pub fn handle_pingreq(stream: &mut TcpStream) -> bool {
+pub fn handle_pingreq(
+    sender_to_task_channel: std::sync::mpsc::Sender<Task>,
+    client_id: Vec<u8>,
+) -> bool {
     println!("Received Pingreq packet");
-    let pingresp_packet = Pingresp::new();
-    let pingresp_bytes = pingresp_packet.to_bytes();
-    stream.write_all(&pingresp_bytes).unwrap();
+    sender_to_task_channel
+        .send(Task::RespondPing(client_id))
+        .unwrap();
+    println!("Sent Pingresp packet to task handler");
     true
 }

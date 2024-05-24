@@ -100,6 +100,7 @@ fn client_run(address: &str, from_server_stream: &mut dyn Read) -> std::io::Resu
 
                     println!("Message: {:?}", message_str);
                 }
+                
                 _ => println!("Received unsupported packet type"),
             }
         }
