@@ -175,20 +175,20 @@ impl TaskHandler {
                 Ok(task) => match task {
                     Task::SubscribeClient(subscribe, client_id) => {
                         println!(
-                            "Task Handler received task: subscribe Client: {:?}",
+                            "Task Handler received task: subscribe Client: {:?}\n",
                             std::str::from_utf8(&client_id).unwrap()
                         );
                         self.subscribe(subscribe, client_id);
                     }
                     Task::UnsubscribeClient(unsubscribe, client_id) => {
                         println!(
-                            "Task Handler received task: unsubscribe Client: {:?}",
+                            "Task Handler received task: unsubscribe Client: {:?}\n",
                             client_id
                         );
                         self.unsubscribe(unsubscribe);
                     }
                     Task::Publish(publish, client_id) => {
-                        println!("Task Handler received task: Publish message: {:?}", publish);
+                        println!("Task Handler received task: Publish message: {:?}\n", publish);
                         self.publish(&publish, client_id);
                     }
                     Task::ClientConnected(client) => {
@@ -210,27 +210,30 @@ impl TaskHandler {
     // Subscribe a client_id into a set of topics given a Subscribe packet
 
     pub fn subscribe(&self, subscribe_packet: Subscribe, client_id: Vec<u8>) {
-        match self.clients.read().unwrap().get(&client_id) {
-            Some(client) => {
-                for (topic_filter, qos) in subscribe_packet.topics() {
-                    let mut levels: Vec<Vec<u8>> = vec![];
-                    for level in topic_filter.levels() {
-                        levels.push(level.to_bytes());
-                    }
-                    let topic_name = TopicName::new(levels, false);
-                    let mut topics = self.topics.write().unwrap();
-                    topics
-                        .entry(topic_name.clone())
-                        .or_default()
-                        .push(client_id.clone());
+        let mut clients = self.clients.write().unwrap();
+        
+        // cambio para obtener una referencia mutable del client y mutarlo agregandole la subscripcion
+        // al cliente ademas de hacerlo en el task handler.
+        if let Some(client) = clients.get_mut(&client_id) {
+            for (topic_filter, qos) in subscribe_packet.topics() {
+                let mut levels: Vec<Vec<u8>> = vec![];
+                for level in topic_filter.levels() {
+                    levels.push(level.to_bytes());
                 }
-                println!("{:?}", &self);
+                let topic_name = TopicName::new(levels, false);
+                
+                client.add_subscription(topic_name.clone());
+                
+                let mut topics = self.topics.write().unwrap();
+                topics.entry(topic_name.clone()).or_default().push(client_id.clone());
             }
-            None => {
-                println!("Client does not exist");
-            }
+            println!("Active clients: {:?}\n", clients);
+            println!("Active topics with subscribers: {:?}\n", self.topics);
+        } else {
+            println!("Client does not exist");
         }
     }
+    
 
     // Unsubscribe a client_id from a set of topics given an Unsubscribe packet
     pub fn unsubscribe(&self, unsubscribe_packet: Unsubscribe) {
@@ -258,7 +261,7 @@ impl TaskHandler {
         //insert the client id as key and the client as value in clients in the rwlockwriteguard
         clients.entry(client_id.clone()).or_insert(client);
 
-        println!("hash de clientes: {:?}", clients);
+        //println!("hash de clientes: {:?}", clients);
         let mut stream = match clients.get(&client_id).unwrap().stream.lock() {
             Ok(stream) => stream,
             Err(_) => {

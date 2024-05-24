@@ -70,6 +70,11 @@ impl TopicName {
     pub fn server_reserved(&self) -> bool {
         self.server_reserved
     }
+
+    pub fn to_string(&self) -> String {
+        println!("los levels son {:?}", self.levels.concat());
+        String::from_utf8(self.levels.concat()).unwrap()
+    }
 }
 
 #[cfg(test)]
