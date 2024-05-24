@@ -3,7 +3,7 @@ use crate::{EncodedString, Error, Read, TopicLevel, TopicName};
 
 #[derive(Debug, Clone)]
 pub struct TopicFilter {
-    pub levels: Vec<TopicLevel>,
+    levels: Vec<TopicLevel>,
     server_reserved: bool,
 }
 
@@ -94,6 +94,14 @@ impl TopicFilter {
 
     pub fn length(&self) -> usize {
         self.to_bytes().len()
+    }
+
+    pub fn levels(&self) -> &Vec<TopicLevel> {
+        &self.levels
+    }
+
+    pub fn server_reserved(&self) -> bool {
+        self.server_reserved
     }
 }
 

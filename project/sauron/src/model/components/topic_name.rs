@@ -1,7 +1,7 @@
 use super::{FORWARD_SLASH, SERVER_RESERVED};
 use crate::{EncodedString, Error, Read, TopicLevel};
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Eq, Hash)]
 pub struct TopicName {
     pub levels: Vec<Vec<u8>>,
     server_reserved: bool,

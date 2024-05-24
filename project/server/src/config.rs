@@ -2,7 +2,9 @@
 #![allow(unused_variables)]
 
 use std::{
-    collections::HashMap, fs::File, io::{BufRead, BufReader, Read}
+    collections::HashMap,
+    fs::File,
+    io::{BufRead, BufReader, Read},
 };
 
 #[derive(Debug, Clone)]
@@ -47,7 +49,6 @@ impl Config {
         }
         Some(config_map)
     }
-
 
     pub fn get_port(&self) -> u16 {
         self.port

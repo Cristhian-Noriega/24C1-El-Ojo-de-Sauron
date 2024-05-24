@@ -20,7 +20,11 @@ pub fn main() -> Result<(), Error> {
 
     let config = match config::Config::new(&argv[1]) {
         Some(config) => config,
-        None => return Err(Error::new("Error al leer el archivo de configuración".to_string())),
+        None => {
+            return Err(Error::new(
+                "Error al leer el archivo de configuración".to_string(),
+            ))
+        }
     };
 
     let server = server::Server::new(config);

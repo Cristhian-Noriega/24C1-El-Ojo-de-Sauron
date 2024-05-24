@@ -10,7 +10,8 @@ use std::{
 use crate::client::Client;
 use sauron::model::{
     components::{qos::QoS, topic_level::TopicLevel, topic_name::TopicName},
-    packets::{connack::Connack, publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe}, return_codes::connect_return_code::ConnectReturnCode,
+    packets::{connack::Connack, publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe},
+    return_codes::connect_return_code::ConnectReturnCode,
 };
 
 pub enum Task {
@@ -43,7 +44,6 @@ pub struct Topic {
     subscriptions: RwLock<Subscriptions>,
 }
 
-
 impl Topic {
     pub fn new() -> Self {
         Topic {
@@ -62,7 +62,6 @@ impl Topic {
         client_id: Vec<u8>,
         data: SubscriptionData,
     ) {
-        
         if levels.is_empty() {
             self.add_subscriber(client_id, data);
             return;
@@ -73,8 +72,6 @@ impl Topic {
             .entry(current_level.to_bytes())
             .or_insert(Topic::new());
         subtopic.subscribe(subtopic, levels, client_id, data);
-        
-        
     }
 
     pub fn publish(
@@ -191,10 +188,7 @@ impl TaskHandler {
                         self.unsubscribe(unsubscribe);
                     }
                     Task::Publish(publish, client_id) => {
-                        println!(
-                            "Task Handler received task: Publish message: {:?}",
-                            publish
-                        );
+                        println!("Task Handler received task: Publish message: {:?}", publish);
                         self.publish(&publish, client_id);
                     }
                     Task::ClientConnected(client) => {
@@ -227,11 +221,11 @@ impl TaskHandler {
                     let mut topics = self.topics.write().unwrap();
                     topics
                         .entry(topic_name.clone())
-                        .or_insert(Vec::new())
+                        .or_default()
                         .push(client_id.clone());
                 }
                 println!("{:?}", &self);
-            },
+            }
             None => {
                 println!("Client does not exist");
             }
@@ -253,27 +247,26 @@ impl TaskHandler {
     }
 
     pub fn handle_new_client_connection(&self, client: Client) {
-
         let connack_packet = Connack::new(true, ConnectReturnCode::ConnectionAccepted);
         let connack_packet_vec = connack_packet.to_bytes();
         let connack_packet_bytes = connack_packet_vec.as_slice();
-        
+
         let client_id = client.id.clone();
- 
+
         let mut clients = self.clients.write().unwrap();
         let active_connections = self.active_connections.write().unwrap();
         //insert the client id as key and the client as value in clients in the rwlockwriteguard
         clients.entry(client_id.clone()).or_insert(client);
-        
+
         println!("hash de clientes: {:?}", clients);
         let mut stream = match clients.get(&client_id).unwrap().stream.lock() {
             Ok(stream) => stream,
             Err(_) => {
                 println!("Error getting new client's stream. Connection will not be accepted.");
                 return;
-            },
+            }
         };
-        
+
         match stream.write(connack_packet_bytes) {
             Ok(_) => {
                 drop(active_connections);
@@ -281,16 +274,13 @@ impl TaskHandler {
             }
             Err(_) => {
                 println!("Error sending ping response to client: {:?}", client_id);
-                return;
             }
-            
         };
     }
 
     pub fn handle_client_disconnected(&self, client_id: Vec<u8>) {
         todo!()
     }
-
 }
 
 pub fn subscribe_to_all_subtopics(topic: &Topic, client_id: Vec<u8>, data: &SubscriptionData) {
