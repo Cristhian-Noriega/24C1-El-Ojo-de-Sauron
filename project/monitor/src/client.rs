@@ -3,7 +3,9 @@ use std::env::args;
 static CLIENT_ARGS: usize = 3;
 
 pub struct Client {
-    pub response: String,
+    pub connection_status: String,
+    pub response_text: String,
+    pub response_bytes: String,
     pub address: String,
 }
 
@@ -18,13 +20,17 @@ impl Client {
         let address = argv[1].clone() + ":" + &argv[2];
 
         Self {
-            response: "no response".to_owned(),
+            connection_status: "offline".to_owned(),
+            response_text: "no response".to_owned(),
+            response_bytes: "no response".to_owned(),
             address: address,
         }
     }
 
     pub fn send_connect(&mut self) {
         println!("Connecting to {}", self.address);
-        self.response = "Connected!".to_owned();
+        self.connection_status = "connected".to_owned();
+        self.response_text = "CONNACK".to_owned();
+        self.response_bytes = "CONNACK".to_owned();
     }
 }
