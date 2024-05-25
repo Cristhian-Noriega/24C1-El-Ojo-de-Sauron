@@ -29,7 +29,7 @@ impl Client {
         Self {
             connection_status: "offline".to_owned(),
             response_text: "no response".to_owned(),
-            address: address,
+            address,
         }
     }
 
@@ -62,7 +62,7 @@ impl Client {
                     connack.connect_return_code(),
                     connack.session_present()
                 );
-                self.connection_status = "connected".to_owned();
+                self.connection_status = "connected".to_string();
                 self.response_text = format!("{:?}", connack);
             }
             _ => println!("Received unsupported packet type"),

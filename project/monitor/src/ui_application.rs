@@ -43,7 +43,7 @@ impl eframe::App for UIApplication {
             ui.add_space(20.0);
 
             ui.heading(egui::RichText::new("Last message received").size(20.0));
-            ui.label(format!("{}", self.client.response_text));
+            ui.label(format!("{}", self.client.response_text.to_string()));
         });
     }
 }

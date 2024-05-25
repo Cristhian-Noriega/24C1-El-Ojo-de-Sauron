@@ -17,3 +17,4 @@ Cargo.lock
 project/target
 project/target/
 /target
+project/.rustc_info.json
