@@ -100,6 +100,24 @@ fn client_run(address: &str, from_server_stream: &mut dyn Read) -> std::io::Resu
 
                     println!("Message: {:?}", message_str);
                 }
+                Packet::Puback(puback) => {
+                    println!("Received Puback packet {:?}", puback);
+                }
+                Packet::Pingresp(pingresp) => {
+                    println!("Received Pingresp packet {:?}", pingresp);
+                }
+                Packet::Suback(suback) => {
+                    println!("Received Suback packet {:?}", suback);
+                }
+                Packet::Unsuback(unsuback) => {
+                    println!("Received Unsuback packet {:?}", unsuback);
+                }
+                Packet::Pingreq(pingreq) => {
+                    println!("Received Pingreq packet {:?}", pingreq);
+                }
+                Packet::Disconnect(disconnect) => {
+                    println!("Received Disconnect packet {:?}", disconnect);
+                }
                 
                 _ => println!("Received unsupported packet type"),
             }
@@ -143,6 +161,7 @@ fn client_run(address: &str, from_server_stream: &mut dyn Read) -> std::io::Resu
             println!("Enter the message to publish:");
             let mut message = String::new();
             std::io::stdin().read_line(&mut message)?;
+            message = message.trim().to_string();
 
             let mut levels = vec![];
 

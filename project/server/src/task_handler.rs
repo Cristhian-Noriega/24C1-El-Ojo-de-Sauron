@@ -11,10 +11,9 @@ use crate::client::Client;
 use sauron::model::{
     components::{qos::QoS, topic_name::TopicName},
     packets::{
-        connack::Connack, pingresp::Pingresp, puback::Puback, publish::Publish,
-        subscribe::Subscribe, unsubscribe::Unsubscribe,
+        connack::Connack, pingresp::Pingresp, puback::Puback, publish::Publish, suback::Suback, subscribe::Subscribe, unsubscribe::Unsubscribe
     },
-    return_codes::connect_return_code::ConnectReturnCode,
+    return_codes::{connect_return_code::ConnectReturnCode, suback_return_code::SubackReturnCode},
 };
 
 pub enum Task {
@@ -255,8 +254,10 @@ impl TaskHandler {
                     .or_default()
                     .push(client_id.clone());
             }
-            println!("Active clients: {:?}\n", clients);
+            //println!("Active clients: {:?}\n", clients);
             println!("Active topics with subscribers: {:?}\n", self.topics);
+            //send suback packet to client
+            self.suback(subscribe_packet.packet_identifier(), client);
         } else {
             println!("Client does not exist");
         }
@@ -265,7 +266,7 @@ impl TaskHandler {
     // Unsubscribe a client_id from a set of topics given an Unsubscribe packet
     pub fn unsubscribe(&self, unsubscribe_packet: Unsubscribe, client_id: Vec<u8>) {
         let mut clients = self.clients.write().unwrap();
-    
+
         if let Some(client) = clients.get_mut(&client_id) {
             for topic_filter in unsubscribe_packet.topics {
                 let mut levels: Vec<Vec<u8>> = vec![];
@@ -273,9 +274,9 @@ impl TaskHandler {
                     levels.push(level.to_bytes());
                 }
                 let topic_name = TopicName::new(levels, false);
-    
+
                 client.remove_subscription(&topic_name);
-    
+
                 let mut topics = self.topics.write().unwrap();
                 if let Some(subscribers) = topics.get_mut(&topic_name) {
                     subscribers.retain(|id| id != &client_id);
@@ -342,6 +343,30 @@ impl TaskHandler {
             }
             Err(_) => {
                 println!("Error sending ping response to client: {:?}", client_id);
+            }
+        };
+    }
+
+    pub fn suback(&self, package_identifier: u16, client: &mut Client) {
+        //return code hardcodeado
+        let suback_packet = Suback::new(package_identifier, vec![SubackReturnCode::SuccessMaximumQoS0]);
+        let suback_packet_vec = suback_packet.to_bytes();
+        let suback_packet_bytes = suback_packet_vec.as_slice();
+
+        let mut stream = match client.stream.lock() {
+            Ok(stream) => stream,
+            Err(_) => {
+                println!("Error getting stream, suback will not be sent to client.");
+                return;
+            }
+        };
+
+        match stream.write(suback_packet_bytes) {
+            Ok(_) => {
+                println!("Suback sent to client");
+            }
+            Err(_) => {
+                println!("Error sending suback to client");
             }
         };
     }
