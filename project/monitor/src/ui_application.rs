@@ -24,7 +24,12 @@ impl eframe::App for UIApplication {
             ui.add_space(15.0);
             ui.horizontal(|ui| {
                 if ui.button("Connect").clicked() {
-                    self.client.send_connect();
+                    match self.client.client_run() {
+                        Ok(_) => println!("Conectado"),
+                        Err(e) => {
+                            println!("Error al conectar: {:?}", e);
+                        }
+                    }
                 }
                 ui.add_space(500.0);
 
@@ -38,17 +43,7 @@ impl eframe::App for UIApplication {
             ui.add_space(20.0);
 
             ui.heading(egui::RichText::new("Last message received").size(20.0));
-            ui.horizontal_centered(|ui| {
-                ui.vertical(|ui| {
-                    ui.label(egui::RichText::new("Bytes").size(15.0));
-                    ui.label(format!("{}", self.client.response_bytes));
-                });
-                ui.add_space(100.0);
-                ui.vertical(|ui| {
-                    ui.label(egui::RichText::new("Text").size(15.0));
-                    ui.label(format!("{}", self.client.response_text));
-                });
-            });
+            ui.label(format!("{}", self.client.response_text));
         });
     }
 }
