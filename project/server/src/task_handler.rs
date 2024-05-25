@@ -313,7 +313,12 @@ impl TaskHandler {
             }
         }
 
-        //self.puback(publish_packet.package_identifier(), client_id.clone());
+        let mut clients = self.clients.write().unwrap();
+        if let Some(client) = clients.get_mut(&client_id) {
+            println!("HOLA!!! HAGO PUBACK METHOD");
+            self.puback(publish_packet.package_identifier(), client);
+
+        }
     }
 
     pub fn handle_new_client_connection(&self, client: Client) {
@@ -363,7 +368,7 @@ impl TaskHandler {
 
         match stream.write(suback_packet_bytes) {
             Ok(_) => {
-                println!("Suback sent to client");
+                println!("Suback sent to client\n");
             }
             Err(_) => {
                 println!("Error sending suback to client");
@@ -371,20 +376,11 @@ impl TaskHandler {
         };
     }
 
-    pub fn puback(&self, package_identifier: Option<u16>, client_id: Vec<u8>) {
+    pub fn puback(&self, package_identifier: Option<u16>, client: &mut Client) {
         let puback_packet = Puback::new(package_identifier);
         let puback_packet_vec = puback_packet.to_bytes();
         let puback_packet_bytes = puback_packet_vec.as_slice();
 
-        let clients = self.clients.write().unwrap();
-
-        let client = match clients.get(&client_id) {
-            Some(client) => client,
-            None => {
-                println!("Error: client not found in client list!");
-                return;
-            }
-        };
 
         let mut stream = match client.stream.lock() {
             Ok(stream) => stream,
@@ -396,10 +392,10 @@ impl TaskHandler {
 
         match stream.write(puback_packet_bytes) {
             Ok(_) => {
-                println!("Puback sent to client: {:?}", client_id);
+                println!("Puback sent to client\n");
             }
             Err(_) => {
-                println!("Error sending puback to client: {:?}", client_id);
+                println!("Error sending puback to client");
             }
         };
     }
@@ -422,7 +418,7 @@ impl TaskHandler {
 
         match stream.write(pingresp_packet_bytes) {
             Ok(_) => {
-                println!("Ping response sent to client: {:?}", client_id);
+                println!("Ping response sent to client: {:?}\n", client_id);
             }
             Err(_) => {
                 println!("Error sending ping response to client: {:?}", client_id);

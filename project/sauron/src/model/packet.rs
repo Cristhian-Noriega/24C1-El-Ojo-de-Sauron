@@ -61,9 +61,9 @@ impl Packet {
                 Packet::Suback(suback_packet)
             }
             PUBACK_PACKET_TYPE => {
-                let puback_packet = Publish::from_bytes(fixed_header, stream)?;
+                let puback_packet = Puback::from_bytes(fixed_header, stream)?;
 
-                Packet::Publish(puback_packet)
+                Packet::Puback(puback_packet)
             }
             DISCONNECT_PACKET_TYPE => {
                 let disconnect_packet = Disconnect::from_bytes(fixed_header)?;

@@ -82,7 +82,14 @@ fn client_run(address: &str, from_server_stream: &mut dyn Read) -> std::io::Resu
         loop {
             let mut buffer = [0; 1024];
             let _ = to_server_stream_clone.read(&mut buffer);
-            let packet = Packet::from_bytes(&mut buffer.as_slice()).unwrap();
+            //let packet = Packet::from_bytes(&mut buffer.as_slice()).unwrap();
+            let packet = match Packet::from_bytes(&mut buffer.as_slice()) {
+                Ok(packet) => packet,
+                Err(e) => {
+                    println!("Error: {:?}", e);
+                    continue;
+                }
+            };
 
             match packet {
                 Packet::Connack(connack) => {
@@ -173,8 +180,11 @@ fn client_run(address: &str, from_server_stream: &mut dyn Read) -> std::io::Resu
                 }
             }
 
+            // cuando se crea el publish, y se elige un qos AtLeast, se debe enviar un puback
+            // entonces como antes se tenia un atMost, y se trataba de enviar un puback, se generaba un error
+            // lo dejo como AtLeast, se esta enviando el puback correctamente pero el mensaje se recorta a la mitad por alguna razon
             let dup = false;
-            let qos = QoS::AtMost;
+            let qos = QoS::AtLeast;
             let retain = false;
             let topic_name = TopicName::new(levels, false);
             let package_identifier = None;
