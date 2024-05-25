@@ -1,5 +1,6 @@
 use super::{FORWARD_SLASH, SERVER_RESERVED};
 use crate::{EncodedString, Error, Read, TopicLevel};
+use std::fmt;
 
 #[derive(Debug, PartialEq, Clone, Eq, Hash)]
 pub struct TopicName {
@@ -70,12 +71,21 @@ impl TopicName {
     pub fn server_reserved(&self) -> bool {
         self.server_reserved
     }
+}
 
-    pub fn to_string(&self) -> String {
-        println!("los levels son {:?}", self.levels.concat());
-        String::from_utf8(self.levels.concat()).unwrap()
+
+impl fmt::Display for TopicName {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let levels = self.levels
+            .iter()
+            .map(|level| String::from_utf8_lossy(level).into_owned())
+            .collect::<Vec<String>>()
+            .join("/");
+
+        write!(f, "{}", levels)
     }
 }
+
 
 #[cfg(test)]
 mod tests {

@@ -9,9 +9,12 @@ use std::{
 
 use crate::client::Client;
 use sauron::model::{
-    components::{qos::QoS, topic_level::TopicLevel, topic_name::TopicName},
-    packets::{connack::Connack, publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe, pingresp::Pingresp, puback::Puback},
-    return_codes::connect_return_code::ConnectReturnCode, 
+    components::{qos::QoS, topic_name::TopicName},
+    packets::{
+        connack::Connack, pingresp::Pingresp, puback::Puback, publish::Publish,
+        subscribe::Subscribe, unsubscribe::Unsubscribe,
+    },
+    return_codes::connect_return_code::ConnectReturnCode,
 };
 
 pub enum Task {
@@ -47,7 +50,7 @@ impl Message {
 }
 
 type Subscribers = HashMap<Vec<u8>, SubscriptionData>; // key : client_id , value: SubscriptionData
-// type Subtopic = HashMap<Vec<u8>, Topic>; // key: level, value: Topic
+                                                       // type Subtopic = HashMap<Vec<u8>, Topic>; // key: level, value: Topic
 type Subscriptions = HashMap<TopicName, SubscriptionData>; // key: topic_name, value: SubscriptionData
 type ClientId = Vec<u8>;
 
@@ -203,7 +206,10 @@ impl TaskHandler {
                         self.unsubscribe(unsubscribe);
                     }
                     Task::Publish(publish, client_id) => {
-                        println!("Task Handler received task: Publish message: {:?}\n", publish);
+                        println!(
+                            "Task Handler received task: Publish message: {:?}\n",
+                            publish
+                        );
                         self.publish(&publish, client_id);
                     }
                     Task::ConnectClient(client) => {
@@ -230,7 +236,7 @@ impl TaskHandler {
 
     pub fn subscribe(&self, subscribe_packet: Subscribe, client_id: Vec<u8>) {
         let mut clients = self.clients.write().unwrap();
-        
+
         // cambio para obtener una referencia mutable del client y mutarlo agregandole la subscripcion
         // al cliente ademas de hacerlo en el task handler.
         if let Some(client) = clients.get_mut(&client_id) {
@@ -240,11 +246,14 @@ impl TaskHandler {
                     levels.push(level.to_bytes());
                 }
                 let topic_name = TopicName::new(levels, false);
-                
+
                 client.add_subscription(topic_name.clone());
-                
+
                 let mut topics = self.topics.write().unwrap();
-                topics.entry(topic_name.clone()).or_default().push(client_id.clone());
+                topics
+                    .entry(topic_name.clone())
+                    .or_default()
+                    .push(client_id.clone());
             }
             println!("Active clients: {:?}\n", clients);
             println!("Active topics with subscribers: {:?}\n", self.topics);
@@ -252,7 +261,6 @@ impl TaskHandler {
             println!("Client does not exist");
         }
     }
-    
 
     // Unsubscribe a client_id from a set of topics given an Unsubscribe packet
     pub fn unsubscribe(&self, unsubscribe_packet: Unsubscribe) {
@@ -262,7 +270,7 @@ impl TaskHandler {
     /*publish uses a publish method of the topic struct and also sends to the clients subscribed to the topic the message*/
     pub fn publish(&self, publish_packet: &Publish, client_id: Vec<u8>) {
         let topic_name = publish_packet.topic();
-    
+
         let binding = self.topics.read().unwrap();
         let clients = match binding.get(topic_name) {
             Some(clients) => clients,
@@ -271,15 +279,15 @@ impl TaskHandler {
                 return;
             }
         };
-    
+
         let message = Message::new(client_id.clone(), publish_packet.clone());
-    
+
         for client_id in clients {
             if let Some(client) = self.clients.read().unwrap().get(client_id) {
                 client.send_message(message.clone());
             }
         }
-        
+
         //self.puback(publish_packet.package_identifier(), client_id.clone());
     }
 
@@ -295,7 +303,6 @@ impl TaskHandler {
         //insert the client id as key and the client as value in clients in the rwlockwriteguard
         clients.entry(client_id.clone()).or_insert(client);
 
-        //println!("hash de clientes: {:?}", clients);
         let mut stream = match clients.get(&client_id).unwrap().stream.lock() {
             Ok(stream) => stream,
             Err(_) => {
@@ -327,8 +334,7 @@ impl TaskHandler {
             None => {
                 println!("Error: client not found in client list!");
                 return;
-            },
-        
+            }
         };
 
         let mut stream = match client.stream.lock() {
@@ -336,7 +342,7 @@ impl TaskHandler {
             Err(_) => {
                 println!("Error getting stream, puback will not be sent to client.");
                 return;
-            },
+            }
         };
 
         match stream.write(puback_packet_bytes) {
@@ -362,7 +368,7 @@ impl TaskHandler {
             Err(_) => {
                 println!("Error getting stream, ping will not be responded to client");
                 return;
-            },
+            }
         };
 
         match stream.write(pingresp_packet_bytes) {
@@ -372,7 +378,6 @@ impl TaskHandler {
             Err(_) => {
                 println!("Error sending ping response to client: {:?}", client_id);
             }
-        
         };
     }
 
@@ -388,8 +393,7 @@ impl TaskHandler {
             None => {
                 println!("Error: Puback packet does not have a packet identifier.");
                 return;
-            },
-        
+            }
         };
         let message_id_bytes = message_id.to_be_bytes().to_vec();
 

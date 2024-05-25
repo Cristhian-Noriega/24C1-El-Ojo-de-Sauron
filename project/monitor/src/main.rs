@@ -44,8 +44,8 @@ fn client_run(address: &str, from_server_stream: &mut dyn Read) -> std::io::Resu
     let mut to_server_stream = TcpStream::connect(address)?;
     let reader = BufReader::new(from_server_stream);
 
-    //client id: camera system
-    let client_id_bytes: Vec<u8> = b"camera system".to_vec();
+    //client id: monitor
+    let client_id_bytes: Vec<u8> = b"monitor".to_vec();
     let client_id = EncodedString::new(client_id_bytes);
     let will = None;
     let login = None;

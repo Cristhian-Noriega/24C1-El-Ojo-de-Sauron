@@ -1,10 +1,11 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use std::net::TcpStream;
-use std::sync::atomic::AtomicBool;
-use std::sync::{Arc, Mutex};
+use std::fmt;
 use std::io::Write;
+use std::net::TcpStream;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 
 use sauron::model::components::topic_name::TopicName;
 
@@ -37,9 +38,13 @@ impl Client {
         }
     }
 
-    pub fn add_subscription(&mut self, topic: TopicName ) {
+    pub fn add_subscription(&mut self, topic: TopicName) {
         let client_id = String::from_utf8(self.id.clone()).unwrap();
-        println!("Client with client id {:?} subscribed to {:?}\n", client_id, topic.clone().to_string());
+        println!(
+            "Client with client id {:?} subscribed to {:?}\n",
+            client_id,
+            topic.clone().to_string()
+        );
         self.subscriptions.push(topic);
     }
 
@@ -48,6 +53,27 @@ impl Client {
         match stream.write_all(message.packet().to_bytes().as_slice()) {
             Ok(_) => println!("Message sent to client"),
             Err(e) => println!("Failed to send message: {}", e),
-        }        
+        }
+    }
+}
+
+impl fmt::Display for Client {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let id = String::from_utf8_lossy(&self.id);
+        let subscriptions = self
+            .subscriptions
+            .iter()
+            .map(|topic| topic.to_string())
+            .collect::<Vec<String>>()
+            .join(", ");
+
+        write!(
+            f,
+            "Client ID: {}\nPassword: {}\nSubscriptions: {}\nAlive: {}",
+            id,
+            self.password,
+            subscriptions,
+            self.alive.load(Ordering::Relaxed)
+        )
     }
 }

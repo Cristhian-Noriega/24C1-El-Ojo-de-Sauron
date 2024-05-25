@@ -12,8 +12,8 @@ use std::{
 pub use sauron::model::{
     packet::Packet,
     packets::{
-        connack::Connack, connect::Connect, disconnect::Disconnect,
-        puback::Puback, publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe,
+        connack::Connack, connect::Connect, disconnect::Disconnect, puback::Puback,
+        publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe,
     },
     return_codes::connect_return_code::ConnectReturnCode,
 };
