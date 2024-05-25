@@ -203,7 +203,7 @@ impl TaskHandler {
                             "Task Handler received task: unsubscribe Client: {:?}\n",
                             client_id
                         );
-                        self.unsubscribe(unsubscribe);
+                        self.unsubscribe(unsubscribe, client_id);
                     }
                     Task::Publish(publish, client_id) => {
                         println!(
@@ -263,8 +263,32 @@ impl TaskHandler {
     }
 
     // Unsubscribe a client_id from a set of topics given an Unsubscribe packet
-    pub fn unsubscribe(&self, unsubscribe_packet: Unsubscribe) {
-        todo!()
+    pub fn unsubscribe(&self, unsubscribe_packet: Unsubscribe, client_id: Vec<u8>) {
+        let mut clients = self.clients.write().unwrap();
+    
+        if let Some(client) = clients.get_mut(&client_id) {
+            for topic_filter in unsubscribe_packet.topics {
+                let mut levels: Vec<Vec<u8>> = vec![];
+                for level in topic_filter.levels() {
+                    levels.push(level.to_bytes());
+                }
+                let topic_name = TopicName::new(levels, false);
+    
+                client.remove_subscription(&topic_name);
+    
+                let mut topics = self.topics.write().unwrap();
+                if let Some(subscribers) = topics.get_mut(&topic_name) {
+                    subscribers.retain(|id| id != &client_id);
+                    if subscribers.is_empty() {
+                        topics.remove(&topic_name);
+                    }
+                }
+            }
+            println!("Active clients: {:?}\n", clients);
+            println!("Active topics with subscribers: {:?}\n", self.topics);
+        } else {
+            println!("Client does not exist");
+        }
     }
 
     /*publish uses a publish method of the topic struct and also sends to the clients subscribed to the topic the message*/

@@ -48,6 +48,16 @@ impl Client {
         self.subscriptions.push(topic);
     }
 
+    pub fn remove_subscription(&mut self, topic: &TopicName) {
+        let client_id = String::from_utf8(self.id.clone()).unwrap();
+        println!(
+            "Client with client id {:?} unsubscribed from {:?}\n",
+            client_id,
+            topic.clone().to_string()
+        );
+        self.subscriptions.retain(|t| t != topic);
+    }
+
     pub fn send_message(&self, message: Message) {
         let mut stream = self.stream.lock().unwrap();
         match stream.write_all(message.packet().to_bytes().as_slice()) {

@@ -164,7 +164,7 @@ pub fn handle_packet(
     stream: &mut TcpStream,
     sender_to_topics_channel: std::sync::mpsc::Sender<Task>,
 ) -> bool {
-    //println!("packet {:?}", packet);
+    println!("packet {:?}", packet);
     match packet {
         Packet::Publish(publish_packet) => {
             println!("Received Publish packet");
