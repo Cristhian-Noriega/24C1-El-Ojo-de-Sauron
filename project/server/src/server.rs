@@ -12,7 +12,7 @@ use std::{
 pub use sauron::model::{
     packet::Packet,
     packets::{
-        connack::Connack, connect::Connect, disconnect::Disconnect, puback::Puback,
+        connack::Connack, connect::Connect, puback::Puback,
         publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe,
     },
     return_codes::connect_return_code::ConnectReturnCode,
@@ -143,17 +143,17 @@ impl Server {
                         );
 
                         if !handling_result {
-                            println!("Connection closed");
                             break;
                         };
                     }
                     Err(err) => {
-                        println!("Error parsing packet: {:?}", err);
-                        println!("Connection closed");
+                        println!("Connection Error: {:?}", err);
                         break;
                     }
                 }
             }
+            disconnect_client(sender_to_task_channel, client_id);
+            println!("Connection closed");
         });
     }
 }
@@ -162,31 +162,35 @@ pub fn handle_packet(
     packet: Packet,
     client_id: Vec<u8>,
     stream: &mut TcpStream,
-    sender_to_topics_channel: std::sync::mpsc::Sender<Task>,
+    sender_to_task_channel: std::sync::mpsc::Sender<Task>,
 ) -> bool {
     println!("packet {:?}", packet);
     match packet {
         Packet::Publish(publish_packet) => {
             println!("Received Publish packet");
-            handle_publish(publish_packet, sender_to_topics_channel, client_id)
+            handle_publish(publish_packet, sender_to_task_channel, client_id)
         }
         Packet::Puback(puback_packet) => {
-            handle_puback(puback_packet, sender_to_topics_channel, client_id)
+            handle_puback(puback_packet, sender_to_task_channel, client_id)
         }
         Packet::Subscribe(subscribe_packet) => {
             println!("Received Subscribe packet");
-            handle_subscribe(subscribe_packet, sender_to_topics_channel, client_id)
+            handle_subscribe(subscribe_packet, sender_to_task_channel, client_id)
         }
         Packet::Unsubscribe(unsubscribe_packet) => {
             println!("Received Unsubscribe packet");
-            handle_unsubscribe(unsubscribe_packet, sender_to_topics_channel, client_id)
+            handle_unsubscribe(unsubscribe_packet, sender_to_task_channel, client_id)
         }
-        Packet::Pingreq(pingreq_packet) => handle_pingreq(sender_to_topics_channel, client_id),
+        Packet::Pingreq(pingreq_packet) => {
+            handle_pingreq(sender_to_task_channel, client_id)
+        }
         Packet::Disconnect(disconnect_packet) => {
-            handle_disconnect(disconnect_packet, sender_to_topics_channel, client_id)
+            disconnect_client(sender_to_task_channel, client_id)
         }
         _ => {
             println!("Unsupported packet type");
+            println!("Clsoing connection");
+            disconnect_client(sender_to_task_channel, client_id);
             false
         }
     }
@@ -221,7 +225,6 @@ pub fn handle_puback(
     // sender_to_topics_channel
     //     .send(TopicHandlerTask::RegisterPubAck(puback_packet))
     //     .unwrap();
-
     true
 }
 
@@ -249,18 +252,6 @@ pub fn handle_unsubscribe(
     true
 }
 
-pub fn handle_disconnect(
-    packet: Disconnect,
-    sender_to_task_channel: std::sync::mpsc::Sender<Task>,
-    client_id: Vec<u8>,
-) -> bool {
-    sender_to_task_channel
-        .send(Task::DisconnectClient(client_id))
-        .unwrap();
-
-    false
-}
-
 pub fn handle_pingreq(
     sender_to_task_channel: std::sync::mpsc::Sender<Task>,
     client_id: Vec<u8>,
@@ -271,4 +262,15 @@ pub fn handle_pingreq(
         .unwrap();
     println!("Sent Pingresp packet to task handler");
     true
+}
+
+
+pub fn disconnect_client(
+    sender_to_task_channel: std::sync::mpsc::Sender<Task>,
+    client_id: Vec<u8>,
+) -> bool {
+    sender_to_task_channel
+        .send(Task::DisconnectClient(client_id))
+        .unwrap();
+    false
 }
