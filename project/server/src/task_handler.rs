@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
+#[allow(clippy::unused_io_amount)]
+
 use std::{
     collections::{HashMap, HashSet},
     io::Write,

@@ -28,7 +28,6 @@ fn main() -> Result<(), ()> {
     }
 
     let address = argv[1].clone() + ":" + &argv[2];
-    println!("Conectándome a {:?}", address);
 
     match client_run(&address, &mut stdin()) {
         Ok(_) => Ok(()),
@@ -40,18 +39,10 @@ fn main() -> Result<(), ()> {
 }
 
 //the client receives a connack packet from the server
-fn client_run(address: &str, from_server_stream: &mut dyn Read) -> std::io::Result<()> {
-    let mut to_server_stream = TcpStream::connect(address)?;
-    let reader = BufReader::new(from_server_stream);
+fn client_run(address: &str, actions_input: &mut dyn Read) -> std::io::Result<()> {
+    let reader = BufReader::new(actions_input);
 
-    //client id: camera system
-    let client_id_bytes: Vec<u8> = b"camera system".to_vec();
-    let client_id = EncodedString::new(client_id_bytes);
-    let will = None;
-    let login = None;
-    let connect_package = Connect::new(false, 0, client_id, will, login);
-
-    let _ = to_server_stream.write(connect_package.to_bytes().as_slice());
+    let mut to_server_stream = connect_to_server(address)?;
 
     let mut to_server_stream_clone = to_server_stream.try_clone()?;
     thread::spawn(move || {
@@ -79,8 +70,8 @@ fn client_run(address: &str, from_server_stream: &mut dyn Read) -> std::io::Resu
                 Packet::Puback(puback) => {
                     println!("Received Puback packet {:?}", puback);
                 }
-                Packet::Pingresp(pingresp) => {
-                    println!("Received Pingresp packet {:?}", pingresp);
+                Packet::Pingresp(_pingresp) => {
+                    println!("Received Pingresp packet");
                 }
                 Packet::Suback(suback) => {
                     println!("Received Suback packet {:?}", suback);
@@ -199,6 +190,7 @@ fn client_run(address: &str, from_server_stream: &mut dyn Read) -> std::io::Resu
             let disconnect_packet = Disconnect::new();
             println!("Attempting disconnection!");
             let _ = to_server_stream.write(disconnect_packet.to_bytes().as_slice());
+            println!("Disconnected from server!");
         }
         if command == "ping" {
             let pingreq_packet = Pingreq::new();
@@ -207,6 +199,25 @@ fn client_run(address: &str, from_server_stream: &mut dyn Read) -> std::io::Resu
 
             let _ = to_server_stream.write(pingreq_packet.to_bytes().as_slice());
         }
+        if command == "connect" {
+            to_server_stream = connect_to_server(address)?;
+        }
     }
     Ok(())
+}
+
+pub fn connect_to_server(address: &str) -> std::io::Result<TcpStream> {
+    println!("Conectándome a {:?}", address);
+    let mut to_server_stream = TcpStream::connect(address)?;
+
+    //client id: camera system
+    let client_id_bytes: Vec<u8> = b"camera system".to_vec();
+    let client_id = EncodedString::new(client_id_bytes);
+    let will = None;
+    let login = None;
+    let connect_package = Connect::new(false, 0, client_id, will, login);
+
+    let _ = to_server_stream.write(connect_package.to_bytes().as_slice());
+
+    Ok(to_server_stream)
 }

@@ -28,7 +28,6 @@ fn main() -> Result<(), ()> {
     }
 
     let address = argv[1].clone() + ":" + &argv[2];
-    println!("Conectándome a {:?}", address);
 
     match client_run(&address, &mut stdin()) {
         Ok(_) => Ok(()),
@@ -40,56 +39,17 @@ fn main() -> Result<(), ()> {
 }
 
 //the client receives a connack packet from the server
-fn client_run(address: &str, from_server_stream: &mut dyn Read) -> std::io::Result<()> {
-    let mut to_server_stream = TcpStream::connect(address)?;
-    let reader = BufReader::new(from_server_stream);
+fn client_run(address: &str, actions_input: &mut dyn Read) -> std::io::Result<()> {
+    let reader = BufReader::new(actions_input);
 
-    //client id: monitor
-    let client_id_bytes: Vec<u8> = b"monitor".to_vec();
-    let client_id = EncodedString::new(client_id_bytes);
-    let will = None;
-    let login = None;
-    let connect_package = Connect::new(false, 0, client_id, will, login);
-
-    let _ = to_server_stream.write(connect_package.to_bytes().as_slice());
-
-    // Read the Connack packet from the server
-    // let mut buffer = [0; 1024];
-    // let _ = to_server_stream.read(&mut buffer);
-    // let packet = Packet::from_bytes(&mut buffer.as_slice()).unwrap();
-
-    // match packet {
-    //     Packet::Connack(connack) => {
-    //         println!(
-    //             "Received Connack packet with return code: {:?} and sessionPresent: {:?}",
-    //             connack.connect_return_code(),
-    //             connack.session_present()
-    //         );
-    //     }
-    //     Packet::Publish(publish) => {
-    //         println!("Received Publish packet {:?}", publish);
-
-    //         let message = publish.message();
-    //         let message_str = String::from_utf8_lossy(message).to_string();
-
-    //         println!("Message: {:?}", message_str);
-    //     }
-    //     _ => println!("Received unsupported packet type"),
-    // }
+    let mut to_server_stream = connect_to_server(address)?;
 
     let mut to_server_stream_clone = to_server_stream.try_clone()?;
     thread::spawn(move || {
         loop {
             let mut buffer = [0; 1024];
             let _ = to_server_stream_clone.read(&mut buffer);
-            //let packet = Packet::from_bytes(&mut buffer.as_slice()).unwrap();
-            let packet = match Packet::from_bytes(&mut buffer.as_slice()) {
-                Ok(packet) => packet,
-                Err(e) => {
-                    println!("Error: {:?}", e);
-                    continue;
-                }
-            };
+            let packet = Packet::from_bytes(&mut buffer.as_slice()).unwrap();
 
             match packet {
                 Packet::Connack(connack) => {
@@ -110,8 +70,8 @@ fn client_run(address: &str, from_server_stream: &mut dyn Read) -> std::io::Resu
                 Packet::Puback(puback) => {
                     println!("Received Puback packet {:?}", puback);
                 }
-                Packet::Pingresp(pingresp) => {
-                    println!("Received Pingresp packet {:?}", pingresp);
+                Packet::Pingresp(_pingresp) => {
+                    println!("Received Pingresp packet");
                 }
                 Packet::Suback(suback) => {
                     println!("Received Suback packet {:?}", suback);
@@ -125,12 +85,10 @@ fn client_run(address: &str, from_server_stream: &mut dyn Read) -> std::io::Resu
                 Packet::Disconnect(disconnect) => {
                     println!("Received Disconnect packet {:?}", disconnect);
                 }
-                
                 _ => println!("Received unsupported packet type"),
             }
         }
     });
-
 
     for line in reader.lines().map_while(Result::ok) {
         let command = line.trim();
@@ -180,15 +138,11 @@ fn client_run(address: &str, from_server_stream: &mut dyn Read) -> std::io::Resu
                 }
             }
 
-            // cuando se crea el publish, y se elige un qos AtLeast, se debe enviar un puback
-            // entonces como antes se tenia un atMost, y se trataba de enviar un puback, se generaba un error
-            // lo dejo como AtLeast, se esta enviando el puback correctamente pero el mensaje se recorta a la mitad por alguna razon
-            // -> solucionado :) faltaba poner el package_identifier en el publish
             let dup = false;
-            let qos = QoS::AtLeast;
+            let qos = QoS::AtMost;
             let retain = false;
             let topic_name = TopicName::new(levels, false);
-            let package_identifier = Some(1);
+            let package_identifier = None;
             let message_bytes = message.as_bytes().to_vec();
 
             let publish_packet = Publish::new(
@@ -235,6 +189,7 @@ fn client_run(address: &str, from_server_stream: &mut dyn Read) -> std::io::Resu
             let disconnect_packet = Disconnect::new();
             println!("Attempting disconnection!");
             let _ = to_server_stream.write(disconnect_packet.to_bytes().as_slice());
+            println!("Disconnected from server!");
         }
         if command == "ping" {
             let pingreq_packet = Pingreq::new();
@@ -243,6 +198,25 @@ fn client_run(address: &str, from_server_stream: &mut dyn Read) -> std::io::Resu
 
             let _ = to_server_stream.write(pingreq_packet.to_bytes().as_slice());
         }
+        if command == "connect" {
+            to_server_stream = connect_to_server(address)?;
+        }
     }
     Ok(())
+}
+
+pub fn connect_to_server(address: &str) -> std::io::Result<TcpStream> {
+    println!("Conectándome a {:?}", address);
+    let mut to_server_stream = TcpStream::connect(address)?;
+
+    //client id: "monitor"
+    let client_id_bytes: Vec<u8> = b"monitor".to_vec();
+    let client_id = EncodedString::new(client_id_bytes);
+    let will = None;
+    let login = None;
+    let connect_package = Connect::new(false, 0, client_id, will, login);
+
+    let _ = to_server_stream.write(connect_package.to_bytes().as_slice());
+
+    Ok(to_server_stream)
 }
