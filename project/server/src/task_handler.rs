@@ -314,10 +314,11 @@ impl TaskHandler {
         }
 
         let mut clients = self.clients.write().unwrap();
-        if let Some(client) = clients.get_mut(&client_id) {
-            println!("HOLA!!! HAGO PUBACK METHOD");
-            self.puback(publish_packet.package_identifier(), client);
-
+        // si el qos no es at most (qos 0), se debe mandar un puback al cliente
+        if &QoS::AtMost != publish_packet.qos() {
+            if let Some(client) = clients.get_mut(&client_id) {
+                self.puback(publish_packet.package_identifier(), client);
+            }
         }
     }
 
@@ -352,6 +353,7 @@ impl TaskHandler {
         };
     }
 
+    // Send a suback packet to a client
     pub fn suback(&self, package_identifier: u16, client: &mut Client) {
         //return code hardcodeado
         let suback_packet = Suback::new(package_identifier, vec![SubackReturnCode::SuccessMaximumQoS0]);
@@ -376,6 +378,7 @@ impl TaskHandler {
         };
     }
 
+    // Send a puback packet to a client
     pub fn puback(&self, package_identifier: Option<u16>, client: &mut Client) {
         let puback_packet = Puback::new(package_identifier);
         let puback_packet_vec = puback_packet.to_bytes();
@@ -400,6 +403,7 @@ impl TaskHandler {
         };
     }
 
+    // Send a ping response to a client
     pub fn respond_ping(&self, client_id: Vec<u8>) {
         let clients = self.clients.write().unwrap();
 

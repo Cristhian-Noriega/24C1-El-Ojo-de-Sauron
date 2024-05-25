@@ -183,11 +183,12 @@ fn client_run(address: &str, from_server_stream: &mut dyn Read) -> std::io::Resu
             // cuando se crea el publish, y se elige un qos AtLeast, se debe enviar un puback
             // entonces como antes se tenia un atMost, y se trataba de enviar un puback, se generaba un error
             // lo dejo como AtLeast, se esta enviando el puback correctamente pero el mensaje se recorta a la mitad por alguna razon
+            // -> solucionado :) faltaba poner el package_identifier en el publish
             let dup = false;
             let qos = QoS::AtLeast;
             let retain = false;
             let topic_name = TopicName::new(levels, false);
-            let package_identifier = None;
+            let package_identifier = Some(1);
             let message_bytes = message.as_bytes().to_vec();
 
             let publish_packet = Publish::new(
