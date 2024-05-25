@@ -1,7 +1,8 @@
 use super::{FORWARD_SLASH, SERVER_RESERVED};
 use crate::{EncodedString, Error, Read, TopicLevel};
+use std::fmt;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Eq, Hash)]
 pub struct TopicName {
     pub levels: Vec<Vec<u8>>,
     server_reserved: bool,
@@ -71,6 +72,20 @@ impl TopicName {
         self.server_reserved
     }
 }
+
+
+impl fmt::Display for TopicName {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let levels = self.levels
+            .iter()
+            .map(|level| String::from_utf8_lossy(level).into_owned())
+            .collect::<Vec<String>>()
+            .join("/");
+
+        write!(f, "{}", levels)
+    }
+}
+
 
 #[cfg(test)]
 mod tests {

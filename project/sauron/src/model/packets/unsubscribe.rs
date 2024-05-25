@@ -80,6 +80,7 @@ impl Unsubscribe {
 
         packet_bytes.extend(fixed_header_bytes);
         packet_bytes.extend(variable_header_bytes);
+        packet_bytes.extend(payload_bytes);
 
         packet_bytes
     }

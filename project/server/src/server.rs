@@ -12,41 +12,44 @@ use std::{
 pub use sauron::model::{
     packet::Packet,
     packets::{
-        connack::Connack, connect::Connect, disconnect::Disconnect, pingresp::Pingresp,
-        puback::Puback, publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe,
+        connack::Connack, connect::Connect, puback::Puback,
+        publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe,
     },
     return_codes::connect_return_code::ConnectReturnCode,
 };
+
+use crate::client::Client;
 
 use super::config::Config;
 use super::task_handler::Task;
 use super::task_handler::TaskHandler;
 
 pub struct Server {
-    config: Option<Config>,
+    config: Config,
     // Channel for client actions
     client_actions_sender: mpsc::Sender<Task>,
-    client_actions_receiver: mpsc::Receiver<Task>,
     // Map to store client senders for communication
     client_senders: RwLock<HashMap<Vec<u8>, mpsc::Sender<Publish>>>,
+    // Task handler to handle client actions
+    // task_handler: TaskHandler,
 }
 
 impl Server {
-    pub fn new() -> Self {
+    pub fn new(config: Config) -> Self {
         let (client_actions_sender, client_actions_receiver) = mpsc::channel();
+        let task_handler = TaskHandler::new(client_actions_receiver);
+        task_handler.initialize_task_handler_thread();
         Server {
-            config: Config::new("/."),
+            config,
             client_actions_sender,
-            client_actions_receiver,
             client_senders: RwLock::new(HashMap::new()),
         }
     }
 
-    pub fn server_run(&self, address: &str) -> std::io::Result<()> {
+    pub fn server_run(&self) -> std::io::Result<()> {
+        let address = format!("{}:{}", self.config.get_address(), self.config.get_port());
         println!("Server running on address: {}", address);
-        let server = Server::new();
-        let listener = TcpListener::bind(address)?;
-        Server::initialize_task_handler_thread(server.client_actions_receiver);
+        let listener = TcpListener::bind(&address)?;
 
         for stream_result in listener.incoming() {
             match stream_result {
@@ -74,11 +77,10 @@ impl Server {
         Ok(())
     }
 
-    pub fn initialize_task_handler_thread(client_actions_receiver: mpsc::Receiver<Task>) {
-        thread::spawn(move || {
-            let topic_handler = TaskHandler::new(client_actions_receiver);
-            println!("Starting topic handler thread\n");
-            topic_handler.run();
+    pub fn initialize_task_handler_thread(task_handler: TaskHandler) {
+        println!("Starting task handler thread\n");
+        std::thread::spawn(move || {
+            task_handler.run();
         });
     }
 
@@ -93,16 +95,15 @@ impl Server {
     pub fn connect_new_client(&self, connect_packet: Connect, mut stream: TcpStream) {
         println!("Received Connect Package");
         let client_id = connect_packet.client_id().content();
-        let (client_sender, client_receiver) = mpsc::channel(); // Create a channel for this client
 
-        let mut client_senders = self.client_senders.write().unwrap();
-        client_senders.insert(client_id.clone(), client_sender);
-
-        //let new_client = Client::new(client_id.clone(), "PASSWORD".to_string(), stream, true, 0);
-
-        // self.client_actions_sender
-        //     .send(TopicHandlerTask::ClientConnected(new_client))
-        //     .unwrap();
+        let new_client = Client::new(
+            client_id.clone(),
+            "PASSWORD".to_string(),
+            stream.try_clone().unwrap(),
+            true,
+            0,
+        );
+        handle_connect(self.client_actions_sender.clone(), new_client);
 
         println!(
             "New client connected: {:?}",
@@ -116,12 +117,7 @@ impl Server {
             self.client_actions_sender.clone(),
             stream,
             client_id.clone(),
-            client_receiver,
         );
-
-        //let connack_packet = Connack::new(false, ConnectReturnCode::ConnectionAccepted);
-
-        //stream.write(connack_packet.to_bytes().as_slice());
     }
 
     pub fn create_new_client_thread(
@@ -129,7 +125,6 @@ impl Server {
         sender_to_task_channel: std::sync::mpsc::Sender<Task>,
         mut stream: TcpStream,
         client_id: Vec<u8>,
-        client_receiver: mpsc::Receiver<Publish>,
     ) {
         thread::spawn(move || {
             println!("Welcome to the newly connected client thread\n");
@@ -148,17 +143,17 @@ impl Server {
                         );
 
                         if !handling_result {
-                            println!("Connection closed");
                             break;
                         };
                     }
                     Err(err) => {
-                        println!("Error parsing packet: {:?}", err);
-                        println!("Connection closed");
+                        println!("Connection Error: {:?}", err);
                         break;
                     }
                 }
             }
+            disconnect_client(sender_to_task_channel, client_id);
+            println!("Connection closed");
         });
     }
 }
@@ -167,34 +162,48 @@ pub fn handle_packet(
     packet: Packet,
     client_id: Vec<u8>,
     stream: &mut TcpStream,
-    sender_to_topics_channel: std::sync::mpsc::Sender<Task>,
+    sender_to_task_channel: std::sync::mpsc::Sender<Task>,
 ) -> bool {
     println!("packet {:?}", packet);
     match packet {
         Packet::Publish(publish_packet) => {
             println!("Received Publish packet");
-            handle_publish(publish_packet, sender_to_topics_channel, client_id)
+            handle_publish(publish_packet, sender_to_task_channel, client_id)
         }
         Packet::Puback(puback_packet) => {
-            handle_puback(puback_packet, sender_to_topics_channel, client_id)
+            handle_puback(puback_packet, sender_to_task_channel, client_id)
         }
         Packet::Subscribe(subscribe_packet) => {
             println!("Received Subscribe packet");
-            handle_subscribe(subscribe_packet, sender_to_topics_channel, client_id)
+            handle_subscribe(subscribe_packet, sender_to_task_channel, client_id)
         }
         Packet::Unsubscribe(unsubscribe_packet) => {
             println!("Received Unsubscribe packet");
-            handle_unsubscribe(unsubscribe_packet, sender_to_topics_channel, client_id)
+            handle_unsubscribe(unsubscribe_packet, sender_to_task_channel, client_id)
         }
-        Packet::Pingreq(pingreq_packet) => handle_pingreq(stream),
+        Packet::Pingreq(pingreq_packet) => {
+            handle_pingreq(sender_to_task_channel, client_id)
+        }
         Packet::Disconnect(disconnect_packet) => {
-            handle_disconnect(disconnect_packet, sender_to_topics_channel, client_id)
+            disconnect_client(sender_to_task_channel, client_id)
         }
         _ => {
             println!("Unsupported packet type");
+            println!("Clsoing connection");
+            disconnect_client(sender_to_task_channel, client_id);
             false
         }
     }
+}
+
+pub fn handle_connect(
+    sender_to_topics_channel: std::sync::mpsc::Sender<Task>,
+    client: Client,
+) -> bool {
+    sender_to_topics_channel
+        .send(Task::ConnectClient(client))
+        .unwrap();
+    true
 }
 
 pub fn handle_publish(
@@ -216,7 +225,6 @@ pub fn handle_puback(
     // sender_to_topics_channel
     //     .send(TopicHandlerTask::RegisterPubAck(puback_packet))
     //     .unwrap();
-
     true
 }
 
@@ -244,22 +252,25 @@ pub fn handle_unsubscribe(
     true
 }
 
-pub fn handle_disconnect(
-    packet: Disconnect,
+pub fn handle_pingreq(
+    sender_to_task_channel: std::sync::mpsc::Sender<Task>,
+    client_id: Vec<u8>,
+) -> bool {
+    println!("Received Pingreq packet");
+    sender_to_task_channel
+        .send(Task::RespondPing(client_id))
+        .unwrap();
+    println!("Sent Pingresp packet to task handler");
+    true
+}
+
+
+pub fn disconnect_client(
     sender_to_task_channel: std::sync::mpsc::Sender<Task>,
     client_id: Vec<u8>,
 ) -> bool {
     sender_to_task_channel
-        .send(Task::ClientDisconnected(client_id))
+        .send(Task::DisconnectClient(client_id))
         .unwrap();
-
     false
-}
-
-pub fn handle_pingreq(stream: &mut TcpStream) -> bool {
-    println!("Received Pingreq packet");
-    let pingresp_packet = Pingresp::new();
-    let pingresp_bytes = pingresp_packet.to_bytes();
-    stream.write_all(&pingresp_bytes).unwrap();
-    true
 }
