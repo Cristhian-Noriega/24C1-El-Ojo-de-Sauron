@@ -1,24 +1,14 @@
-use std::io::Read;
+use super::{DEFAULT_VARIABLE_HEADER_LENGTH, PUBLISH_PACKET_TYPE};
+use crate::{Error, FixedHeader, QoS, Read, RemainingLength, TopicName};
 
-const PACKET_TYPE: u8 = 0x03;
-const PACKAGE_IDENTIFIER_LENGTH: usize = 2;
-
-use crate::{
-    errors::error::Error,
-    model::{
-        encoded_string::EncodedString, fixed_header::FixedHeader, qos::QoS,
-        remaining_length::RemainingLength,
-    },
-};
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Publish {
     dup: bool,
     qos: QoS,
     retain: bool,
-    topic_name: EncodedString,
+    topic: TopicName,
     package_identifier: Option<u16>,
-    payload: Vec<u8>,
+    message: Vec<u8>,
 }
 
 impl Publish {
@@ -26,17 +16,17 @@ impl Publish {
         dup: bool,
         qos: QoS,
         retain: bool,
-        topic_name: EncodedString,
+        topic: TopicName,
         package_identifier: Option<u16>,
-        payload: Vec<u8>,
+        message: Vec<u8>,
     ) -> Self {
         Self {
             dup,
             qos,
             retain,
-            topic_name,
+            topic,
             package_identifier,
-            payload,
+            message,
         }
     }
 
@@ -53,43 +43,47 @@ impl Publish {
 
         // Variable Header
 
-        let topic_name = EncodedString::from_bytes(stream)?;
+        let topic = TopicName::from_bytes(stream)?;
 
-        let package_identifier = if qos != QoS::AtMost {
-            let mut package_identifier_buffer = [0; PACKAGE_IDENTIFIER_LENGTH];
-            stream.read_exact(&mut package_identifier_buffer)?;
+        let package_identifier = match qos {
+            QoS::AtMost => None,
+            _ => {
+                let mut package_identifier_buffer = [0; DEFAULT_VARIABLE_HEADER_LENGTH];
+                stream.read_exact(&mut package_identifier_buffer)?;
 
-            Some(u16::from_be_bytes(package_identifier_buffer))
-        } else {
-            None
+                Some(u16::from_be_bytes(package_identifier_buffer))
+            }
         };
 
         let variable_header_len =
-            topic_name.length() + package_identifier.map_or(0, |_| PACKAGE_IDENTIFIER_LENGTH);
+            topic.length() + package_identifier.map_or(0, |_| DEFAULT_VARIABLE_HEADER_LENGTH);
 
         // Payload
 
         let payload_len = remaining_length - variable_header_len;
 
-        let mut payload = vec![0; payload_len];
-        stream.read_exact(&mut payload)?;
+        let mut message = vec![0; payload_len];
+        stream.read_exact(&mut message)?;
 
         Ok(Publish::new(
             dup,
             qos,
             retain,
-            topic_name,
+            topic,
             package_identifier,
-            payload,
+            message,
         ))
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
+        // Payload
+        let payload_bytes = &self.message;
+
         // Variable Header
 
         let mut variable_header_bytes = vec![];
 
-        variable_header_bytes.extend(self.topic_name.to_bytes());
+        variable_header_bytes.extend(self.topic.to_bytes());
 
         if let Some(package_identifier) = self.package_identifier {
             variable_header_bytes.extend(&package_identifier.to_be_bytes());
@@ -101,9 +95,10 @@ impl Publish {
             | (self.qos.to_byte() << 1)
             | (if self.retain { 1 } else { 0 });
 
-        let mut fixed_header_bytes = vec![PACKET_TYPE << 4 | fixed_header_flags];
+        let mut fixed_header_bytes = vec![PUBLISH_PACKET_TYPE << 4 | fixed_header_flags];
 
-        let remaining_length_value = variable_header_bytes.len() as u32 + self.payload.len() as u32;
+        let remaining_length_value =
+            variable_header_bytes.len() as u32 + payload_bytes.len() as u32;
         let remaining_length_bytes = RemainingLength::new(remaining_length_value).to_bytes();
         fixed_header_bytes.extend(remaining_length_bytes);
 
@@ -111,8 +106,32 @@ impl Publish {
 
         packet_bytes.extend(fixed_header_bytes);
         packet_bytes.extend(variable_header_bytes);
-        packet_bytes.extend(&self.payload);
+        packet_bytes.extend(payload_bytes);
 
         packet_bytes
+    }
+
+    pub fn dup(&self) -> bool {
+        self.dup
+    }
+
+    pub fn qos(&self) -> &QoS {
+        &self.qos
+    }
+
+    pub fn retain(&self) -> bool {
+        self.retain
+    }
+
+    pub fn topic(&self) -> &TopicName {
+        &self.topic
+    }
+
+    pub fn package_identifier(&self) -> Option<u16> {
+        self.package_identifier
+    }
+
+    pub fn message(&self) -> &Vec<u8> {
+        &self.message
     }
 }

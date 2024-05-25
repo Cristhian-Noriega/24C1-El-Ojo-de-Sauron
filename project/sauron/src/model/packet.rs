@@ -5,17 +5,7 @@ use crate::{
     Publish, Suback, Subscribe, Unsuback, Unsubscribe,
 };
 
-pub const CONNECT_PACKET_TYPE: u8 = 0x01;
-pub const CONNACK_PACKET_TYPE: u8 = 0x02;
-pub const PUBLISH_PACKET_TYPE: u8 = 0x03;
-pub const PUBACK_PACKET_TYPE: u8 = 0x04;
-pub const SUBSCRIBE_PACKET_TYPE: u8 = 0x08;
-pub const SUBACK_PACKET_TYPE: u8 = 0x09;
-pub const PINGREQ_PACKET_TYPE: u8 = 0x12;
-pub const PINGRESP_PACKET_TYPE: u8 = 0x13;
-pub const DISCONNECT_PACKET_TYPE: u8 = 0x14;
-pub const UNSUBSCRIBE_PACKET_TYPE: u8 = 0x0A;
-pub const UNSUBACK_PACKET_TYPE: u8 = 0x0B;
+use super::packets::*;
 
 #[derive(Debug)]
 pub enum Packet {
@@ -71,9 +61,9 @@ impl Packet {
                 Packet::Suback(suback_packet)
             }
             PUBACK_PACKET_TYPE => {
-                let puback_packet = Publish::from_bytes(fixed_header, stream)?;
+                let puback_packet = Puback::from_bytes(fixed_header, stream)?;
 
-                Packet::Publish(puback_packet)
+                Packet::Puback(puback_packet)
             }
             DISCONNECT_PACKET_TYPE => {
                 let disconnect_packet = Disconnect::from_bytes(fixed_header)?;
@@ -97,12 +87,7 @@ impl Packet {
                 let unsuback_packet = Unsuback::from_bytes(fixed_header, stream)?;
                 Packet::Unsuback(unsuback_packet)
             }
-            _ => {
-                return Err(crate::errors::error::Error::new(format!(
-                    "Invalid packet type: {}",
-                    packet_type
-                )))
-            }
+            _ => return Err(Error::new(format!("Invalid packet type: {}", packet_type))),
         };
 
         if let Ok(remaining_length) = stream.read(&mut [0; 1]) {

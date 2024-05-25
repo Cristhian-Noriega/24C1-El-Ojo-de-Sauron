@@ -1,14 +1,5 @@
-use crate::{
-    errors::error::Error,
-    model::{
-        fixed_header::FixedHeader, qos::QoS, remaining_length::RemainingLength,
-        topic_filter::TopicFilter,
-    },
-};
-use std::io::Read;
-
-const PACKET_TYPE: u8 = 0x08;
-const RESERVED_FIXED_HEADER_FLAGS: u8 = 0x02;
+use super::{DEFAULT_VARIABLE_HEADER_LENGTH, RESERVED_FIXED_HEADER_FLAGS, SUBSCRIBE_PACKET_TYPE};
+use crate::{Error, FixedHeader, QoS, Read, RemainingLength, TopicFilter};
 
 #[derive(Debug)]
 pub struct Subscribe {
@@ -33,7 +24,7 @@ impl Subscribe {
         }
 
         // Variable Header
-        let mut variable_header_buffer = [0; 2];
+        let mut variable_header_buffer = [0; DEFAULT_VARIABLE_HEADER_LENGTH];
         stream.read_exact(&mut variable_header_buffer)?;
 
         let packet_identifier = u16::from_be_bytes(variable_header_buffer);
@@ -80,7 +71,7 @@ impl Subscribe {
         }
 
         // Fixed Header
-        let mut fixed_header_bytes = vec![PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS];
+        let mut fixed_header_bytes = vec![SUBSCRIBE_PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS];
 
         let remaining_length_value =
             variable_header_bytes.len() as u32 + payload_bytes.len() as u32;
@@ -91,7 +82,16 @@ impl Subscribe {
 
         packet_bytes.extend(fixed_header_bytes);
         packet_bytes.extend(variable_header_bytes);
+        packet_bytes.extend(payload_bytes);
 
         packet_bytes
+    }
+
+    pub fn packet_identifier(&self) -> u16 {
+        self.packet_identifier
+    }
+
+    pub fn topics(&self) -> Vec<(TopicFilter, QoS)> {
+        self.topics.clone()
     }
 }

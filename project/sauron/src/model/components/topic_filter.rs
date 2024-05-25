@@ -1,13 +1,7 @@
-use std::io::Read;
+use super::{FORWARD_SLASH, SERVER_RESERVED};
+use crate::{EncodedString, Error, Read, TopicLevel, TopicName};
 
-use crate::{errors::error::Error, model::encoded_string::EncodedString};
-
-use super::{topic_level::TopicLevel, topic_name::TopicName};
-
-const FORWARD_SLASH: u8 = 0x2F;
-const SERVER_RESERVED: u8 = 0x24;
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TopicFilter {
     levels: Vec<TopicLevel>,
     server_reserved: bool,
@@ -59,13 +53,15 @@ impl TopicFilter {
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
-        let topic_bytes = self
-            .levels
-            .iter()
-            .map(|level| level.to_bytes())
-            .chain(std::iter::once(vec![FORWARD_SLASH]))
-            .flatten()
-            .collect();
+        let mut topic_bytes = vec![];
+
+        for (i, level) in self.levels.iter().enumerate() {
+            topic_bytes.extend(level.to_bytes());
+
+            if i < self.levels.len() - 1 {
+                topic_bytes.push(FORWARD_SLASH);
+            }
+        }
 
         EncodedString::new(topic_bytes).to_bytes()
     }
@@ -99,11 +95,20 @@ impl TopicFilter {
     pub fn length(&self) -> usize {
         self.to_bytes().len()
     }
+
+    pub fn levels(&self) -> &Vec<TopicLevel> {
+        &self.levels
+    }
+
+    pub fn server_reserved(&self) -> bool {
+        self.server_reserved
+    }
 }
 
+#[cfg(test)]
 mod test {
     use super::*;
-    use crate::model::encoded_string::EncodedString;
+    use crate::EncodedString;
     use std::io::Cursor;
 
     #[allow(dead_code)]

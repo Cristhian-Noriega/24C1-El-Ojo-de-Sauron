@@ -1,13 +1,5 @@
-use std::io::Read;
-
-use crate::{
-    errors::error::Error,
-    model::{fixed_header::FixedHeader, remaining_length::RemainingLength},
-};
-
-const RESERVED_FIXED_HEADER_FLAGS: u8 = 0x0B;
-const VARIABLE_HEADER_LENGTH: usize = 2;
-const PACKET_TYPE: u8 = 0x11;
+use super::{DEFAULT_VARIABLE_HEADER_LENGTH, RESERVED_FIXED_HEADER_FLAGS, UNSUBACK_PACKET_TYPE};
+use crate::{Error, FixedHeader, Read, RemainingLength};
 
 #[derive(Debug)]
 pub struct Unsuback {
@@ -28,7 +20,7 @@ impl Unsuback {
         }
 
         // Variable Header
-        let mut variable_header_buffer = vec![0; VARIABLE_HEADER_LENGTH];
+        let mut variable_header_buffer = [0; DEFAULT_VARIABLE_HEADER_LENGTH];
         stream.read_exact(&mut variable_header_buffer)?;
 
         let packet_identifier =
@@ -42,7 +34,7 @@ impl Unsuback {
         let variable_header_bytes = self.packet_identifier.to_be_bytes().to_vec();
 
         // Fixed Header
-        let mut fixed_header_bytes = vec![PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS];
+        let mut fixed_header_bytes = vec![UNSUBACK_PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS];
 
         let remaining_length_value = variable_header_bytes.len() as u32;
         let remaining_length_bytes = RemainingLength::new(remaining_length_value).to_bytes();
@@ -54,5 +46,9 @@ impl Unsuback {
         packet_bytes.extend(variable_header_bytes);
 
         packet_bytes
+    }
+
+    pub fn packet_identifier(&self) -> u16 {
+        self.packet_identifier
     }
 }

@@ -1,16 +1,5 @@
-use std::io::Read;
-
-use crate::{
-    errors::error::Error,
-    model::{
-        fixed_header::FixedHeader, remaining_length::RemainingLength,
-        return_codes::suback_return_code::SubackReturnCode,
-    },
-};
-
-const RESERVED_FIXED_HEADER_FLAGS: u8 = 0x02;
-const VARIABLE_HEADER_LENGTH: usize = 2;
-const PACKET_TYPE: u8 = 0x09;
+use super::{DEFAULT_VARIABLE_HEADER_LENGTH, RESERVED_FIXED_HEADER_FLAGS, SUBACK_PACKET_TYPE};
+use crate::{Error, FixedHeader, Read, RemainingLength, SubackReturnCode};
 
 #[derive(Debug)]
 pub struct Suback {
@@ -37,7 +26,7 @@ impl Suback {
         let remaining_length = fixed_header.remaining_length().value();
 
         // Variable Header
-        let mut variable_header_buffer = vec![0; VARIABLE_HEADER_LENGTH];
+        let mut variable_header_buffer = [0; DEFAULT_VARIABLE_HEADER_LENGTH];
         stream.read_exact(&mut variable_header_buffer)?;
 
         let packet_identifier =
@@ -46,7 +35,7 @@ impl Suback {
         let mut return_codes = vec![];
 
         // Payload
-        let mut payload_buffer = vec![0; remaining_length - VARIABLE_HEADER_LENGTH];
+        let mut payload_buffer = vec![0; remaining_length - DEFAULT_VARIABLE_HEADER_LENGTH];
         stream.read_exact(&mut payload_buffer)?;
 
         for &return_code_byte in payload_buffer.iter() {
@@ -67,7 +56,7 @@ impl Suback {
         }
 
         // Fixed Header
-        let mut fixed_header_bytes = vec![PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS];
+        let mut fixed_header_bytes = vec![SUBACK_PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS];
 
         let remaining_length_value = variable_header_bytes.len() as u32;
         let remaining_length_bytes = RemainingLength::new(remaining_length_value).to_bytes();
@@ -79,5 +68,13 @@ impl Suback {
         packet_bytes.extend(variable_header_bytes);
 
         packet_bytes
+    }
+
+    pub fn packet_identifier(&self) -> u16 {
+        self.packet_identifier
+    }
+
+    pub fn suback_return_codes(&self) -> &Vec<SubackReturnCode> {
+        &self.suback_return_codes
     }
 }
