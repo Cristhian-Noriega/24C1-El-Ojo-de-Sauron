@@ -99,6 +99,7 @@ fn client_run(address: &str, actions_input: &mut dyn Read) -> std::io::Result<()
             std::io::stdin().read_line(&mut topic)?;
 
             topic = topic.trim_end_matches('\n').to_string();
+            topic = topic.trim_end_matches('\r').to_string();
 
             let mut levels = vec![];
             for level in topic.split(' ') {
