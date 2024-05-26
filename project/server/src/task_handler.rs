@@ -330,29 +330,36 @@ impl TaskHandler {
         let connack_packet_bytes = connack_packet_vec.as_slice();
 
         let client_id = client.id.clone();
-
         let mut clients = self.clients.write().unwrap();
-        let active_connections = self.active_connections.write().unwrap();
-        //insert the client id as key and the client as value in clients in the rwlockwriteguard
-        clients.entry(client_id.clone()).or_insert(client);
+
+        if clients.contains_key(&client_id) {
+            println!("Client reconnected!.");
+            
+        } else {
+            //insert the client id as key and the client as value in clients in the rwlockwriteguard
+            clients.entry(client_id.clone()).or_insert(client);
+        }
 
         let mut stream = match clients.get(&client_id).unwrap().stream.lock() {
             Ok(stream) => stream,
             Err(_) => {
-                println!("Error getting new client's stream. Connection will not be accepted.");
+                println!("Error getting client's stream. Connection will not be accepted.");
                 return;
             }
         };
-
+        
+        let active_connections = self.active_connections.write().unwrap();
+        
         match stream.write(connack_packet_bytes) {
             Ok(_) => {
                 drop(active_connections);
                 println!("New client connected! ID number: {:?}", client_id);
             }
             Err(_) => {
-                println!("Error sending ping response to client: {:?}", client_id);
+                println!("Error sending Connack response to client: {:?}", client_id);
             }
         };
+
     }
 
     // Send a suback packet to a client
