@@ -13,7 +13,7 @@ use crate::client::Client;
 use sauron::model::{
     components::{qos::QoS, topic_name::TopicName},
     packets::{
-        connack::Connack, pingresp::Pingresp, puback::Puback, publish::Publish, suback::Suback, subscribe::Subscribe, unsubscribe::Unsubscribe
+        connack::Connack, pingresp::Pingresp, puback::Puback, publish::Publish, suback::Suback, subscribe::Subscribe, unsuback::Unsuback, unsubscribe::Unsubscribe
     },
     return_codes::{connect_return_code::ConnectReturnCode, suback_return_code::SubackReturnCode},
 };
@@ -238,8 +238,6 @@ impl TaskHandler {
     pub fn subscribe(&self, subscribe_packet: Subscribe, client_id: Vec<u8>) {
         let mut clients = self.clients.write().unwrap();
 
-        // cambio para obtener una referencia mutable del client y mutarlo agregandole la subscripcion
-        // al cliente ademas de hacerlo en el task handler.
         if let Some(client) = clients.get_mut(&client_id) {
             for (topic_filter, qos) in subscribe_packet.topics() {
                 let mut levels: Vec<Vec<u8>> = vec![];
@@ -268,7 +266,7 @@ impl TaskHandler {
     // Unsubscribe a client_id from a set of topics given an Unsubscribe packet
     pub fn unsubscribe(&self, unsubscribe_packet: Unsubscribe, client_id: Vec<u8>) {
         let mut clients = self.clients.write().unwrap();
-
+    
         if let Some(client) = clients.get_mut(&client_id) {
             for topic_filter in unsubscribe_packet.topics {
                 let mut levels: Vec<Vec<u8>> = vec![];
@@ -276,19 +274,20 @@ impl TaskHandler {
                     levels.push(level.to_bytes());
                 }
                 let topic_name = TopicName::new(levels, false);
-
+        
                 client.remove_subscription(&topic_name);
-
+        
                 let mut topics = self.topics.write().unwrap();
                 if let Some(subscribers) = topics.get_mut(&topic_name) {
-                    subscribers.retain(|id| id != &client_id);
-                    if subscribers.is_empty() {
+                    let client_id_clone = client_id.clone();
+                    subscribers.retain(|id| id != &client_id_clone);
+                     if subscribers.is_empty() {
                         topics.remove(&topic_name);
                     }
                 }
             }
             println!("Active clients: {:?}\n", clients);
-            println!("Active topics with subscribers: {:?}\n", self.topics);
+            println!("Active topics with subscribers: {:?}\n", self.topics.read().unwrap());
         } else {
             println!("Client does not exist");
         }
@@ -408,6 +407,29 @@ impl TaskHandler {
             }
             Err(_) => {
                 println!("Error sending puback to client");
+            }
+        };
+    }
+
+    pub fn unsuback(&self, package_identifier: u16, client: &mut Client) {
+        let unsuback_packet = Unsuback::new(package_identifier);
+        let unsuback_packet_vec = unsuback_packet.to_bytes();
+        let unsuback_packet_bytes = unsuback_packet_vec.as_slice();
+
+        let mut stream = match client.stream.lock() {
+            Ok(stream) => stream,
+            Err(_) => {
+                println!("Error getting stream, unsuback will not be sent to client.");
+                return;
+            }
+        };
+
+        match stream.write(unsuback_packet_bytes) {
+            Ok(_) => {
+                println!("Unsuback sent to client\n");
+            }
+            Err(_) => {
+                println!("Error sending unsuback to client");
             }
         };
     }

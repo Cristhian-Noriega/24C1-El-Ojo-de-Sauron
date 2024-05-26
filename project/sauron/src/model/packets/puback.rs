@@ -1,3 +1,5 @@
+use std::fmt::{self, Display, Formatter};
+
 use super::{PUBACK_PACKET_TYPE, RESERVED_FIXED_HEADER_FLAGS};
 use crate::{Error, FixedHeader, Read, RemainingLength};
 
@@ -57,5 +59,16 @@ impl Puback {
 
     pub fn packet_identifier(&self) -> Option<u16> {
         self.packet_identifier
+    }
+}
+
+
+impl Display for Puback {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        let packet_identifier = match self.packet_identifier {
+            Some(packet_identifier) => packet_identifier.to_string(),
+            None => "None".to_string(),
+        };
+        write!(f, "Puback packet with packet identifier: {}", packet_identifier)
     }
 }

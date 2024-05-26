@@ -98,6 +98,8 @@ fn client_run(address: &str, actions_input: &mut dyn Read) -> std::io::Result<()
             let mut topic = String::new();
             std::io::stdin().read_line(&mut topic)?;
 
+            topic = topic.trim_end_matches('\n').to_string();
+
             let mut levels = vec![];
             for level in topic.split(' ') {
                 if let Ok(topic_level) = TopicLevel::from_bytes(level.as_bytes().to_vec()) {
@@ -123,6 +125,8 @@ fn client_run(address: &str, actions_input: &mut dyn Read) -> std::io::Result<()
             println!("Enter the topic to publish to:");
             let mut topic = String::new();
             std::io::stdin().read_line(&mut topic)?;
+
+            topic = topic.trim_end_matches('\n').to_string();
 
             println!("Enter the message to publish:");
             let mut message = String::new();
@@ -165,6 +169,8 @@ fn client_run(address: &str, actions_input: &mut dyn Read) -> std::io::Result<()
             println!("Enter the topic to unsubscribe to (sepataded by spaces):");
             let mut topic = String::new();
             std::io::stdin().read_line(&mut topic)?;
+
+            topic = topic.trim_end_matches('\n').to_string();
 
             let mut levels = vec![];
             for level in topic.split(' ') {

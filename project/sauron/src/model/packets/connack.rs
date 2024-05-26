@@ -1,3 +1,5 @@
+use std::fmt::{Display, Formatter};
+
 use super::{CONNACK_PACKET_TYPE, DEFAULT_VARIABLE_HEADER_LENGTH, RESERVED_FIXED_HEADER_FLAGS};
 use crate::{ConnectReturnCode, Error, FixedHeader, Read, RemainingLength};
 
@@ -73,6 +75,16 @@ impl Connack {
 
     pub fn connect_return_code(&self) -> &ConnectReturnCode {
         &self.connect_return_code
+    }
+}
+
+impl Display for Connack {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Connack packet with return code: {:?} and sessionPresent: {}",
+            self.connect_return_code(), self.session_present()
+        )
     }
 }
 
@@ -158,3 +170,5 @@ mod test {
         assert!(connack.is_err());
     }
 }
+
+
