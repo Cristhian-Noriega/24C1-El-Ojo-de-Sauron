@@ -10,7 +10,7 @@ use std::{
 };
 
 use crate::client::Client;
-use sauron::model::{
+use mqtt::model::{
     components::{qos::QoS, topic_name::TopicName},
     packets::{
         connack::Connack, pingresp::Pingresp, puback::Puback, publish::Publish, suback::Suback, subscribe::Subscribe, unsuback::Unsuback, unsubscribe::Unsubscribe

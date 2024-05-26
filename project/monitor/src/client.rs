@@ -1,6 +1,6 @@
 #![allow(clippy::unused_io_amount)]
 
-use sauron::model::{
+use mqtt::model::{
     components::encoded_string::EncodedString, components::qos::QoS,
     components::topic_level::TopicLevel, components::topic_name::TopicName, packet::Packet,
     packets::connect::Connect, packets::publish::Publish,

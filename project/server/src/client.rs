@@ -7,7 +7,7 @@ use std::net::TcpStream;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
-use sauron::model::components::topic_name::TopicName;
+use mqtt::model::components::topic_name::TopicName;
 
 use crate::task_handler::Message;
 

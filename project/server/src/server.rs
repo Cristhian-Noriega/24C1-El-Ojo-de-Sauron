@@ -9,7 +9,7 @@ use std::{
     thread,
 };
 
-pub use sauron::model::{
+pub use mqtt::model::{
     packet::Packet,
     packets::{
         connack::Connack, connect::Connect, puback::Puback,
