@@ -78,7 +78,7 @@ impl Client {
                                     connack.connect_return_code(),
                                     connack.session_present()
                                 );
-                                *connection_status.lock().unwrap() = "connected".to_owned();
+                                "connected".clone_into(&mut connection_status.lock().unwrap());
                                 *response_text.lock().unwrap() = format!("{}", connack);
                             }
                             Packet::Publish(publish) => {
