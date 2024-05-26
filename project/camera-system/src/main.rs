@@ -5,9 +5,9 @@ use std::io::{BufRead, BufReader, Read};
 use std::net::TcpStream;
 use std::thread;
 
-use sauron::model::components::encoded_string::EncodedString;
-use sauron::model::components::topic_name::TopicName;
-pub use sauron::model::{
+use mqtt::model::components::encoded_string::EncodedString;
+use mqtt::model::components::topic_name::TopicName;
+pub use mqtt::model::{
     components::{qos::QoS, topic_filter::TopicFilter, topic_level::TopicLevel},
     packet::Packet,
     packets::{

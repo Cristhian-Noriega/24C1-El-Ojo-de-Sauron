@@ -4,7 +4,7 @@ resolver = "2"
 members = [
     "server",
     "drone",
-    "sauron", 
+    "mqtt", 
     "camera-system", 
     "monitor",
 ]
