@@ -54,38 +54,33 @@ fn client_run(address: &str, actions_input: &mut dyn Read) -> std::io::Result<()
             match packet {
                 Packet::Connack(connack) => {
                     println!(
-                        "Received Connack packet with return code: {:?} and sessionPresent: {:?}",
+                        "Received Connack packet with return code: {:?} and sessionPresent: {:?}\n",
                         connack.connect_return_code(),
                         connack.session_present()
                     );
                 }
                 Packet::Publish(publish) => {
-                    println!("Received Publish packet {:?}", publish);
+                    //println!("Received Publish packet {:?}", publish);
 
                     let message = publish.message();
                     let message_str = String::from_utf8_lossy(message).to_string();
 
+                    println!("Received Publish packet!");
                     println!("Message: {:?}", message_str);
                 }
-                Packet::Puback(puback) => {
-                    println!("Received Puback packet {:?}", puback);
+                Packet::Puback(_puback) => {
+                    println!("Received Puback packet\n");
                 }
                 Packet::Pingresp(_pingresp) => {
-                    println!("Received Pingresp packet");
+                    println!("Received ping Response!\n");
                 }
-                Packet::Suback(suback) => {
-                    println!("Received Suback packet {:?}", suback);
+                Packet::Suback(_suback) => {
+                    println!("Received Suback packet\n");
                 }
-                Packet::Unsuback(unsuback) => {
-                    println!("Received Unsuback packet {:?}", unsuback);
+                Packet::Unsuback(_unsuback) => {
+                    println!("Received Unsuback packet\n");
                 }
-                Packet::Pingreq(pingreq) => {
-                    println!("Received Pingreq packet {:?}", pingreq);
-                }
-                Packet::Disconnect(disconnect) => {
-                    println!("Received Disconnect packet {:?}", disconnect);
-                }
-                _ => println!("Received unsupported packet type"),
+                _ => println!("Received unsupported packet type\n"),
             }
         }
     });
@@ -94,7 +89,7 @@ fn client_run(address: &str, actions_input: &mut dyn Read) -> std::io::Result<()
     for line in reader.lines().map_while(Result::ok) {
         let command = line.trim();
         if command == "subscribe" {
-            println!("Enter the topic to subscribe to (sepataded by spaces):");
+            println!("Enter the topic to subscribe to:");
             let mut topic = String::new();
             std::io::stdin().read_line(&mut topic)?;
 
@@ -118,7 +113,7 @@ fn client_run(address: &str, actions_input: &mut dyn Read) -> std::io::Result<()
 
             // Send Subscribe packet
             println!("Packet ID: {:?}", subscribe_packet.packet_identifier());
-            println!("Topics: {:?}", subscribe_packet.topics());
+            //println!("Topics: {:?}", subscribe_packet.topics());
             let _ = to_server_stream.write(subscribe_packet.to_bytes().as_slice());
             println!("Sent Subscribe packet");
         }
@@ -128,6 +123,7 @@ fn client_run(address: &str, actions_input: &mut dyn Read) -> std::io::Result<()
             std::io::stdin().read_line(&mut topic)?;
 
             topic = topic.trim_end_matches('\n').to_string();
+            topic = topic.trim_end_matches('\r').to_string();
 
             println!("Enter the message to publish:");
             let mut message = String::new();
@@ -161,10 +157,10 @@ fn client_run(address: &str, actions_input: &mut dyn Read) -> std::io::Result<()
             );
 
             // Send Publish packet
-            println!("Packet Publish: {:?}", publish_packet);
+            //println!("Packet Publish: {:?}", publish_packet);
 
             let _ = to_server_stream.write(publish_packet.to_bytes().as_slice());
-            println!("Sent Publish packet");
+            println!("Sent Publish packet to topic: {:?} with message: {:?}", topic, message);
         }
         if command == "unsubscribe" {
             println!("Enter the topic to unsubscribe to (sepataded by spaces):");
@@ -202,7 +198,6 @@ fn client_run(address: &str, actions_input: &mut dyn Read) -> std::io::Result<()
         if command == "ping" {
             let pingreq_packet = Pingreq::new();
             println!("Sending ping!");
-            println!("Packet: {:?}", pingreq_packet);
 
             let _ = to_server_stream.write(pingreq_packet.to_bytes().as_slice());
         }
@@ -214,7 +209,7 @@ fn client_run(address: &str, actions_input: &mut dyn Read) -> std::io::Result<()
 }
 
 pub fn connect_to_server(address: &str) -> std::io::Result<TcpStream> {
-    println!("Conectándome a {:?}", address);
+    println!("\nConnecting to address: {:?}", address);
     let mut to_server_stream = TcpStream::connect(address)?;
 
     //client id: camera system
