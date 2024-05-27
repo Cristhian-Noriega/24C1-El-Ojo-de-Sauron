@@ -13,7 +13,8 @@ use crate::client::Client;
 use mqtt::model::{
     components::{qos::QoS, topic_name::TopicName},
     packets::{
-        connack::Connack, pingresp::Pingresp, puback::Puback, publish::Publish, suback::Suback, subscribe::Subscribe, unsuback::Unsuback, unsubscribe::Unsubscribe
+        connack::Connack, pingresp::Pingresp, puback::Puback, publish::Publish, suback::Suback,
+        subscribe::Subscribe, unsuback::Unsuback, unsubscribe::Unsubscribe,
     },
     return_codes::{connect_return_code::ConnectReturnCode, suback_return_code::SubackReturnCode},
 };
@@ -102,8 +103,9 @@ impl TaskHandler {
                     }
                     Task::Publish(publish, client_id) => {
                         println!(
-                            "Task Handler received task: Publish message: {:?} from client: {:?}", 
-                            std::str::from_utf8(publish.message()).unwrap(), std::str::from_utf8(&client_id).unwrap()
+                            "Task Handler received task: Publish message: {:?} from client: {:?}",
+                            std::str::from_utf8(publish.message()).unwrap(),
+                            std::str::from_utf8(&client_id).unwrap()
                         );
                         self.publish(&publish, client_id);
                     }
@@ -112,6 +114,7 @@ impl TaskHandler {
                         self.handle_new_client_connection(client);
                     }
                     Task::DisconnectClient(client_id) => {
+                        //println!("entro dos veces aca? ");
                         println!("Task Handler received task: Disconnect Client");
                         self.handle_client_disconnected(client_id);
                     }
@@ -161,28 +164,29 @@ impl TaskHandler {
     // Unsubscribe a client_id from a set of topics given an Unsubscribe packet
     pub fn unsubscribe(&self, unsubscribe_packet: Unsubscribe, client_id: Vec<u8>) {
         let mut clients = self.clients.write().unwrap();
-    
+
         if let Some(client) = clients.get_mut(&client_id) {
-            for topic_filter in unsubscribe_packet.topics {
+            for topic_filter in unsubscribe_packet.topics() {
                 let mut levels: Vec<Vec<u8>> = vec![];
                 for level in topic_filter.levels() {
                     levels.push(level.to_bytes());
                 }
                 let topic_name = TopicName::new(levels, false);
-        
+
                 client.remove_subscription(&topic_name);
-        
+
                 let mut topics = self.topics.write().unwrap();
                 if let Some(subscribers) = topics.get_mut(&topic_name) {
                     let client_id_clone = client_id.clone();
                     subscribers.retain(|id| id != &client_id_clone);
-                     if subscribers.is_empty() {
+                    if subscribers.is_empty() {
                         topics.remove(&topic_name);
                     }
                 }
             }
             // println!("Active clients: {:?}\n", clients);
             // println!("Active topics with subscribers: {:?}\n", self.topics.read().unwrap());
+            self.unsuback(unsubscribe_packet.packet_identifier(), client);
         } else {
             println!("Client does not exist");
         }
@@ -196,7 +200,7 @@ impl TaskHandler {
         let clients = match binding.get(topic_name) {
             Some(clients) => clients,
             None => {
-                println!("No clients subscribed to topic: {:?}", topic_name);
+                println!("No clients subscribed to topic: {}", topic_name);
                 return;
             }
         };
@@ -228,7 +232,6 @@ impl TaskHandler {
 
         if clients.contains_key(&client_id) {
             println!("Client reconnected!.");
-            
         } else {
             //insert the client id as key and the client as value in clients in the rwlockwriteguard
             clients.entry(client_id.clone()).or_insert(client);
@@ -241,25 +244,33 @@ impl TaskHandler {
                 return;
             }
         };
-        
+
         let active_connections = self.active_connections.write().unwrap();
-        
+
         match stream.write(connack_packet_bytes) {
             Ok(_) => {
                 drop(active_connections);
-                println!("New client connected! ID: {:?}. Connack Package sent", std::str::from_utf8(&client_id).unwrap());
+                println!(
+                    "New client connected! ID: {:?}. Connack Package sent",
+                    std::str::from_utf8(&client_id).unwrap()
+                );
             }
             Err(_) => {
-                println!("Error sending Connack response to client: {:?}", std::str::from_utf8(&client_id).unwrap());
+                println!(
+                    "Error sending Connack response to client: {:?}",
+                    std::str::from_utf8(&client_id).unwrap()
+                );
             }
         };
-
     }
 
     // Send a suback packet to a client
     pub fn suback(&self, package_identifier: u16, client: &mut Client) {
         //return code hardcodeado
-        let suback_packet = Suback::new(package_identifier, vec![SubackReturnCode::SuccessMaximumQoS0]);
+        let suback_packet = Suback::new(
+            package_identifier,
+            vec![SubackReturnCode::SuccessMaximumQoS0],
+        );
         let suback_packet_vec = suback_packet.to_bytes();
         let suback_packet_bytes = suback_packet_vec.as_slice();
 
@@ -286,7 +297,6 @@ impl TaskHandler {
         let puback_packet = Puback::new(package_identifier);
         let puback_packet_vec = puback_packet.to_bytes();
         let puback_packet_bytes = puback_packet_vec.as_slice();
-
 
         let mut stream = match client.stream.lock() {
             Ok(stream) => stream,
@@ -348,10 +358,16 @@ impl TaskHandler {
 
         match stream.write(pingresp_packet_bytes) {
             Ok(_) => {
-                println!("Ping response sent to client: {:?}\n", std::str::from_utf8(&client_id).unwrap());
+                println!(
+                    "Ping response sent to client: {:?}\n",
+                    std::str::from_utf8(&client_id).unwrap()
+                );
             }
             Err(_) => {
-                println!("Error sending ping response to client: {:?}", std::str::from_utf8(&client_id).unwrap());
+                println!(
+                    "Error sending ping response to client: {:?}",
+                    std::str::from_utf8(&client_id).unwrap()
+                );
             }
         };
     }

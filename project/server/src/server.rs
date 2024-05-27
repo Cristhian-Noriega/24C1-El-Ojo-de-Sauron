@@ -11,7 +11,8 @@ use std::{
 pub use mqtt::model::{
     packet::Packet,
     packets::{
-        connect::Connect, puback::Puback, publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe,
+        connect::Connect, puback::Puback, publish::Publish, subscribe::Subscribe,
+        unsubscribe::Unsubscribe,
     },
 };
 
@@ -102,13 +103,10 @@ impl Server {
         );
         handle_connect(self.client_actions_sender.clone(), new_client);
 
-        println!(
-            "New client connected: {:?}",
-            String::from_utf8_lossy(client_id)
-        );
-
-        // let connack_packet = Connack::new(false, ConnectReturnCode::ConnectionAccepted);
-        // let _ = stream.write(connack_packet.to_bytes().as_slice());
+        // println!(
+        //     "New client connected: {:?}",
+        //     String::from_utf8_lossy(client_id)
+        // );
 
         self.create_new_client_thread(
             self.client_actions_sender.clone(),
@@ -149,7 +147,7 @@ impl Server {
                     }
                 }
             }
-            disconnect_client(sender_to_task_channel, client_id);
+            //disconnect_client(sender_to_task_channel, client_id);
             println!("Connection closed");
         });
     }
@@ -163,32 +161,50 @@ pub fn handle_packet(
 ) -> bool {
     match packet {
         Packet::Publish(publish_packet) => {
-            println!("Received Publish packet from client: {:?}", std::str::from_utf8(&client_id).unwrap());
+            println!(
+                "Received Publish packet from client: {:?}",
+                std::str::from_utf8(&client_id).unwrap()
+            );
             handle_publish(publish_packet, sender_to_task_channel, client_id)
         }
         Packet::Puback(puback_packet) => {
-            println!("Received Puback packet from client: {:?}", std::str::from_utf8(&client_id).unwrap());
+            println!(
+                "Received Puback packet from client: {:?}",
+                std::str::from_utf8(&client_id).unwrap()
+            );
             handle_puback(puback_packet, sender_to_task_channel, client_id)
         }
         Packet::Subscribe(subscribe_packet) => {
-            println!("Received Subscribe packet from client: {:?}", std::str::from_utf8(&client_id).unwrap());
+            println!(
+                "Received Subscribe packet from client: {:?}",
+                std::str::from_utf8(&client_id).unwrap()
+            );
             handle_subscribe(subscribe_packet, sender_to_task_channel, client_id)
         }
         Packet::Unsubscribe(unsubscribe_packet) => {
-            println!("Received Unsubscribe packet from client: {:?}", std::str::from_utf8(&client_id).unwrap());
+            println!(
+                "Received Unsubscribe packet from client: {:?}",
+                std::str::from_utf8(&client_id).unwrap()
+            );
             handle_unsubscribe(unsubscribe_packet, sender_to_task_channel, client_id)
         }
         Packet::Pingreq(pingreq_packet) => {
-            println!("Received Pingreq packet from client: {:?}", std::str::from_utf8(&client_id).unwrap());
+            println!(
+                "Received Pingreq packet from client: {:?}",
+                std::str::from_utf8(&client_id).unwrap()
+            );
             handle_pingreq(sender_to_task_channel, client_id)
         }
         Packet::Disconnect(disconnect_packet) => {
-            println!("Received Disconnect packet from client: {:?}", std::str::from_utf8(&client_id).unwrap());
+            println!(
+                "Received Disconnect packet from client: {:?}",
+                std::str::from_utf8(&client_id).unwrap()
+            );
             disconnect_client(sender_to_task_channel, client_id)
         }
         _ => {
             println!("Received an unsupported packet type");
-            println!("Clsoing connection");
+            println!("Closing connection");
             disconnect_client(sender_to_task_channel, client_id);
             false
         }
@@ -260,7 +276,6 @@ pub fn handle_pingreq(
         .unwrap();
     true
 }
-
 
 pub fn disconnect_client(
     sender_to_task_channel: std::sync::mpsc::Sender<Task>,
