@@ -5,7 +5,7 @@ const LENGTH_SIZE: usize = 2;
 #[derive(Debug, PartialEq)]
 pub struct EncodedString {
     length: u16,
-    pub content: Vec<u8>,
+    content: Vec<u8>,
 }
 
 impl EncodedString {

@@ -184,8 +184,8 @@ fn client_run(address: &str, actions_input: &mut dyn Read) -> std::io::Result<()
             let unsubscribe_packet = Unsubscribe::new(packet_id, topics_filters);
 
             // Send Subscribe packet
-            println!("Packet ID: {:?}", unsubscribe_packet.packet_identifier);
-            println!("Topics: {:?}", unsubscribe_packet.topics);
+            println!("Packet ID: {:?}", unsubscribe_packet.packet_identifier());
+            //println!("Topics: {:?}", unsubscribe_packet.topics);
             let _ = to_server_stream.write(unsubscribe_packet.to_bytes().as_slice());
             println!("Sent UnSubscribe packet");
         }
