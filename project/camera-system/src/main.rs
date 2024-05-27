@@ -163,11 +163,12 @@ fn client_run(address: &str, actions_input: &mut dyn Read) -> std::io::Result<()
             println!("Sent Publish packet to topic: {:?} with message: {:?}", topic, message);
         }
         if command == "unsubscribe" {
-            println!("Enter the topic to unsubscribe to (sepataded by spaces):");
+            println!("Enter the topic to unsubscribe to:");
             let mut topic = String::new();
             std::io::stdin().read_line(&mut topic)?;
 
             topic = topic.trim_end_matches('\n').to_string();
+            topic = topic.trim_end_matches('\r').to_string();
 
             let mut levels = vec![];
             for level in topic.split(' ') {
