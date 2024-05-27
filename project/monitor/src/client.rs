@@ -42,7 +42,7 @@ impl Client {
     }
 
     pub fn connect_to_server(&self) -> std::io::Result<TcpStream> {
-        println!("Conectándome a {:?}", self.address);
+        println!("\nConnecting to address: {:?}", self.address);
         let mut to_server_stream = TcpStream::connect(&self.address)?;
 
         let client_id_bytes: Vec<u8> = b"monitor".to_vec();
@@ -82,7 +82,7 @@ impl Client {
                                 *response_text.lock().unwrap() = format!("{}", connack);
                             }
                             Packet::Publish(publish) => {
-                                println!("Received Publish packet {:?}", publish);
+                                println!("Received Publish packet!\n");
 
                                 let message = publish.message();
                                 let message_str = String::from_utf8_lossy(message).to_string();
@@ -90,7 +90,7 @@ impl Client {
                                 println!("Message: {:?}", message_str);
                             }
                             Packet::Puback(puback) => {
-                                println!("Received Puback packet {:?}", puback);
+                                println!("Received Puback packet!\n");
                                 // *response_text.lock().unwrap() = format!("{:?}", puback);
                                 let puback_info = format!("{}", puback);
                                 // Update the response_text field with the Puback packet information
@@ -98,19 +98,19 @@ impl Client {
                                 sender.send(format!("{}", puback)).unwrap();
                             }
                             Packet::Pingresp(_pingresp) => {
-                                println!("Received Pingresp packet");
+                                println!("Received Pingresp packet\n");
                             }
-                            Packet::Suback(suback) => {
-                                println!("Received Suback packet {:?}", suback);
+                            Packet::Suback(_suback) => {
+                                println!("Received Suback packet\n");
                             }
-                            Packet::Unsuback(unsuback) => {
-                                println!("Received Unsuback packet {:?}", unsuback);
+                            Packet::Unsuback(_unsuback) => {
+                                println!("Received Unsuback packet\n");
                             }
-                            Packet::Pingreq(pingreq) => {
-                                println!("Received Pingreq packet {:?}", pingreq);
+                            Packet::Pingreq(_pingreq) => {
+                                println!("Received Pingreq packet\n");
                             }
-                            Packet::Disconnect(disconnect) => {
-                                println!("Received Disconnect packet {:?}", disconnect);
+                            Packet::Disconnect(_disconnect) => {
+                                println!("Received Disconnect packet\n");
                             }
                             _ => println!("Received unsupported packet type"),
                         }
@@ -154,7 +154,7 @@ impl Client {
             message_bytes,
         );
 
-        println!("Packet Publish: {:?}", publish_packet);
+        //println!("Packet Publish: {:?}", publish_packet);
         let _ = self
             .to_server_stream
             .lock()
@@ -162,7 +162,7 @@ impl Client {
             .as_mut()
             .unwrap()
             .write(publish_packet.to_bytes().as_slice());
-        println!("Sent Publish packet");
+        println!("Sent Publish packet to topic: {:?} with message: {:?}", topic, message);
 
         Ok(())
     }

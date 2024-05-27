@@ -16,7 +16,7 @@ pub fn main() -> Result<(), Error> {
         println!("Usage:\n{:?} <config_file>", app_name);
         return Err(Error::new("Cantidad de argumentos inválido".to_string()));
     }
-    println!("Server starting with config file: {:?}", argv[1]);
+    println!("\nServer starting with config file: {:?}", argv[1]);
 
     let config = match config::Config::new(&argv[1]) {
         Some(config) => config,
