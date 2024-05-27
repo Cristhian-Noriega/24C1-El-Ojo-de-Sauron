@@ -3,7 +3,6 @@
 
 use std::{
     collections::HashMap,
-    io::Write,
     net::{TcpListener, TcpStream},
     sync::{mpsc, RwLock},
     thread,
@@ -12,10 +11,8 @@ use std::{
 pub use mqtt::model::{
     packet::Packet,
     packets::{
-        connack::Connack, connect::Connect, puback::Puback,
-        publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe,
+        connect::Connect, puback::Puback, publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe,
     },
-    return_codes::connect_return_code::ConnectReturnCode,
 };
 
 use crate::client::Client;
@@ -48,7 +45,7 @@ impl Server {
 
     pub fn server_run(&self) -> std::io::Result<()> {
         let address = format!("{}:{}", self.config.get_address(), self.config.get_port());
-        println!("Server running on address: {}", address);
+        println!("Server running on address: {}\n", address);
         let listener = TcpListener::bind(&address)?;
 
         for stream_result in listener.incoming() {
@@ -78,7 +75,7 @@ impl Server {
     }
 
     pub fn initialize_task_handler_thread(task_handler: TaskHandler) {
-        println!("Starting task handler thread\n");
+        println!("Starting task handler thread");
         std::thread::spawn(move || {
             task_handler.run();
         });
@@ -92,7 +89,7 @@ impl Server {
         }
     }
 
-    pub fn connect_new_client(&self, connect_packet: Connect, mut stream: TcpStream) {
+    pub fn connect_new_client(&self, connect_packet: Connect, stream: TcpStream) {
         println!("Received Connect Package");
         let client_id = connect_packet.client_id().content();
 
@@ -110,8 +107,8 @@ impl Server {
             String::from_utf8_lossy(client_id)
         );
 
-        let connack_packet = Connack::new(false, ConnectReturnCode::ConnectionAccepted);
-        let _ = stream.write(connack_packet.to_bytes().as_slice());
+        // let connack_packet = Connack::new(false, ConnectReturnCode::ConnectionAccepted);
+        // let _ = stream.write(connack_packet.to_bytes().as_slice());
 
         self.create_new_client_thread(
             self.client_actions_sender.clone(),
@@ -127,13 +124,13 @@ impl Server {
         client_id: Vec<u8>,
     ) {
         thread::spawn(move || {
-            println!("Welcome to the newly connected client thread\n");
+            println!("New client thread initiated\n");
 
             loop {
                 let packet = Packet::from_bytes(&mut stream);
                 match packet {
                     Ok(packet) => {
-                        println!("Received packet: {:?}", packet);
+                        println!("Received new packet");
 
                         let handling_result = handle_packet(
                             packet,
@@ -164,31 +161,33 @@ pub fn handle_packet(
     stream: &mut TcpStream,
     sender_to_task_channel: std::sync::mpsc::Sender<Task>,
 ) -> bool {
-    println!("packet {:?}", packet);
     match packet {
         Packet::Publish(publish_packet) => {
-            println!("Received Publish packet");
+            println!("Received Publish packet from client: {:?}", std::str::from_utf8(&client_id).unwrap());
             handle_publish(publish_packet, sender_to_task_channel, client_id)
         }
         Packet::Puback(puback_packet) => {
+            println!("Received Puback packet from client: {:?}", std::str::from_utf8(&client_id).unwrap());
             handle_puback(puback_packet, sender_to_task_channel, client_id)
         }
         Packet::Subscribe(subscribe_packet) => {
-            println!("Received Subscribe packet");
+            println!("Received Subscribe packet from client: {:?}", std::str::from_utf8(&client_id).unwrap());
             handle_subscribe(subscribe_packet, sender_to_task_channel, client_id)
         }
         Packet::Unsubscribe(unsubscribe_packet) => {
-            println!("Received Unsubscribe packet");
+            println!("Received Unsubscribe packet from client: {:?}", std::str::from_utf8(&client_id).unwrap());
             handle_unsubscribe(unsubscribe_packet, sender_to_task_channel, client_id)
         }
         Packet::Pingreq(pingreq_packet) => {
+            println!("Received Pingreq packet from client: {:?}", std::str::from_utf8(&client_id).unwrap());
             handle_pingreq(sender_to_task_channel, client_id)
         }
         Packet::Disconnect(disconnect_packet) => {
+            println!("Received Disconnect packet from client: {:?}", std::str::from_utf8(&client_id).unwrap());
             disconnect_client(sender_to_task_channel, client_id)
         }
         _ => {
-            println!("Unsupported packet type");
+            println!("Received an unsupported packet type");
             println!("Clsoing connection");
             disconnect_client(sender_to_task_channel, client_id);
             false
@@ -256,11 +255,9 @@ pub fn handle_pingreq(
     sender_to_task_channel: std::sync::mpsc::Sender<Task>,
     client_id: Vec<u8>,
 ) -> bool {
-    println!("Received Pingreq packet");
     sender_to_task_channel
         .send(Task::RespondPing(client_id))
         .unwrap();
-    println!("Sent Pingresp packet to task handler");
     true
 }
 

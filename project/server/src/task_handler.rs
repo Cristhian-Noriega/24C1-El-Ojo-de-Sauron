@@ -55,112 +55,6 @@ type Subscribers = HashMap<Vec<u8>, SubscriptionData>; // key : client_id , valu
 type Subscriptions = HashMap<TopicName, SubscriptionData>; // key: topic_name, value: SubscriptionData
 type ClientId = Vec<u8>;
 
-// #[derive(Debug)]
-// pub struct Topic {
-//     subscribers: RwLock<Subscribers>,
-//     retained_messages: RwLock<Vec<Message>>,
-//     subtopics: RwLock<Subtopic>,
-//     subscriptions: RwLock<Subscriptions>,
-// }
-
-// impl Topic {
-//     pub fn new() -> Self {
-//         Topic {
-//             subscribers: RwLock::new(HashMap::new()),
-//             retained_messages: RwLock::new(Vec::new()),
-//             subtopics: RwLock::new(HashMap::new()),
-//             subscriptions: RwLock::new(HashMap::new()),
-//         }
-//     }
-
-//     // todo: replace the unwraps
-//     pub fn subscribe(
-//         &self,
-//         topic: &Topic,
-//         mut levels: Vec<TopicLevel>,
-//         client_id: Vec<u8>,
-//         data: SubscriptionData,
-//     ) {
-//         if levels.is_empty() {
-//             self.add_subscriber(client_id, data);
-//             return;
-//         }
-//         let current_level = levels.remove(0);
-//         let mut subtopics = self.subtopics.write().unwrap();
-//         let subtopic = subtopics
-//             .entry(current_level.to_bytes())
-//             .or_insert(Topic::new());
-//         subtopic.subscribe(subtopic, levels, client_id, data);
-//     }
-
-//     pub fn publish(
-//         &self,
-//         topic_name: TopicName,
-//         message: Message,
-//         clients: &HashMap<Vec<u8>, Client>,
-//         active_connections: &HashSet<Vec<u8>>,
-//     ) {
-//         let subscribers = self.get_all_matching_subscriptions(topic_name);
-//         for subscriber in subscribers {
-//             for (client_id, data) in subscriber {
-//                 // if !active_connections.contains(&client_id){
-//                 //     clients.get(&client_id).unwrap().unreceived_messages.(message.packet.clone());
-//                 //     continue;
-//                 // }
-//                 let client = clients.get(&client_id).unwrap();
-
-//                 let publish_packet = message.packet.clone();
-//                 if client
-//                     .stream
-//                     .lock()
-//                     .unwrap()
-//                     .write(publish_packet.to_bytes().as_slice())
-//                     .is_ok()
-//                 {};
-//             }
-//         }
-//     }
-
-//     pub fn get_all_matching_subscriptions(&self, topic_name: TopicName) -> Vec<Subscribers> {
-//         let mut subscribers = Vec::new();
-//         self.collect_matching_subscriptions(&mut subscribers, topic_name.levels);
-//         subscribers
-//     }
-
-//     pub fn collect_matching_subscriptions(
-//         &self,
-//         subscribers: &mut Vec<Subscribers>,
-//         levels: Vec<Vec<u8>>,
-//     ) {
-//         if levels.is_empty() {
-//             subscribers.push(self.subscribers.read().unwrap().clone());
-//             return;
-//         }
-//         let current_level = &levels[0];
-//         let remaining_levels = levels[1..].to_vec();
-
-//         let subtopics = self.subtopics.read().unwrap();
-//         if let Some(subtopic) = subtopics.get(current_level) {
-//             subtopic.collect_matching_subscriptions(subscribers, remaining_levels);
-//         }
-//     }
-
-//     pub fn add_subscriber(&self, client_id: Vec<u8>, data: SubscriptionData) {
-//         let mut subscribers = self.subscribers.write().unwrap();
-//         subscribers.insert(client_id, data);
-//     }
-
-//     pub fn remove_subscriber(&self, client_id: Vec<u8>) {
-//         let mut subscribers = self.subscribers.write().unwrap();
-//         subscribers.remove(&client_id);
-//     }
-
-//     pub fn add_retained_message(&self, message: Message) {
-//         let mut retained_messages = self.retained_messages.write().unwrap();
-//         retained_messages.push(message);
-//     }
-// }
-
 #[derive(Debug)]
 pub struct TaskHandler {
     client_actions_receiver_channel: mpsc::Receiver<Task>,
@@ -194,30 +88,31 @@ impl TaskHandler {
                 Ok(task) => match task {
                     Task::SubscribeClient(subscribe, client_id) => {
                         println!(
-                            "Task Handler received task: subscribe Client: {:?}\n",
+                            "Task Handler received task: subscribe Client: {:?}",
                             std::str::from_utf8(&client_id).unwrap()
                         );
                         self.subscribe(subscribe, client_id);
                     }
                     Task::UnsubscribeClient(unsubscribe, client_id) => {
                         println!(
-                            "Task Handler received task: unsubscribe Client: {:?}\n",
-                            client_id
+                            "Task Handler received task: unsubscribe Client: {:?}",
+                            std::str::from_utf8(&client_id).unwrap()
                         );
                         self.unsubscribe(unsubscribe, client_id);
                     }
                     Task::Publish(publish, client_id) => {
                         println!(
-                            "Task Handler received task: Publish message: {:?}\n",
-                            publish
+                            "Task Handler received task: Publish message: {:?} from client: {:?}", 
+                            std::str::from_utf8(publish.message()).unwrap(), std::str::from_utf8(&client_id).unwrap()
                         );
                         self.publish(&publish, client_id);
                     }
                     Task::ConnectClient(client) => {
-                        println!("Task Handler received task: Client Connected");
+                        println!("Task Handler received task: Connect Client");
                         self.handle_new_client_connection(client);
                     }
                     Task::DisconnectClient(client_id) => {
+                        println!("Task Handler received task: Disconnect Client");
                         self.handle_client_disconnected(client_id);
                     }
                     Task::RespondPing(client_id) => {
@@ -255,7 +150,7 @@ impl TaskHandler {
                     .push(client_id.clone());
             }
             //println!("Active clients: {:?}\n", clients);
-            println!("Active topics with subscribers: {:?}\n", self.topics);
+            //println!("Active topics with subscribers: {:?}\n", self.topics);
             //send suback packet to client
             self.suback(subscribe_packet.packet_identifier(), client);
         } else {
@@ -286,8 +181,8 @@ impl TaskHandler {
                     }
                 }
             }
-            println!("Active clients: {:?}\n", clients);
-            println!("Active topics with subscribers: {:?}\n", self.topics.read().unwrap());
+            // println!("Active clients: {:?}\n", clients);
+            // println!("Active topics with subscribers: {:?}\n", self.topics.read().unwrap());
         } else {
             println!("Client does not exist");
         }
@@ -352,10 +247,10 @@ impl TaskHandler {
         match stream.write(connack_packet_bytes) {
             Ok(_) => {
                 drop(active_connections);
-                println!("New client connected! ID number: {:?}", client_id);
+                println!("New client connected! ID: {:?}. Connack Package sent", std::str::from_utf8(&client_id).unwrap());
             }
             Err(_) => {
-                println!("Error sending Connack response to client: {:?}", client_id);
+                println!("Error sending Connack response to client: {:?}", std::str::from_utf8(&client_id).unwrap());
             }
         };
 
@@ -453,10 +348,10 @@ impl TaskHandler {
 
         match stream.write(pingresp_packet_bytes) {
             Ok(_) => {
-                println!("Ping response sent to client: {:?}\n", client_id);
+                println!("Ping response sent to client: {:?}\n", std::str::from_utf8(&client_id).unwrap());
             }
             Err(_) => {
-                println!("Error sending ping response to client: {:?}", client_id);
+                println!("Error sending ping response to client: {:?}", std::str::from_utf8(&client_id).unwrap());
             }
         };
     }

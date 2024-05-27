@@ -41,7 +41,7 @@ impl Client {
     pub fn add_subscription(&mut self, topic: TopicName) {
         let client_id = String::from_utf8(self.id.clone()).unwrap();
         println!(
-            "Client with client id {:?} subscribed to {:?}\n",
+            "Client with client id {:?} subscribed to {:?}",
             client_id,
             topic.clone().to_string()
         );
@@ -51,7 +51,7 @@ impl Client {
     pub fn remove_subscription(&mut self, topic: &TopicName) {
         let client_id = String::from_utf8(self.id.clone()).unwrap();
         println!(
-            "Client with client id {:?} unsubscribed from {:?}\n",
+            "Client with client id {:?} unsubscribed from {:?}",
             client_id,
             topic.clone().to_string()
         );
