@@ -4,10 +4,9 @@
 use std::{
     collections::HashMap,
     net::{TcpListener, TcpStream},
-    sync::{mpsc, Arc, Mutex, RwLock},
+    sync::{mpsc, Arc, RwLock},
     thread,
 };
-use chrono::Utc;
 
 pub use mqtt::model::{
     packet::Packet,
@@ -38,15 +37,15 @@ pub struct Server {
 impl Server {
     pub fn new(config: Config) -> Self {
         let (client_actions_sender, client_actions_receiver) = mpsc::channel();
-        let task_handler = TaskHandler::new(client_actions_receiver);
+        
+        let log_file = Arc::new(Logger::new(&config.get_log_file()));
+        let task_handler = TaskHandler::new(client_actions_receiver, log_file.clone());
         task_handler.initialize_task_handler_thread();
-        let log_file = Logger::new(&config.get_log_file());
-
         Server {
             config,
             client_actions_sender,
             client_senders: RwLock::new(HashMap::new()),
-            log_file: Arc::new(log_file),
+            log_file: log_file,
             
         }
     }
@@ -104,7 +103,9 @@ impl Server {
     }
 
     pub fn connect_new_client(&self, connect_packet: Connect, stream: TcpStream) {
-        self.log_file.log("INFO", "Received Connect Packet");
+        //add more info to the connect message
+        let message = format!("Received Connect Packet from client with ID: {}", connect_packet.client_id());
+        self.log_file.log("INFO", message.as_str());
         //println!("Received Connect Package");
         //self.log_file.lock().unwrap().log("Received Connect Package");
         let client_id = connect_packet.client_id().content();

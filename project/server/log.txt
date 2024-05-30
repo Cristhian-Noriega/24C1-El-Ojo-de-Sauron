@@ -1,12 +1,21 @@
-[2024-05-30 14:23:53] INFO: Server running on address: 127.0.0.1:8080
-[2024-05-30 14:25:03] INFO: New connection received
-[2024-05-30 14:25:03] INFO: Received Connect Packet
-[2024-05-30 14:25:03] INFO: New client thread initiated
-[2024-05-30 14:25:15] INFO: Received new packet
-[2024-05-30 14:25:15] INFO: Received Subscribe packet from client: camera system
-[2024-05-30 14:25:40] INFO: New connection received
-[2024-05-30 14:25:40] INFO: Received Connect Packet
-[2024-05-30 14:25:40] INFO: New client thread initiated
-[2024-05-30 14:25:46] INFO: Received new packet
-[2024-05-30 14:25:46] INFO: Received Publish packet from client: monitor
-
+[2024-05-30 16:17:15] INFO: Server running on address: 127.0.0.1:8080
+[2024-05-30 16:19:31] INFO: New connection received
+[2024-05-30 16:19:31] INFO: Received Connect Packet from client with ID: camera system
+[2024-05-30 16:19:31] INFO: New client connected! ID: "camera system". Connack Package sent
+[2024-05-30 16:19:31] INFO: New client thread initiated
+[2024-05-30 16:20:03] INFO: New connection received
+[2024-05-30 16:20:03] INFO: Received Connect Packet from client with ID: monitor
+[2024-05-30 16:20:03] INFO: New client connected! ID: "monitor". Connack Package sent
+[2024-05-30 16:20:03] INFO: New client thread initiated
+[2024-05-30 16:20:24] INFO: Received new packet
+[2024-05-30 16:20:24] INFO: Received Subscribe packet from client: camera system
+[2024-05-30 16:20:24] INFO: Suback sent to client "camera system"
+[2024-05-30 16:20:34] INFO: Received new packet
+[2024-05-30 16:20:34] INFO: Received Publish packet from client: monitor
+[2024-05-30 16:20:34] INFO: Puback sent to client "monitor"
+[2024-05-30 16:20:51] INFO: Received new packet
+[2024-05-30 16:20:51] INFO: Received Unsubscribe packet from client: camera system
+[2024-05-30 16:20:51] INFO: Unsuback sent to client "camera system"
+[2024-05-30 16:21:03] INFO: Received new packet
+[2024-05-30 16:21:03] INFO: Received Publish packet from client: monitor
+[2024-05-30 16:21:03] ERROR: No clients subscribed to topic: home

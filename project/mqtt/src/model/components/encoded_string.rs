@@ -1,3 +1,5 @@
+use std::fmt::{self, Display, Formatter};
+
 use crate::{Error, Read};
 
 const LENGTH_SIZE: usize = 2;
@@ -49,5 +51,12 @@ impl EncodedString {
 
     pub fn content(&self) -> &Vec<u8> {
         &self.content
+    }
+}
+
+impl Display for EncodedString {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        let content = String::from_utf8_lossy(&self.content);
+        write!(f, "{}", content)
     }
 }
