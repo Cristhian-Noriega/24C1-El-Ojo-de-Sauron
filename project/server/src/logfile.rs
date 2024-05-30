@@ -1,8 +1,10 @@
-use std::sync::mpsc::{self, Sender};
-use std::thread;
-use std::fs::OpenOptions;
-use std::io::Write;
 use chrono::Local;
+use std::{
+    fs::OpenOptions,
+    io::Write,
+    sync::mpsc::{self, Sender},
+    thread,
+};
 
 #[derive(Debug, Clone)]
 pub struct Logger {
@@ -16,7 +18,6 @@ impl Logger {
         thread::spawn(move || {
             let mut file = OpenOptions::new()
                 .create(true)
-                .write(true)
                 .append(true)
                 .open(&file_path)
                 .unwrap();
@@ -34,5 +35,13 @@ impl Logger {
         let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
         let log_entry = format!("[{}] {}: {}", timestamp, level, message);
         self.sender.send(log_entry).unwrap();
+    }
+
+    pub fn info(&self, message: &str) {
+        self.log("INFO", message);
+    }
+
+    pub fn error(&self, message: &str) {
+        self.log("ERROR", message);
     }
 }

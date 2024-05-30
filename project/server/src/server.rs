@@ -18,10 +18,11 @@ pub use mqtt::model::{
 
 use crate::client::Client;
 
-use super::config::Config;
-use super::task_handler::Task;
-use super::task_handler::TaskHandler;
-use super::logfile::Logger;
+use super::{
+    config::Config,
+    logfile::Logger,
+    task_handler::{Task, TaskHandler},
+};
 
 pub struct Server {
     config: Config,
@@ -29,45 +30,39 @@ pub struct Server {
     client_actions_sender: mpsc::Sender<Task>,
     // Map to store client senders for communication
     client_senders: RwLock<HashMap<Vec<u8>, mpsc::Sender<Publish>>>,
-    // Task handler to handle client actions
-    // task_handler: TaskHandler,
-    log_file: Arc<Logger>
+    log_file: Arc<Logger>,
 }
 
 impl Server {
     pub fn new(config: Config) -> Self {
         let (client_actions_sender, client_actions_receiver) = mpsc::channel();
-        
-        let log_file = Arc::new(Logger::new(&config.get_log_file()));
+
+        let log_file = Arc::new(Logger::new(config.get_log_file()));
         let task_handler = TaskHandler::new(client_actions_receiver, log_file.clone());
         task_handler.initialize_task_handler_thread();
         Server {
             config,
             client_actions_sender,
             client_senders: RwLock::new(HashMap::new()),
-            log_file: log_file,
-            
+            log_file,
         }
     }
 
     pub fn server_run(&self) -> std::io::Result<()> {
         let address = format!("{}:{}", self.config.get_address(), self.config.get_port());
-        //println!("Server running on address: {}\n", address);
-        //self.log_file.log(&format!("Server running on address: {}\n", address));
-        self.log_file.log("INFO", &format!("Server running on address: {}", address));
+        self.log_file
+            .info(&format!("Server running on address: {}\n", address));
         let listener = TcpListener::bind(&address)?;
 
         for stream_result in listener.incoming() {
             match stream_result {
                 Ok(stream) => {
-                    //println!("New connection received");
-                    self.log_file.log("INFO", "New connection received");
+                    self.log_file.info("New connection received");
                     self.handle_new_connection(stream)?;
                 }
                 Err(err) => {
-                    self.log_file.log("ERROR", &format!("Error accepting connection: {:?}", err))
-                    //println!("Error accepting connection: {:?}", err);
-                    //self.log_file.lock().unwrap().log(&format!("Error accepting connection: {:?}", err));
+                    self.log_file
+                        .error(&format!("Error accepting connection: {:?}", err));
                 }
             }
         }
@@ -79,9 +74,8 @@ impl Server {
         match Packet::from_bytes(&mut stream) {
             Ok(packet) => self.handle_incoming_packet(packet, stream),
             Err(err) => {
-                self.log_file.log("ERROR", &format!("Error reading packet: {:?}", err));
-                //println!("Error reading packet: {:?}", err);
-                //self.log_file.lock().unwrap().log(&format!("Error reading packet: {:?}", err));
+                self.log_file
+                    .error(&format!("Error reading packet: {:?}", err));
                 return Ok(());
             }
         }
@@ -89,7 +83,6 @@ impl Server {
     }
 
     pub fn initialize_task_handler_thread(task_handler: TaskHandler) {
-        //println!("Starting task handler thread");
         std::thread::spawn(move || {
             task_handler.run();
         });
@@ -98,16 +91,16 @@ impl Server {
     pub fn handle_incoming_packet(&self, packet: Packet, stream: TcpStream) {
         match packet {
             Packet::Connect(connect_packet) => self.connect_new_client(connect_packet, stream),
-            _ => println!("Unsupported packet type"),
+            _ => self.log_file.error("Received an unsupported packet type"),
         }
     }
 
     pub fn connect_new_client(&self, connect_packet: Connect, stream: TcpStream) {
-        //add more info to the connect message
-        let message = format!("Received Connect Packet from client with ID: {}", connect_packet.client_id());
-        self.log_file.log("INFO", message.as_str());
-        //println!("Received Connect Package");
-        //self.log_file.lock().unwrap().log("Received Connect Package");
+        let message = format!(
+            "Received Connect Packet from client with ID: {}",
+            connect_packet.client_id()
+        );
+        self.log_file.info(&message);
         let client_id = connect_packet.client_id().content();
 
         let new_client = Client::new(
@@ -135,15 +128,10 @@ impl Server {
         log_file: Arc<Logger>,
     ) {
         thread::spawn(move || {
-            //println!("New client thread initiated\n");
-            log_file.log("INFO", "New client thread initiated");
             loop {
                 let packet = Packet::from_bytes(&mut stream);
                 match packet {
                     Ok(packet) => {
-                        //println!("Received new packet");
-                        log_file.log("INFO", "Received new packet");
-
                         let handling_result = handle_packet(
                             packet,
                             client_id.clone(),
@@ -157,13 +145,11 @@ impl Server {
                         };
                     }
                     Err(err) => {
-                        //println!("Connection Error: {:?}", err);
-                        log_file.log("ERROR", &format!("Connection Error: {:?}", err));
+                        log_file.error(&format!("Connection Error: {:?}", err));
                         break;
                     }
                 }
             }
-            //disconnect_client(sender_to_task_channel, client_id);
             println!("Connection closed");
             log_file.log("INFO", "Connection closed");
         });
@@ -177,78 +163,41 @@ pub fn handle_packet(
     sender_to_task_channel: std::sync::mpsc::Sender<Task>,
     log_file: Arc<Logger>,
 ) -> bool {
+    let log_message = |packet_type: &str| {
+        log_file.info(&format!(
+            "Received {} packet from client: {}",
+            packet_type,
+            String::from_utf8_lossy(&client_id)
+        ));
+    };
     match packet {
         Packet::Publish(publish_packet) => {
-            // println!(
-            //     "Received Publish packet from client: {:?}",
-            //     std::str::from_utf8(&client_id).unwrap()
-            // );
-            log_file.log("INFO", &format!(
-                "Received Publish packet from client: {}",
-                String::from_utf8_lossy(&client_id)
-            ));
+            log_message("Publish");
             handle_publish(publish_packet, sender_to_task_channel, client_id)
         }
         Packet::Puback(puback_packet) => {
-            // println!(
-            //     "Received Puback packet from client: {:?}",
-            //     std::str::from_utf8(&client_id).unwrap()
-            // );
-            log_file.log("INFO", &format!(
-                "Received Puback packet from client: {}",
-                String::from_utf8_lossy(&client_id)
-            ));
+            log_message("Puback");
             handle_puback(puback_packet, sender_to_task_channel, client_id)
         }
         Packet::Subscribe(subscribe_packet) => {
-            // println!(
-            //     "Received Subscribe packet from client: {:?}",
-            //     std::str::from_utf8(&client_id).unwrap()
-            // );
-            log_file.log("INFO", &format!(
-                "Received Subscribe packet from client: {}",
-                String::from_utf8_lossy(&client_id)
-            ));
+            log_message("Subscribe");
             handle_subscribe(subscribe_packet, sender_to_task_channel, client_id)
         }
         Packet::Unsubscribe(unsubscribe_packet) => {
-            // println!(
-            //     "Received Unsubscribe packet from client: {:?}",
-            //     std::str::from_utf8(&client_id).unwrap()
-            // );
-            log_file.log("INFO", &format!(
-                "Received Unsubscribe packet from client: {}",
-                String::from_utf8_lossy(&client_id)
-            ));
+            log_message("Unsubscribe");
             handle_unsubscribe(unsubscribe_packet, sender_to_task_channel, client_id)
         }
         Packet::Pingreq(pingreq_packet) => {
-            // println!(
-            //     "Received Pingreq packet from client: {:?}",
-            //     std::str::from_utf8(&client_id).unwrap()
-            // );
-            log_file.log("INFO", &format!(
-                "Received Pingreq packet from client: {}",
-                String::from_utf8_lossy(&client_id)
-            ));
+            log_message("Pingreq");
             handle_pingreq(sender_to_task_channel, client_id)
         }
         Packet::Disconnect(disconnect_packet) => {
-            // println!(
-            //     "Received Disconnect packet from client: {:?}",
-            //     std::str::from_utf8(&client_id).unwrap()
-            // );
-            log_file.log("INFO", &format!(
-                "Received Disconnect packet from client: {}",
-                String::from_utf8_lossy(&client_id)
-            ));
+            log_message("Disconnect");
             disconnect_client(sender_to_task_channel, client_id)
         }
         _ => {
-            // println!("Received an unsupported packet type");
-            // println!("Closing connection");
-            log_file.log("INFO", "Received an unsupported packet type");
-            log_file.log("INFO", "Closing connection");
+            log_file.error("Unsupported packet type");
+            log_file.info("Disconnecting client");
             disconnect_client(sender_to_task_channel, client_id);
             false
         }
@@ -281,9 +230,6 @@ pub fn handle_puback(
     sender_to_topics_channel: std::sync::mpsc::Sender<Task>,
     client_id: Vec<u8>,
 ) -> bool {
-    // sender_to_topics_channel
-    //     .send(TopicHandlerTask::RegisterPubAck(puback_packet))
-    //     .unwrap();
     true
 }
 

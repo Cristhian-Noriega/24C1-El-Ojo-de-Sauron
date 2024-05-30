@@ -10,6 +10,7 @@ use std::{
 };
 
 use crate::{client::Client, logfile::Logger};
+
 use mqtt::model::{
     components::{qos::QoS, topic_name::TopicName},
     packets::{
@@ -63,7 +64,7 @@ pub struct TaskHandler {
     active_connections: RwLock<HashSet<Vec<u8>>>,
     retained_messages: RwLock<HashMap<Vec<u8>, Publish>>,
     topics: RwLock<HashMap<TopicName, Vec<ClientId>>>,
-    log_file: Arc<Logger>
+    log_file: Arc<Logger>,
 }
 
 impl TaskHandler {
@@ -74,7 +75,7 @@ impl TaskHandler {
             active_connections: RwLock::new(HashSet::new()),
             retained_messages: RwLock::new(HashMap::new()),
             topics: RwLock::new(HashMap::new()),
-            log_file
+            log_file,
         }
     }
 
@@ -160,7 +161,10 @@ impl TaskHandler {
             self.suback(subscribe_packet.packet_identifier(), client);
         } else {
             //println!("Client does not exist");
-            let message = format!("Client {} does not exist", std::str::from_utf8(&client_id).unwrap());
+            let message = format!(
+                "Client {} does not exist",
+                std::str::from_utf8(&client_id).unwrap()
+            );
             self.log_file.log("ERROR", message.as_str());
         }
     }
@@ -193,7 +197,10 @@ impl TaskHandler {
             self.unsuback(unsubscribe_packet.packet_identifier(), client);
         } else {
             //println!("Client does not exist");
-            let message = format!("Client {} does not exist", std::str::from_utf8(&client_id).unwrap());
+            let message = format!(
+                "Client {} does not exist",
+                std::str::from_utf8(&client_id).unwrap()
+            );
             self.log_file.log("ERROR", message.as_str());
         }
     }
@@ -240,7 +247,10 @@ impl TaskHandler {
 
         if clients.contains_key(&client_id) {
             //println!("Client reconnected!.");
-            let message = format!("Client {} reconnected", std::str::from_utf8(&client_id).unwrap());
+            let message = format!(
+                "Client {} reconnected",
+                std::str::from_utf8(&client_id).unwrap()
+            );
             self.log_file.log("INFO", message.as_str());
         } else {
             //insert the client id as key and the client as value in clients in the rwlockwriteguard
@@ -251,7 +261,10 @@ impl TaskHandler {
             Ok(stream) => stream,
             Err(_) => {
                 //println!("Error getting client's stream. Connection will not be accepted.");
-                let message = format!("Error getting client {}'s stream. Connection will not be accepted", std::str::from_utf8(&client_id).unwrap());
+                let message = format!(
+                    "Error getting client {}'s stream. Connection will not be accepted",
+                    std::str::from_utf8(&client_id).unwrap()
+                );
                 self.log_file.log("ERROR", message.as_str());
                 return;
             }
@@ -266,7 +279,10 @@ impl TaskHandler {
                 //     "New client connected! ID: {:?}. Connack Package sent",
                 //     std::str::from_utf8(&client_id).unwrap()
                 // );
-                let message = format!("New client connected! ID: {:?}. Connack Package sent", std::str::from_utf8(&client_id).unwrap());
+                let message = format!(
+                    "New client connected! ID: {:?}. Connack Package sent",
+                    std::str::from_utf8(&client_id).unwrap()
+                );
                 self.log_file.log("INFO", message.as_str());
             }
             Err(_) => {
@@ -274,7 +290,10 @@ impl TaskHandler {
                 //     "Error sending Connack response to client: {:?}",
                 //     std::str::from_utf8(&client_id).unwrap()
                 // );
-                let message = format!("Error sending Connack response to client: {:?}", std::str::from_utf8(&client_id).unwrap());
+                let message = format!(
+                    "Error sending Connack response to client: {:?}",
+                    std::str::from_utf8(&client_id).unwrap()
+                );
                 self.log_file.log("ERROR", message.as_str());
             }
         };
@@ -301,12 +320,18 @@ impl TaskHandler {
         match stream.write(suback_packet_bytes) {
             Ok(_) => {
                 //println!("Suback sent to client\n");
-                let message = format!("Suback sent to client {:?}", std::str::from_utf8(&client.id).unwrap());
+                let message = format!(
+                    "Suback sent to client {:?}",
+                    std::str::from_utf8(&client.id).unwrap()
+                );
                 self.log_file.log("INFO", message.as_str());
             }
             Err(_) => {
                 //println!("Error sending suback to client");
-                let message = format!("Error sending suback to client {:?}", std::str::from_utf8(&client.id).unwrap());
+                let message = format!(
+                    "Error sending suback to client {:?}",
+                    std::str::from_utf8(&client.id).unwrap()
+                );
                 self.log_file.log("ERROR", message.as_str());
             }
         };
@@ -329,12 +354,18 @@ impl TaskHandler {
         match stream.write(puback_packet_bytes) {
             Ok(_) => {
                 //println!("Puback sent to client\n");
-                let message = format!("Puback sent to client {:?}", std::str::from_utf8(&client.id).unwrap());
+                let message = format!(
+                    "Puback sent to client {:?}",
+                    std::str::from_utf8(&client.id).unwrap()
+                );
                 self.log_file.log("INFO", message.as_str());
             }
             Err(_) => {
                 // println!("Error sending puback to client");
-                let message = format!("Error sending puback to client {:?}", std::str::from_utf8(&client.id).unwrap());
+                let message = format!(
+                    "Error sending puback to client {:?}",
+                    std::str::from_utf8(&client.id).unwrap()
+                );
                 self.log_file.log("ERROR", message.as_str());
             }
         };
@@ -356,12 +387,18 @@ impl TaskHandler {
         match stream.write(unsuback_packet_bytes) {
             Ok(_) => {
                 //println!("Unsuback sent to client\n");
-                let message = format!("Unsuback sent to client {:?}", std::str::from_utf8(&client.id).unwrap());
+                let message = format!(
+                    "Unsuback sent to client {:?}",
+                    std::str::from_utf8(&client.id).unwrap()
+                );
                 self.log_file.log("INFO", message.as_str());
             }
             Err(_) => {
                 //println!("Error sending unsuback to client");
-                let message = format!("Error sending unsuback to client {:?}", std::str::from_utf8(&client.id).unwrap());
+                let message = format!(
+                    "Error sending unsuback to client {:?}",
+                    std::str::from_utf8(&client.id).unwrap()
+                );
                 self.log_file.log("ERROR", message.as_str());
             }
         };
