@@ -6,6 +6,7 @@ mod config;
 mod error;
 mod server;
 mod task_handler;
+mod logfile;
 
 static SERVER_ARGS: usize = 2;
 

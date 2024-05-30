@@ -1,0 +1,12 @@
+[2024-05-30 14:23:53] INFO: Server running on address: 127.0.0.1:8080
+[2024-05-30 14:25:03] INFO: New connection received
+[2024-05-30 14:25:03] INFO: Received Connect Packet
+[2024-05-30 14:25:03] INFO: New client thread initiated
+[2024-05-30 14:25:15] INFO: Received new packet
+[2024-05-30 14:25:15] INFO: Received Subscribe packet from client: camera system
+[2024-05-30 14:25:40] INFO: New connection received
+[2024-05-30 14:25:40] INFO: Received Connect Packet
+[2024-05-30 14:25:40] INFO: New client thread initiated
+[2024-05-30 14:25:46] INFO: Received new packet
+[2024-05-30 14:25:46] INFO: Received Publish packet from client: monitor
+
