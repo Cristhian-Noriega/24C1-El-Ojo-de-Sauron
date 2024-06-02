@@ -2,6 +2,7 @@ use ui_application::UIApplication;
 
 mod ui_application;
 mod client;
+mod incident;
 
 
 fn main() -> Result<(), eframe::Error>{    

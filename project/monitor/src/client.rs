@@ -3,8 +3,10 @@
 use mqtt::model::{
     components::encoded_string::EncodedString, components::qos::QoS,
     components::topic_level::TopicLevel, components::topic_name::TopicName, packet::Packet,
-    packets::connect::Connect, packets::publish::Publish,
+    components::topic_filter::TopicFilter, packets::connect::Connect, packets::publish::Publish,
+    packets::subscribe::Subscribe,
 };
+use crate::incident::Incident;
 use std::io::Read;
 use std::io::Write;
 use std::net::TcpStream;
@@ -126,6 +128,25 @@ impl Client {
         Ok(())
     }
 
+    pub fn new_incident(&self, name: &str, description: &str, x_coordenate: &str, y_coordenate: &str) -> std::io::Result<()> {
+        println!("Building new incident {:?}", name);
+
+        let new_incident_topic = "new-incident";
+        let x_coordenate_float: f64 = x_coordenate.parse().unwrap();
+        let y_coordenate_float: f64 = y_coordenate.parse().unwrap();
+        let new_incident = Incident::new(name.to_string(), description.to_string(), x_coordenate_float, y_coordenate_float, "Open".to_string());
+        let message = new_incident.build_new_incident_message();
+
+        let _ = self.publish(new_incident_topic, &message)?;
+
+        let attending_topic = format!("attending-incident/{}", new_incident.uuid);
+        let close_topic = format!("close-incident/{}", new_incident.uuid);
+        let _ = self.subscribe(&attending_topic)?;
+        let _ = self.subscribe(&close_topic)?;
+
+        Ok(())
+    }
+
     pub fn publish(&self, topic: &str, message: &str) -> std::io::Result<()> {
         let mut levels = vec![];
         let message = message.trim();
@@ -163,6 +184,35 @@ impl Client {
             .unwrap()
             .write(publish_packet.to_bytes().as_slice());
         println!("Sent Publish packet to topic: {:?} with message: {:?}", topic, message);
+
+        Ok(())
+    }
+
+    pub fn subscribe(&self, topic: &str) -> std::io::Result<()> {
+        let mut levels = vec![];
+        for level in topic.split(' ') {
+            if let Ok(topic_level) = TopicLevel::from_bytes(level.as_bytes().to_vec()) {
+                levels.push(topic_level);
+            }
+        }
+
+        let topic_filter = TopicFilter::new(levels, false);
+        let packet_id = 1;
+        let qos = QoS::AtLeast;
+
+        let topics_filters = vec![(topic_filter, qos)];
+
+        let subscribe_packet = Subscribe::new(packet_id, topics_filters);
+
+        println!("Packet ID: {:?}", subscribe_packet.packet_identifier());
+        let _ = self
+            .to_server_stream
+            .lock()
+            .unwrap()
+            .as_mut()
+            .unwrap()
+            .write(subscribe_packet.to_bytes().as_slice());
+        println!("Sent Subscribe packet");
 
         Ok(())
     }

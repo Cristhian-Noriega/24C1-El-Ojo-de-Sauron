@@ -4,8 +4,10 @@ use crate::client::Client;
 
 pub struct UIApplication {
     client: Arc<Mutex<Client>>,
-    pub topic: String,
-    pub message: String,
+    pub new_incident_name: String,
+    pub new_incident_description: String,
+    pub new_incident_x_coordenate: String,
+    pub new_incident_y_coordenate: String,
     pub ui_receiver: mpsc::Receiver<String>,
 }
 
@@ -14,8 +16,10 @@ impl Default for UIApplication {
         let (sender, receiver) = mpsc::channel();
         Self {
             client: Arc::new(Mutex::new(Client::new(sender))),
-            topic: "".to_owned(),
-            message: "".to_owned(),
+            new_incident_name: "".to_owned(),
+            new_incident_description: "".to_owned(),
+            new_incident_x_coordenate: "".to_owned(),
+            new_incident_y_coordenate: "".to_owned(),
             ui_receiver: receiver,
         }
     }
@@ -51,35 +55,34 @@ impl eframe::App for UIApplication {
 
             ui.add_space(20.0);
             ui.horizontal(|ui| {
-                ui.label("Topic:");
-                ui.add_space(18.0);
-                ui.text_edit_singleline(&mut self.topic);
+                ui.label("Name:");
+                ui.add_space(38.0);
+                ui.text_edit_singleline(&mut self.new_incident_name);
             });
             ui.add_space(5.0);
             ui.horizontal(|ui| {
-                ui.label("Message:");
-                ui.text_edit_multiline(&mut self.message);
+                ui.label("Description:");
+                ui.add_space(8.0);
+                ui.text_edit_multiline(&mut self.new_incident_description);
             });
-            if ui.button("Publish").clicked() {
-                match client.publish(&self.topic, &self.message) {
-                    Ok(_) => println!("Mensaje publicado"),
-                    Err(e) => {
-                        println!("Error al publicar mensaje: {:?}", e);
-                    }
-                }
-            }
+            ui.add_space(5.0);
+            ui.horizontal(|ui| {
+                ui.label("Coordenates:");
+                ui.text_edit_singleline(&mut self.new_incident_x_coordenate);
+                ui.text_edit_singleline(&mut self.new_incident_y_coordenate);
+            });
 
             ui.add_space(20.0);
-
-            ui.heading(egui::RichText::new("Last message received").size(20.0));
-            if let Ok(new_message) = self.ui_receiver.try_recv() {
-                *client.response_text.lock().unwrap() = new_message;
-            }
-
-            let response_text = format!("{:?}", *client.response_text.lock().unwrap());
-            if ui.label(response_text).clicked() {
-                ui.ctx().request_repaint();
-            }
+            ui.vertical_centered(|ui| {
+                if ui.button("Send").clicked() {
+                    match client.new_incident(&self.new_incident_name, &self.new_incident_description, &self.new_incident_x_coordenate, &self.new_incident_y_coordenate) {
+                        Ok(_) => println!("Nuevo incidente enviado"),
+                        Err(e) => {
+                            println!("Error al publicar mensaje: {:?}", e);
+                        }
+                    }
+                }
+            });
         });
     }
 }
