@@ -1,5 +1,6 @@
 use std::sync::{mpsc, Arc, Mutex};
 use eframe::egui;
+use egui_extras::{TableBuilder, Column};
 use crate::client::Client;
 
 #[derive(PartialEq)]
@@ -58,6 +59,8 @@ impl eframe::App for UIApplication {
                 }
             });
 
+            ui.add_space(20.0);
+
             ui.horizontal(|ui| {
                 ui.selectable_value(&mut self.current_layout, Layout::IncidentMap, "Map");
                 ui.selectable_value(
@@ -72,13 +75,14 @@ impl eframe::App for UIApplication {
                 );
             });
 
+            ui.add_space(20.0);
+
 
             if self.current_layout == Layout::IncidentMap {
                 ui.label("Map of incidents");
             }
 
             if self.current_layout == Layout::NewIncident{
-                ui.add_space(20.0);
                 ui.horizontal(|ui| {
                     ui.label("Name:");
                     ui.add_space(38.0);
@@ -111,7 +115,46 @@ impl eframe::App for UIApplication {
             }
 
             if self.current_layout == Layout::IncidentList{
-                ui.label("List of incidents");
+                TableBuilder::new(ui)
+                    .striped(true)
+                    .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
+                    .columns(Column::remainder(), 5)
+                    .header(10.0, |mut header| {
+                        header.col(|ui| {
+                            ui.heading("UUID");
+                        });
+                        header.col(|ui| {
+                            ui.heading("Name");
+                        });
+                        header.col(|ui| {
+                            ui.heading("Description");
+                        });
+                        header.col(|ui| {
+                            ui.heading("Coordinates");
+                        });
+                        header.col(|ui| {
+                            ui.heading("State");
+                        });
+                    })
+                    .body(|mut body| {
+                        body.row(50.0, |mut row| {
+                            row.col(|ui| {
+                                ui.label("550e8400-e29b-41d4-a716-446655440000");
+                            });
+                            row.col(|ui| {
+                                ui.label("Robbery");
+                            });
+                            row.col(|ui| {
+                                ui.label("Test description");
+                            });
+                            row.col(|ui| {
+                                ui.label("35.0, 45.0");
+                            });
+                            row.col(|ui| {
+                                ui.label("Active");
+                            });
+                        });
+                    });
             }
         });
     }
