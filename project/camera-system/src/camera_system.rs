@@ -4,6 +4,7 @@ use crate::{camera::Camera, incident::Incident};
 
 const SEPARATOR: &str = "|";
 
+#[derive(Debug)]
 pub struct CameraSystem {
     cameras: Vec<Camera>,
     active_incidents: HashMap<String, Incident>,
@@ -33,7 +34,7 @@ impl CameraSystem {
     pub fn new_incident(&mut self, incident: Incident) {
         let incident_id = incident.uuid().to_string();
 
-        for camera in &self.cameras {
+        for camera in self.cameras.iter_mut() {
             if camera.is_near(&incident) {
                 camera.follow_incident();
             }
@@ -45,7 +46,7 @@ impl CameraSystem {
     pub fn close_incident(&mut self, incident_id: &String) {
         let incident = self.active_incidents.get(incident_id).unwrap(); // TODO: que pasa si el incidente no estaba activo?
 
-        for camera in &self.cameras {
+        for camera in &mut self.cameras {
             if camera.is_near(incident) {
                 camera.unfollow_incident();
             }

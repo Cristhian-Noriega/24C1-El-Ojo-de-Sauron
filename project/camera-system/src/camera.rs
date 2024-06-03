@@ -2,7 +2,7 @@ use crate::camera_status::CameraStatus;
 
 const ACTIVE_RANGE: f64 = 10.0;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Camera {
     id: u8,
     x_coordinate: f64,
@@ -29,14 +29,14 @@ impl Camera {
         )
     }
 
-    pub fn follow_incident(mut self) {
+        pub fn follow_incident(&mut self) {
         if self.active_incidents == 0 {
             self.activate();
         }
         self.active_incidents += 1;
     }
 
-    pub fn unfollow_incident(mut self) {
+    pub fn unfollow_incident(&mut self) {
         self.active_incidents -= 1;
         if self.active_incidents == 0 {
             self.deactivate();

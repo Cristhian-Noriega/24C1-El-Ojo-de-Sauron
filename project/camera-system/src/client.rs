@@ -83,7 +83,7 @@ fn subscribe(filter: TopicFilter, server_stream: &mut TcpStream) -> std::io::Res
     let topics_filters = vec![(filter, qos)];
 
     let subscribe_packet = Subscribe::new(packet_id, topics_filters);
-
+    println!("Subscribe packet: {:?}", subscribe_packet.to_bytes().as_slice());
     let _ = server_stream.write(subscribe_packet.to_bytes().as_slice());
 
     match Packet::from_bytes(server_stream) {
@@ -101,7 +101,7 @@ fn publish(
     server_stream: &mut TcpStream,
 ) -> std::io::Result<()> {
     let dup = false;
-    let qos = QoS::AtMost;
+    let qos = QoS::AtLeast;
     let retain = false;
     let package_identifier = None;
     let message_bytes = message;
@@ -181,6 +181,8 @@ fn handle_new_incident(
             ))
         }
     };
+
+    println!("New incident: {:?}", incident);
 
     camera_system.new_incident(incident.clone());
 
