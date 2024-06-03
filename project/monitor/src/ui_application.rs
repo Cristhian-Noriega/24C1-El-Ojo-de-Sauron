@@ -125,6 +125,7 @@ impl eframe::App for UIApplication {
             }
 
             if self.current_layout == Layout::IncidentList{
+                let incidents = client.incident_list.lock().unwrap();
                 TableBuilder::new(ui)
                     .striped(true)
                     .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
@@ -147,23 +148,25 @@ impl eframe::App for UIApplication {
                         });
                     })
                     .body(|mut body| {
-                        body.row(50.0, |mut row| {
-                            row.col(|ui| {
-                                ui.label("550e8400-e29b-41d4-a716-446655440000");
+                        for item in incidents.iter() {
+                            body.row(50.0, |mut row| {
+                                row.col(|ui| {
+                                    ui.label(item.uuid.clone());
+                                });
+                                row.col(|ui| {
+                                    ui.label(item.name.clone());
+                                });
+                                row.col(|ui| {
+                                    ui.label(item.description.clone());
+                                });
+                                row.col(|ui| {
+                                    ui.label("x,y");
+                                });
+                                row.col(|ui| {
+                                    ui.label(item.state.clone());
+                                });
                             });
-                            row.col(|ui| {
-                                ui.label("Robbery");
-                            });
-                            row.col(|ui| {
-                                ui.label("Test description");
-                            });
-                            row.col(|ui| {
-                                ui.label("35.0, 45.0");
-                            });
-                            row.col(|ui| {
-                                ui.label("Active");
-                            });
-                        });
+                        }
                     });
             }
         });

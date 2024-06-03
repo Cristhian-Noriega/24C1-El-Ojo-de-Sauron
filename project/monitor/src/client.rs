@@ -24,6 +24,7 @@ pub struct Client {
     pub address: String,
     pub to_server_stream: Arc<Mutex<Option<TcpStream>>>,
     pub sender: Sender<String>,
+    pub incident_list: Arc<Mutex<Vec<Incident>>>,
 }
 
 impl Client {
@@ -42,6 +43,7 @@ impl Client {
             address,
             to_server_stream: Arc::new(Mutex::new(None)),
             sender,
+            incident_list: Arc::new(Mutex::new(vec![])),
         }
     }
 
@@ -175,6 +177,8 @@ impl Client {
         // let close_topic = format!("close-incident/{}", new_incident.uuid);
         // self.subscribe(&attending_topic)?;
         // self.subscribe(&close_topic)?;
+
+        self.incident_list.lock().unwrap().push(new_incident);
 
         Ok(())
     }
