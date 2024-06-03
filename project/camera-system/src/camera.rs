@@ -29,7 +29,7 @@ impl Camera {
         )
     }
 
-        pub fn follow_incident(&mut self) {
+    pub fn follow_incident(&mut self) {
         if self.active_incidents == 0 {
             self.activate();
         }

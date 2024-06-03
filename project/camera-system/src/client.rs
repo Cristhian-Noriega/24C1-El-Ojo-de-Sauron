@@ -83,7 +83,10 @@ fn subscribe(filter: TopicFilter, server_stream: &mut TcpStream) -> std::io::Res
     let topics_filters = vec![(filter, qos)];
 
     let subscribe_packet = Subscribe::new(packet_id, topics_filters);
-    println!("Subscribe packet: {:?}", subscribe_packet.to_bytes().as_slice());
+    println!(
+        "Subscribe packet: {:?}",
+        subscribe_packet.to_bytes().as_slice()
+    );
     let _ = server_stream.write(subscribe_packet.to_bytes().as_slice());
 
     match Packet::from_bytes(server_stream) {

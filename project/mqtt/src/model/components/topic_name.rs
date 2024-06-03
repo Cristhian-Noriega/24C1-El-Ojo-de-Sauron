@@ -73,10 +73,10 @@ impl TopicName {
     }
 }
 
-
 impl fmt::Display for TopicName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let levels = self.levels
+        let levels = self
+            .levels
             .iter()
             .map(|level| String::from_utf8_lossy(level).into_owned())
             .collect::<Vec<String>>()
@@ -85,7 +85,6 @@ impl fmt::Display for TopicName {
         write!(f, "{}", levels)
     }
 }
-
 
 #[cfg(test)]
 mod tests {

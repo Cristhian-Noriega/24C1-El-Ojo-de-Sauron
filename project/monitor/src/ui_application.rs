@@ -1,12 +1,16 @@
-use walkers::{Tiles, Map, MapMemory, Position, sources::OpenStreetMap};
-use std::sync::{mpsc, Arc, Mutex};
+use crate::client::Client;
 use eframe::egui;
 use egui::Context;
-use egui_extras::{TableBuilder, Column};
-use crate::client::Client;
+use egui_extras::{Column, TableBuilder};
+use std::sync::{mpsc, Arc, Mutex};
+use walkers::{sources::OpenStreetMap, Map, MapMemory, Position, Tiles};
 
 #[derive(PartialEq)]
-enum Layout { IncidentMap, IncidentList, NewIncident }
+enum Layout {
+    IncidentMap,
+    IncidentList,
+    NewIncident,
+}
 
 pub struct UIApplication {
     client: Arc<Mutex<Client>>,
@@ -58,7 +62,7 @@ impl eframe::App for UIApplication {
                 }
                 ui.add_space(500.0);
 
-                if *client.connection_status.lock().unwrap() == "connected"{
+                if *client.connection_status.lock().unwrap() == "connected" {
                     ui.label(egui::RichText::new("Connected").color(egui::Color32::GREEN));
                 } else {
                     ui.label(egui::RichText::new("Disconnected").color(egui::Color32::RED));
@@ -83,16 +87,15 @@ impl eframe::App for UIApplication {
 
             ui.add_space(20.0);
 
-
             if self.current_layout == Layout::IncidentMap {
                 ui.add(Map::new(
                     Some(&mut self.tiles),
                     &mut self.map_memory,
-                    Position::from_lon_lat(-58.3717, -34.6081)
+                    Position::from_lon_lat(-58.3717, -34.6081),
                 ));
             }
 
-            if self.current_layout == Layout::NewIncident{
+            if self.current_layout == Layout::NewIncident {
                 ui.horizontal(|ui| {
                     ui.label("Name:");
                     ui.add_space(38.0);
@@ -114,7 +117,12 @@ impl eframe::App for UIApplication {
                 ui.add_space(20.0);
                 ui.vertical_centered(|ui| {
                     if ui.button("Send").clicked() {
-                        match client.new_incident(&self.new_incident_name, &self.new_incident_description, &self.new_incident_x_coordenate, &self.new_incident_y_coordenate) {
+                        match client.new_incident(
+                            &self.new_incident_name,
+                            &self.new_incident_description,
+                            &self.new_incident_x_coordenate,
+                            &self.new_incident_y_coordenate,
+                        ) {
                             Ok(_) => println!("Nuevo incidente enviado"),
                             Err(e) => {
                                 println!("Error al publicar mensaje: {:?}", e);
@@ -124,7 +132,7 @@ impl eframe::App for UIApplication {
                 });
             }
 
-            if self.current_layout == Layout::IncidentList{
+            if self.current_layout == Layout::IncidentList {
                 let incidents = client.incident_list.lock().unwrap();
                 TableBuilder::new(ui)
                     .striped(true)

@@ -203,7 +203,7 @@ impl TaskHandler {
         } else {
             println!("No clients subscribed to topic: {}", topic_name);
         };
-        
+
         // clients = match binding.get(topic_name) {
         //     Some(clients) => clients,
         //     None => {
