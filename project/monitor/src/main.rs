@@ -1,10 +1,10 @@
 use ui_application::UIApplication;
 
-mod ui_application;
 mod client;
+mod incident;
+mod ui_application;
 
-
-fn main() -> Result<(), eframe::Error>{    
+fn main() -> Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default(),
         ..Default::default()
@@ -15,7 +15,7 @@ fn main() -> Result<(), eframe::Error>{
         options,
         Box::new(|cc| {
             egui_extras::install_image_loaders(&cc.egui_ctx);
-            Box::<UIApplication>::default()
+            Box::new(UIApplication::new(cc.egui_ctx.clone()))
         }),
     )
 }

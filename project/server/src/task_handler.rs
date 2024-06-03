@@ -197,13 +197,21 @@ impl TaskHandler {
         let topic_name = publish_packet.topic();
 
         let binding = self.topics.read().unwrap();
-        let clients = match binding.get(topic_name) {
-            Some(clients) => clients,
-            None => {
-                println!("No clients subscribed to topic: {}", topic_name);
-                return;
-            }
+        let mut clients = vec![];
+        if let Some(topic_clients) = binding.get(topic_name) {
+            clients.extend(topic_clients)
+        } else {
+            println!("No clients subscribed to topic: {}", topic_name);
         };
+
+        // clients = match binding.get(topic_name) {
+        //     Some(clients) => clients,
+        //     None => {
+        //         println!("No clients subscribed to topic: {}", topic_name);
+        //         let empty_clients: Vec<Vec<u8>> = vec![vec![]];
+        //         &empty_clients
+        //     }
+        // };
 
         let message = Message::new(client_id.clone(), publish_packet.clone());
 

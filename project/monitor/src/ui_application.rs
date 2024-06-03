@@ -1,22 +1,42 @@
-use std::sync::{mpsc, Arc, Mutex};
-use eframe::egui;
 use crate::client::Client;
+use eframe::egui;
+use egui::Context;
+use egui_extras::{Column, TableBuilder};
+use std::sync::{mpsc, Arc, Mutex};
+use walkers::{sources::OpenStreetMap, Map, MapMemory, Position, Tiles};
+
+#[derive(PartialEq)]
+enum Layout {
+    IncidentMap,
+    IncidentList,
+    NewIncident,
+}
 
 pub struct UIApplication {
     client: Arc<Mutex<Client>>,
-    pub topic: String,
-    pub message: String,
+    pub new_incident_name: String,
+    pub new_incident_description: String,
+    pub new_incident_x_coordenate: String,
+    pub new_incident_y_coordenate: String,
     pub ui_receiver: mpsc::Receiver<String>,
+    current_layout: Layout,
+    tiles: Tiles,
+    map_memory: MapMemory,
 }
 
-impl Default for UIApplication {
-    fn default() -> Self {
+impl UIApplication {
+    pub fn new(egui_ctx: Context) -> Self {
         let (sender, receiver) = mpsc::channel();
         Self {
             client: Arc::new(Mutex::new(Client::new(sender))),
-            topic: "".to_owned(),
-            message: "".to_owned(),
+            new_incident_name: "".to_owned(),
+            new_incident_description: "".to_owned(),
+            new_incident_x_coordenate: "".to_owned(),
+            new_incident_y_coordenate: "".to_owned(),
             ui_receiver: receiver,
+            current_layout: Layout::IncidentMap,
+            tiles: Tiles::new(OpenStreetMap, egui_ctx),
+            map_memory: MapMemory::default(),
         }
     }
 }
@@ -42,7 +62,7 @@ impl eframe::App for UIApplication {
                 }
                 ui.add_space(500.0);
 
-                if *client.connection_status.lock().unwrap() == "connected"{
+                if *client.connection_status.lock().unwrap() == "connected" {
                     ui.label(egui::RichText::new("Connected").color(egui::Color32::GREEN));
                 } else {
                     ui.label(egui::RichText::new("Disconnected").color(egui::Color32::RED));
@@ -50,35 +70,112 @@ impl eframe::App for UIApplication {
             });
 
             ui.add_space(20.0);
+
             ui.horizontal(|ui| {
-                ui.label("Topic:");
-                ui.add_space(18.0);
-                ui.text_edit_singleline(&mut self.topic);
+                ui.selectable_value(&mut self.current_layout, Layout::IncidentMap, "Map");
+                ui.selectable_value(
+                    &mut self.current_layout,
+                    Layout::IncidentList,
+                    "Incident List",
+                );
+                ui.selectable_value(
+                    &mut self.current_layout,
+                    Layout::NewIncident,
+                    "Create incident",
+                );
             });
-            ui.add_space(5.0);
-            ui.horizontal(|ui| {
-                ui.label("Message:");
-                ui.text_edit_multiline(&mut self.message);
-            });
-            if ui.button("Publish").clicked() {
-                match client.publish(&self.topic, &self.message) {
-                    Ok(_) => println!("Mensaje publicado"),
-                    Err(e) => {
-                        println!("Error al publicar mensaje: {:?}", e);
-                    }
-                }
-            }
 
             ui.add_space(20.0);
 
-            ui.heading(egui::RichText::new("Last message received").size(20.0));
-            if let Ok(new_message) = self.ui_receiver.try_recv() {
-                *client.response_text.lock().unwrap() = new_message;
+            if self.current_layout == Layout::IncidentMap {
+                ui.add(Map::new(
+                    Some(&mut self.tiles),
+                    &mut self.map_memory,
+                    Position::from_lon_lat(-58.3717, -34.6081),
+                ));
             }
 
-            let response_text = format!("{:?}", *client.response_text.lock().unwrap());
-            if ui.label(response_text).clicked() {
-                ui.ctx().request_repaint();
+            if self.current_layout == Layout::NewIncident {
+                ui.horizontal(|ui| {
+                    ui.label("Name:");
+                    ui.add_space(38.0);
+                    ui.text_edit_singleline(&mut self.new_incident_name);
+                });
+                ui.add_space(5.0);
+                ui.horizontal(|ui| {
+                    ui.label("Description:");
+                    ui.add_space(8.0);
+                    ui.text_edit_multiline(&mut self.new_incident_description);
+                });
+                ui.add_space(5.0);
+                ui.horizontal(|ui| {
+                    ui.label("Coordenates:");
+                    ui.text_edit_singleline(&mut self.new_incident_x_coordenate);
+                    ui.text_edit_singleline(&mut self.new_incident_y_coordenate);
+                });
+
+                ui.add_space(20.0);
+                ui.vertical_centered(|ui| {
+                    if ui.button("Send").clicked() {
+                        match client.new_incident(
+                            &self.new_incident_name,
+                            &self.new_incident_description,
+                            &self.new_incident_x_coordenate,
+                            &self.new_incident_y_coordenate,
+                        ) {
+                            Ok(_) => println!("Nuevo incidente enviado"),
+                            Err(e) => {
+                                println!("Error al publicar mensaje: {:?}", e);
+                            }
+                        }
+                    }
+                });
+            }
+
+            if self.current_layout == Layout::IncidentList {
+                let incidents = client.incident_list.lock().unwrap();
+                TableBuilder::new(ui)
+                    .striped(true)
+                    .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
+                    .columns(Column::remainder(), 5)
+                    .header(10.0, |mut header| {
+                        header.col(|ui| {
+                            ui.heading("UUID");
+                        });
+                        header.col(|ui| {
+                            ui.heading("Name");
+                        });
+                        header.col(|ui| {
+                            ui.heading("Description");
+                        });
+                        header.col(|ui| {
+                            ui.heading("Coordinates");
+                        });
+                        header.col(|ui| {
+                            ui.heading("State");
+                        });
+                    })
+                    .body(|mut body| {
+                        for item in incidents.iter() {
+                            body.row(50.0, |mut row| {
+                                row.col(|ui| {
+                                    ui.label(item.uuid.clone());
+                                });
+                                row.col(|ui| {
+                                    ui.label(item.name.clone());
+                                });
+                                row.col(|ui| {
+                                    ui.label(item.description.clone());
+                                });
+                                row.col(|ui| {
+                                    ui.label("x,y");
+                                });
+                                row.col(|ui| {
+                                    ui.label(item.state.clone());
+                                });
+                            });
+                        }
+                    });
             }
         });
     }

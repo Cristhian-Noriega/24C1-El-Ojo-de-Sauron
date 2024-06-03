@@ -2,15 +2,19 @@
 
 use mqtt::model::{
     components::encoded_string::EncodedString, components::qos::QoS,
-    components::topic_level::TopicLevel, components::topic_name::TopicName, packet::Packet,
-    packets::connect::Connect, packets::publish::Publish,
+    components::topic_filter::TopicFilter, components::topic_level::TopicLevel,
+    components::topic_name::TopicName, packet::Packet, packets::connect::Connect,
+    packets::publish::Publish, packets::subscribe::Subscribe,
 };
+use std::io::ErrorKind;
 use std::io::Read;
 use std::io::Write;
 use std::net::TcpStream;
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 use std::{env::args, thread};
+
+use crate::incident::Incident;
 
 static CLIENT_ARGS: usize = 3;
 
@@ -20,6 +24,7 @@ pub struct Client {
     pub address: String,
     pub to_server_stream: Arc<Mutex<Option<TcpStream>>>,
     pub sender: Sender<String>,
+    pub incident_list: Arc<Mutex<Vec<Incident>>>,
 }
 
 impl Client {
@@ -38,6 +43,7 @@ impl Client {
             address,
             to_server_stream: Arc::new(Mutex::new(None)),
             sender,
+            incident_list: Arc::new(Mutex::new(vec![])),
         }
     }
 
@@ -55,15 +61,33 @@ impl Client {
         // update the field to_server_stream
         *self.to_server_stream.lock().unwrap() = Some(to_server_stream.try_clone()?);
 
-        Ok(to_server_stream)
+        match Packet::from_bytes(&mut to_server_stream) {
+            Ok(Packet::Connack(connack)) => {
+                println!(
+                    "Received Connack packet with return code: {:?} and sessionPresent: {:?}\n",
+                    connack.connect_return_code(),
+                    connack.session_present()
+                );
+                let response_text = Arc::clone(&self.response_text);
+                let connection_status = Arc::clone(&self.connection_status);
+                "connected".clone_into(&mut connection_status.lock().unwrap());
+                *response_text.lock().unwrap() = format!("{}", connack);
+                Ok(to_server_stream)
+            }
+            _ => Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Connack was not received.",
+            )),
+        }
     }
 
     pub fn client_run(&mut self) -> std::io::Result<()> {
         let to_server_stream = self.connect_to_server()?;
+        let response_text = Arc::clone(&self.response_text);
+
+        self.make_initial_subscribes()?;
 
         let mut to_server_stream_clone = to_server_stream.try_clone()?;
-        let connection_status = Arc::clone(&self.connection_status);
-        let response_text = Arc::clone(&self.response_text);
         let sender = self.sender.clone();
         thread::spawn(move || {
             loop {
@@ -72,15 +96,15 @@ impl Client {
                     Ok(_) => {
                         let packet = Packet::from_bytes(&mut buffer.as_slice()).unwrap();
                         match packet {
-                            Packet::Connack(connack) => {
-                                println!(
-                                    "Received Connack packet with return code: {:?} and sessionPresent: {:?}",
-                                    connack.connect_return_code(),
-                                    connack.session_present()
-                                );
-                                "connected".clone_into(&mut connection_status.lock().unwrap());
-                                *response_text.lock().unwrap() = format!("{}", connack);
-                            }
+                            // Packet::Connack(connack) => {
+                            //     println!(
+                            //         "Received Connack packet with return code: {:?} and sessionPresent: {:?}",
+                            //         connack.connect_return_code(),
+                            //         connack.session_present()
+                            //     );
+                            //     "connected".clone_into(&mut connection_status.lock().unwrap());
+                            //     *response_text.lock().unwrap() = format!("{}", connack);
+                            // }
                             Packet::Publish(publish) => {
                                 println!("Received Publish packet!\n");
 
@@ -126,6 +150,39 @@ impl Client {
         Ok(())
     }
 
+    pub fn new_incident(
+        &self,
+        name: &str,
+        description: &str,
+        x_coordenate: &str,
+        y_coordenate: &str,
+    ) -> std::io::Result<()> {
+        println!("Building new incident {:?}", name);
+
+        let new_incident_topic = "new-incident";
+        let x_coordenate_float: f64 = x_coordenate.parse().unwrap();
+        let y_coordenate_float: f64 = y_coordenate.parse().unwrap();
+        let new_incident = Incident::new(
+            name.to_string(),
+            description.to_string(),
+            x_coordenate_float,
+            y_coordenate_float,
+            "Open".to_string(),
+        );
+        let message = new_incident.build_new_incident_message();
+
+        self.publish(new_incident_topic, &message)?;
+
+        // let attending_topic = format!("attending-incident/{}", new_incident.uuid);
+        // let close_topic = format!("close-incident/{}", new_incident.uuid);
+        // self.subscribe(&attending_topic)?;
+        // self.subscribe(&close_topic)?;
+
+        self.incident_list.lock().unwrap().push(new_incident);
+
+        Ok(())
+    }
+
     pub fn publish(&self, topic: &str, message: &str) -> std::io::Result<()> {
         let mut levels = vec![];
         let message = message.trim();
@@ -162,7 +219,61 @@ impl Client {
             .as_mut()
             .unwrap()
             .write(publish_packet.to_bytes().as_slice());
-        println!("Sent Publish packet to topic: {:?} with message: {:?}", topic, message);
+        println!(
+            "Sent Publish packet to topic: {:?} with message: {:?}",
+            topic, message
+        );
+
+        Ok(())
+    }
+
+    pub fn subscribe(&self, topic: &str) -> std::io::Result<()> {
+        let mut levels = vec![];
+        for level in topic.split('/') {
+            if let Ok(topic_level) = TopicLevel::from_bytes(level.as_bytes().to_vec()) {
+                levels.push(topic_level);
+            }
+        }
+
+        let topic_filter = TopicFilter::new(levels, false);
+        let packet_id = 1;
+        let qos = QoS::AtLeast;
+
+        let topics_filters = vec![(topic_filter, qos)];
+
+        let subscribe_packet = Subscribe::new(packet_id, topics_filters);
+
+        println!("Packet ID: {:?}", subscribe_packet.packet_identifier());
+        let _ = self
+            .to_server_stream
+            .lock()
+            .unwrap()
+            .as_mut()
+            .unwrap()
+            .write(subscribe_packet.to_bytes().as_slice());
+        println!("Sent Subscribe packet");
+
+        match Packet::from_bytes(self.to_server_stream.lock().unwrap().as_mut().unwrap()) {
+            Ok(Packet::Suback(_)) => Ok(()),
+            _ => Err(std::io::Error::new(
+                ErrorKind::Other,
+                "Suback was not received.",
+            )),
+        }
+    }
+
+    fn make_initial_subscribes(&self) -> std::io::Result<()> {
+        let new_incident_topic = "new-incident";
+        let camera_topic = "camera-data";
+        let camera_update = "camera-update";
+        let attending_topic = "attending-incident/+";
+        let close_topic = "close-incident/+";
+
+        self.subscribe(new_incident_topic)?;
+        self.subscribe(camera_topic)?;
+        self.subscribe(camera_update)?;
+        self.subscribe(attending_topic)?;
+        self.subscribe(close_topic)?;
 
         Ok(())
     }
