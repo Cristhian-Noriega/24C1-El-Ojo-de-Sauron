@@ -85,7 +85,6 @@ fn client_run(address: &str, actions_input: &mut dyn Read) -> std::io::Result<()
         }
     });
 
-
     for line in reader.lines().map_while(Result::ok) {
         let command = line.trim();
         if command == "subscribe" {
@@ -160,7 +159,10 @@ fn client_run(address: &str, actions_input: &mut dyn Read) -> std::io::Result<()
             //println!("Packet Publish: {:?}", publish_packet);
 
             let _ = to_server_stream.write(publish_packet.to_bytes().as_slice());
-            println!("Sent Publish packet to topic: {:?} with message: {:?}", topic, message);
+            println!(
+                "Sent Publish packet to topic: {:?} with message: {:?}",
+                topic, message
+            );
         }
         if command == "unsubscribe" {
             println!("Enter the topic to unsubscribe to:");

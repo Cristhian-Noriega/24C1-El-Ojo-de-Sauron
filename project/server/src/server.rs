@@ -150,8 +150,7 @@ impl Server {
                     }
                 }
             }
-            println!("Connection closed");
-            log_file.log("INFO", "Connection closed");
+            log_file.info("Closing connection");
         });
     }
 }

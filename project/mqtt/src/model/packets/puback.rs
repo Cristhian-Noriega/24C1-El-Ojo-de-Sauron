@@ -62,13 +62,16 @@ impl Puback {
     }
 }
 
-
 impl Display for Puback {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         let packet_identifier = match self.packet_identifier {
             Some(packet_identifier) => packet_identifier.to_string(),
             None => "None".to_string(),
         };
-        write!(f, "Puback packet with packet identifier: {}", packet_identifier)
+        write!(
+            f,
+            "Puback packet with packet identifier: {}",
+            packet_identifier
+        )
     }
 }

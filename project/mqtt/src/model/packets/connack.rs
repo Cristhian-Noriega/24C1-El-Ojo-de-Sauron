@@ -83,7 +83,8 @@ impl Display for Connack {
         write!(
             f,
             "Connack packet with return code: {:?} and sessionPresent: {}",
-            self.connect_return_code(), self.session_present()
+            self.connect_return_code(),
+            self.session_present()
         )
     }
 }
@@ -170,5 +171,3 @@ mod test {
         assert!(connack.is_err());
     }
 }
-
-

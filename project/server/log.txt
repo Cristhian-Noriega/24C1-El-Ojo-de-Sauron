@@ -1,24 +1,28 @@
-[2024-05-30 17:11:48] INFO: Server running on address: 127.0.0.1:8080
+[2024-06-03 11:51:43] INFO: Server running on address: 127.0.0.1:8080
 
-[2024-05-30 17:11:57] INFO: New connection received
-[2024-05-30 17:11:57] INFO: Received Connect Packet from client with ID: camera system
-[2024-05-30 17:11:57] INFO: New client connected! ID: "camera system". Connack Package sent
-[2024-05-30 17:12:12] INFO: New connection received
-[2024-05-30 17:12:12] INFO: Received Connect Packet from client with ID: monitor
-[2024-05-30 17:12:12] INFO: New client connected! ID: "monitor". Connack Package sent
-[2024-05-30 17:12:18] INFO: Received Subscribe packet from client: camera system
-[2024-05-30 17:12:18] INFO: Suback sent to client "camera system"
-[2024-05-30 17:12:29] INFO: Received Publish packet from client: monitor
-[2024-05-30 17:12:29] INFO: Puback sent to client "monitor"
-[2024-05-30 17:12:34] INFO: Received Unsubscribe packet from client: camera system
-[2024-05-30 17:12:34] INFO: Unsuback sent to client "camera system"
-[2024-05-30 17:12:55] INFO: Received Publish packet from client: monitor
-[2024-05-30 17:12:55] ERROR: No clients subscribed to topic: home
-[2024-05-30 17:13:05] INFO: Received Subscribe packet from client: camera system
-[2024-05-30 17:13:05] INFO: Suback sent to client "camera system"
-[2024-05-30 17:13:23] INFO: Received Publish packet from client: monitor
-[2024-05-30 17:13:23] INFO: Puback sent to client "monitor"
-[2024-05-30 17:13:31] INFO: Received Disconnect packet from client: camera system
-[2024-05-30 17:13:31] INFO: Connection closed
-[2024-05-30 17:13:49] ERROR: Connection Error: Error { _message: "IO error: failed to fill whole buffer" }
-[2024-05-30 17:13:49] INFO: Connection closed
+[2024-06-03 11:51:49] INFO: New connection received
+[2024-06-03 11:51:49] INFO: Received Connect Packet from client with ID: camera system
+[2024-06-03 11:51:49] INFO: New client connected! ID: "camera system". Connack Package sent
+[2024-06-03 11:51:54] INFO: New connection received
+[2024-06-03 11:51:54] INFO: Received Connect Packet from client with ID: monitor
+[2024-06-03 11:51:54] INFO: New client connected! ID: "monitor". Connack Package sent
+[2024-06-03 11:52:12] INFO: Received Subscribe packet from client: camera system
+[2024-06-03 11:52:12] INFO: Client camera system subscribed to topics pase_colon, 
+[2024-06-03 11:52:12] INFO: Suback sent to client "camera system"
+[2024-06-03 11:52:47] INFO: Received Publish packet from client: monitor
+[2024-06-03 11:52:47] ERROR: No clients subscribed to topic: paseo_colon
+[2024-06-03 11:52:58] INFO: Received Unsubscribe packet from client: camera system
+[2024-06-03 11:52:58] INFO: Client camera system unsubscribed to topics paseo_colon, 
+[2024-06-03 11:52:58] INFO: Unsuback packet sent to client "camera system"
+[2024-06-03 11:53:06] INFO: Received Publish packet from client: monitor
+[2024-06-03 11:53:06] ERROR: No clients subscribed to topic: paseo_colon
+[2024-06-03 11:53:15] INFO: Received Subscribe packet from client: camera system
+[2024-06-03 11:53:15] INFO: Client camera system subscribed to topics las_heras, 
+[2024-06-03 11:53:15] INFO: Suback sent to client "camera system"
+[2024-06-03 11:53:24] INFO: Received Publish packet from client: monitor
+[2024-06-03 11:53:24] INFO: Message: "incidente3" sent to topic: las_heras by client: "monitor"
+[2024-06-03 11:53:24] INFO: Puback sent to client "monitor"
+[2024-06-03 11:53:32] INFO: Received Disconnect packet from client: camera system
+[2024-06-03 11:53:32] INFO: Connection closed
+[2024-06-03 11:53:39] ERROR: Connection Error: Error { _message: "IO error: failed to fill whole buffer" }
+[2024-06-03 11:53:39] INFO: Connection closed

@@ -1,6 +1,6 @@
-use std::sync::{mpsc, Arc, Mutex};
-use eframe::egui;
 use crate::client::Client;
+use eframe::egui;
+use std::sync::{mpsc, Arc, Mutex};
 
 pub struct UIApplication {
     client: Arc<Mutex<Client>>,
@@ -42,7 +42,7 @@ impl eframe::App for UIApplication {
                 }
                 ui.add_space(500.0);
 
-                if *client.connection_status.lock().unwrap() == "connected"{
+                if *client.connection_status.lock().unwrap() == "connected" {
                     ui.label(egui::RichText::new("Connected").color(egui::Color32::GREEN));
                 } else {
                     ui.label(egui::RichText::new("Disconnected").color(egui::Color32::RED));

@@ -162,7 +162,10 @@ impl Client {
             .as_mut()
             .unwrap()
             .write(publish_packet.to_bytes().as_slice());
-        println!("Sent Publish packet to topic: {:?} with message: {:?}", topic, message);
+        println!(
+            "Sent Publish packet to topic: {:?} with message: {:?}",
+            topic, message
+        );
 
         Ok(())
     }
