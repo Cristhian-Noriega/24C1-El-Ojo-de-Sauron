@@ -1,11 +1,10 @@
 use ui_application::UIApplication;
 
-mod ui_application;
 mod client;
 mod incident;
+mod ui_application;
 
-
-fn main() -> Result<(), eframe::Error>{    
+fn main() -> Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default(),
         ..Default::default()

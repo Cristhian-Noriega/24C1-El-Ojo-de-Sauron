@@ -7,11 +7,17 @@ pub struct Incident {
     pub description: String,
     pub x_coordinate: f64,
     pub y_coordinate: f64,
-    pub state: String,
+    pub state: String, // Cambiar a Enum
 }
 
 impl Incident {
-    pub fn new(name: String, description: String, x_coordinate: f64, y_coordinate: f64, state: String) -> Self {
+    pub fn new(
+        name: String,
+        description: String,
+        x_coordinate: f64,
+        y_coordinate: f64,
+        state: String,
+    ) -> Self {
         let uuid = Uuid::new_v4();
 
         Self {
@@ -25,6 +31,14 @@ impl Incident {
     }
 
     pub fn build_new_incident_message(&self) -> String {
-        format!("{};{};{};{},{};{}", self.uuid, self.name, self.description, self.x_coordinate, self.y_coordinate, self.state)
+        format!(
+            "{};{};{};{};{};{}",
+            self.uuid,
+            self.name,
+            self.description,
+            self.x_coordinate,
+            self.y_coordinate,
+            self.state
+        )
     }
 }

@@ -2,17 +2,18 @@
 
 use mqtt::model::{
     components::encoded_string::EncodedString, components::qos::QoS,
-    components::topic_level::TopicLevel, components::topic_name::TopicName, packet::Packet,
-    components::topic_filter::TopicFilter, packets::connect::Connect, packets::publish::Publish,
-    packets::subscribe::Subscribe,
+    components::topic_filter::TopicFilter, components::topic_level::TopicLevel,
+    components::topic_name::TopicName, packet::Packet, packets::connect::Connect,
+    packets::publish::Publish, packets::subscribe::Subscribe,
 };
-use crate::incident::Incident;
 use std::io::Read;
 use std::io::Write;
 use std::net::TcpStream;
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 use std::{env::args, thread};
+
+use crate::incident::Incident;
 
 static CLIENT_ARGS: usize = 3;
 
@@ -128,13 +129,25 @@ impl Client {
         Ok(())
     }
 
-    pub fn new_incident(&self, name: &str, description: &str, x_coordenate: &str, y_coordenate: &str) -> std::io::Result<()> {
+    pub fn new_incident(
+        &self,
+        name: &str,
+        description: &str,
+        x_coordenate: &str,
+        y_coordenate: &str,
+    ) -> std::io::Result<()> {
         println!("Building new incident {:?}", name);
 
         let new_incident_topic = "new-incident";
         let x_coordenate_float: f64 = x_coordenate.parse().unwrap();
         let y_coordenate_float: f64 = y_coordenate.parse().unwrap();
-        let new_incident = Incident::new(name.to_string(), description.to_string(), x_coordenate_float, y_coordenate_float, "Open".to_string());
+        let new_incident = Incident::new(
+            name.to_string(),
+            description.to_string(),
+            x_coordenate_float,
+            y_coordenate_float,
+            "Open".to_string(),
+        );
         let message = new_incident.build_new_incident_message();
 
         let _ = self.publish(new_incident_topic, &message)?;
@@ -183,7 +196,10 @@ impl Client {
             .as_mut()
             .unwrap()
             .write(publish_packet.to_bytes().as_slice());
-        println!("Sent Publish packet to topic: {:?} with message: {:?}", topic, message);
+        println!(
+            "Sent Publish packet to topic: {:?} with message: {:?}",
+            topic, message
+        );
 
         Ok(())
     }
