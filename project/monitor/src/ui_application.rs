@@ -1,5 +1,7 @@
+use walkers::{Tiles, Map, MapMemory, Position, sources::OpenStreetMap};
 use std::sync::{mpsc, Arc, Mutex};
 use eframe::egui;
+use egui::Context;
 use egui_extras::{TableBuilder, Column};
 use crate::client::Client;
 
@@ -14,10 +16,12 @@ pub struct UIApplication {
     pub new_incident_y_coordenate: String,
     pub ui_receiver: mpsc::Receiver<String>,
     current_layout: Layout,
+    tiles: Tiles,
+    map_memory: MapMemory,
 }
 
-impl Default for UIApplication {
-    fn default() -> Self {
+impl UIApplication {
+    pub fn new(egui_ctx: Context) -> Self {
         let (sender, receiver) = mpsc::channel();
         Self {
             client: Arc::new(Mutex::new(Client::new(sender))),
@@ -26,7 +30,9 @@ impl Default for UIApplication {
             new_incident_x_coordenate: "".to_owned(),
             new_incident_y_coordenate: "".to_owned(),
             ui_receiver: receiver,
-            current_layout: Layout::NewIncident,
+            current_layout: Layout::IncidentMap,
+            tiles: Tiles::new(OpenStreetMap, egui_ctx),
+            map_memory: MapMemory::default(),
         }
     }
 }
@@ -79,7 +85,11 @@ impl eframe::App for UIApplication {
 
 
             if self.current_layout == Layout::IncidentMap {
-                ui.label("Map of incidents");
+                ui.add(Map::new(
+                    Some(&mut self.tiles),
+                    &mut self.map_memory,
+                    Position::from_lon_lat(-58.3717, -34.6081)
+                ));
             }
 
             if self.current_layout == Layout::NewIncident{
