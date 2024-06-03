@@ -1,7 +1,7 @@
 const SEPARATOR: char = ';';
 const ELEMENTS_COUNT: usize = 6;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Incident {
     pub uuid: String,
     pub name: String,
@@ -34,5 +34,9 @@ impl Incident {
             y_coordinate,
             state,
         })
+    }
+
+    pub fn uuid(&self) -> &str {
+        &self.uuid
     }
 }

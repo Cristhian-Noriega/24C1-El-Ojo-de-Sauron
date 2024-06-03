@@ -1,14 +1,4 @@
 use std::env::args;
-use std::io::stdin;
-
-pub use mqtt::model::{
-    components::{qos::QoS, topic_filter::TopicFilter, topic_level::TopicLevel},
-    packet::Packet,
-    packets::{
-        connect::Connect, disconnect::Disconnect, pingreq::Pingreq, puback::Puback,
-        publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe,
-    },
-};
 
 mod camera;
 mod camera_status;
@@ -30,7 +20,7 @@ fn main() {
 
     let address = argv[1].clone() + ":" + &argv[2];
 
-    if let Err(e) = client::client_run(&address, &mut stdin()) {
+    if let Err(e) = client::client_run(&address) {
         println!("Error: {:?}", e);
     }
 }

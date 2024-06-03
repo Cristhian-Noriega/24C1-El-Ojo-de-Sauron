@@ -150,12 +150,12 @@ impl Client {
         );
         let message = new_incident.build_new_incident_message();
 
-        let _ = self.publish(new_incident_topic, &message)?;
+        self.publish(new_incident_topic, &message)?;
 
         let attending_topic = format!("attending-incident/{}", new_incident.uuid);
         let close_topic = format!("close-incident/{}", new_incident.uuid);
-        let _ = self.subscribe(&attending_topic)?;
-        let _ = self.subscribe(&close_topic)?;
+        self.subscribe(&attending_topic)?;
+        self.subscribe(&close_topic)?;
 
         Ok(())
     }
