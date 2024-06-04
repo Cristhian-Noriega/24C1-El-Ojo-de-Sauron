@@ -181,13 +181,12 @@ impl TaskHandler {
         let topic_name = publish_packet.topic();
 
         let binding = self.topics.read().unwrap();
-        let clients = match binding.get(topic_name) {
-            Some(clients) => clients,
-            None => {
-                let message = format!("No clients subscribed to topic: {}", topic_name);
-                self.log_file.log("ERROR", message.as_str());
-                return;
-            }
+        let mut clients = vec![];
+        if let Some(topic_clients) = binding.get(topic_name) {
+            clients.extend(topic_clients)
+        } else {
+            let message = format!("No clients subscribed to topic: {}", topic_name);
+                self.log_file.error(message.as_str());
         };
 
         let message = Message::new(client_id.clone(), publish_packet.clone());
