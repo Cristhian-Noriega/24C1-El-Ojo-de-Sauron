@@ -46,7 +46,7 @@ impl Logger {
         self.log("ERROR", message);
     }
 
-    pub fn log_successful_subscription(&self, client_id: &Vec<u8>, subscribe_packet: &Subscribe) {
+    pub fn log_successful_subscription(&self, client_id: &[u8], subscribe_packet: &Subscribe) {
         let message = format!(
             "Client {} subscribed to topics {}",
             std::str::from_utf8(client_id).unwrap(),
@@ -62,7 +62,7 @@ impl Logger {
 
     pub fn log_successful_unsubscription(
         &self,
-        client_id: &Vec<u8>,
+        client_id: &[u8],
         unsubscribe_packet: &Unsubscribe,
     ) {
         let message = format!(
@@ -78,7 +78,7 @@ impl Logger {
         self.info(message.as_str());
     }
 
-    pub fn log_successful_publish(&self, client_id: &Vec<u8>, publish_packet: &Publish) {
+    pub fn log_successful_publish(&self, client_id: &[u8], publish_packet: &Publish) {
         let message = format!(
             "Client {} published message {} to topic {}",
             std::str::from_utf8(client_id).unwrap(),
@@ -88,7 +88,7 @@ impl Logger {
         self.info(message.as_str());
     }
 
-    pub fn log_client_does_not_exist(&self, client_id: &Vec<u8>) {
+    pub fn log_client_does_not_exist(&self, client_id: &[u8]) {
         let message = format!(
             "Client {} does not exist",
             std::str::from_utf8(client_id).unwrap()
@@ -96,7 +96,7 @@ impl Logger {
         self.error(message.as_str());
     }
 
-    pub fn log_info_sent_packet(&self, packet_type: &str, client_id: &Vec<u8>) {
+    pub fn log_info_sent_packet(&self, packet_type: &str, client_id: &[u8]) {
         let message = format!(
             "Sent {} packet to client {}",
             packet_type,
@@ -105,7 +105,7 @@ impl Logger {
         self.info(message.as_str());
     }
 
-    pub fn log_error_sending_packet(&self, packet_type: &str, client_id: &Vec<u8>) {
+    pub fn log_error_sending_packet(&self, packet_type: &str, client_id: &[u8]) {
         let message = format!(
             "Error sending {} packet to client {}",
             packet_type,
@@ -114,7 +114,7 @@ impl Logger {
         self.error(message.as_str());
     }
 
-    pub fn log_error_getting_stream(&self, client_id: &Vec<u8>, packet_type: &str) {
+    pub fn log_error_getting_stream(&self, client_id: &[u8], packet_type: &str) {
         let message = format!(
             "Error getting stream for client {} when sending {} packet",
             std::str::from_utf8(client_id).unwrap(),

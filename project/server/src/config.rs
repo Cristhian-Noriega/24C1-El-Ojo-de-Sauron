@@ -1,5 +1,4 @@
-#![allow(dead_code)]
-#![allow(unused_variables)]
+// #![allow(dead_code)]
 
 use std::{
     collections::HashMap,
@@ -12,7 +11,6 @@ pub struct Config {
     port: u16,
     address: String,
     log_file: String,
-    segs_to_disconnect: u32,
 }
 
 impl Config {
@@ -28,13 +26,11 @@ impl Config {
         let port = config_map.get("port")?.parse().ok()?;
         let address = config_map.get("address")?.clone();
         let log_file = config_map.get("log_file")?.clone();
-        let segs_to_disconnect = config_map.get("segs_to_disconnect")?.parse().ok()?;
 
         Some(Config {
             port,
             address,
             log_file,
-            segs_to_disconnect,
         })
     }
 
@@ -62,7 +58,4 @@ impl Config {
         &self.log_file
     }
 
-    pub fn get_segs_to_disconnect(&self) -> u32 {
-        self.segs_to_disconnect
-    }
 }

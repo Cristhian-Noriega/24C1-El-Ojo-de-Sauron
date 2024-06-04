@@ -1,6 +1,4 @@
 #![allow(dead_code)]
-#![allow(unused_variables)]
-#![allow(clippy::unused_io_amount)]
 
 use std::{
     collections::{HashMap, HashSet},
@@ -121,7 +119,7 @@ impl TaskHandler {
         let mut clients = self.clients.write().unwrap();
 
         if let Some(client) = clients.get_mut(&client_id) {
-            for (topic_filter, qos) in subscribe_packet.topics() {
+            for (topic_filter, _) in subscribe_packet.topics() {
                 let mut levels: Vec<Vec<u8>> = vec![];
                 for level in topic_filter.levels() {
                     levels.push(level.to_bytes());
@@ -186,7 +184,7 @@ impl TaskHandler {
             clients.extend(topic_clients)
         } else {
             let message = format!("No clients subscribed to topic: {}", topic_name);
-                self.log_file.error(message.as_str());
+            self.log_file.error(message.as_str());
         };
 
         let message = Message::new(client_id.clone(), publish_packet.clone());
@@ -208,7 +206,6 @@ impl TaskHandler {
             }
         }
     }
-
 
     pub fn handle_new_client_connection(&self, client: Client) {
         let connack_packet = Connack::new(true, ConnectReturnCode::ConnectionAccepted);
@@ -311,7 +308,7 @@ impl TaskHandler {
             Ok(stream) => stream,
             Err(_) => {
                 self.log_file
-                    .log_error_getting_stream(&client.id, "unsuback");
+                    .log_error_getting_stream(&client.id, "Unsuback");
                 return;
             }
         };
@@ -337,7 +334,7 @@ impl TaskHandler {
             Ok(stream) => stream,
             Err(_) => {
                 self.log_file
-                    .log_error_getting_stream(&client_id, "ping response");
+                    .log_error_getting_stream(&client_id, "Ping response");
                 return;
             }
         };
@@ -363,7 +360,8 @@ impl TaskHandler {
         let message_id = match puback.packet_identifier() {
             Some(id) => id,
             None => {
-                self.log_file.error("Puback packet without message id");
+                self.log_file
+                    .error("Puback packet without packet identifier");
                 return;
             }
         };

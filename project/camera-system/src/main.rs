@@ -26,4 +26,3 @@ fn main() {
 }
 
 //the client receives a connack packet from the server
-
