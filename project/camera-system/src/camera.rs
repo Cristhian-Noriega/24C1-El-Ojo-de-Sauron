@@ -1,4 +1,4 @@
-use crate::camera_status::CameraStatus;
+use crate::{camera_status::CameraStatus, incident::Incident};
 
 const ACTIVE_RANGE: f64 = 10.0;
 
@@ -51,7 +51,7 @@ impl Camera {
         self.status = CameraStatus::Sleep;
     }
 
-    pub fn is_near(&self, incident: &crate::incident::Incident) -> bool {
+    pub fn is_near(&self, incident: &Incident) -> bool {
         let distance = euclidean_distance(
             self.x_coordinate,
             self.y_coordinate,
