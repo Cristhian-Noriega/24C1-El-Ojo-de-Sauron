@@ -57,5 +57,4 @@ impl Config {
     pub fn get_log_file(&self) -> &str {
         &self.log_file
     }
-
 }

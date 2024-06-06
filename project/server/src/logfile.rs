@@ -7,6 +7,10 @@ use std::{
     thread,
 };
 
+
+const LOG_LEVEL_INFO: &str = "INFO";
+const LOG_LEVEL_ERROR: &str = "ERROR";
+
 #[derive(Debug, Clone)]
 pub struct Logger {
     sender: Sender<String>,
@@ -17,11 +21,17 @@ impl Logger {
         let (sender, receiver) = mpsc::channel();
         let file_path = log_file_path.to_string();
         thread::spawn(move || {
-            let mut file = OpenOptions::new()
+            let mut file = match OpenOptions::new()
                 .create(true)
                 .append(true)
                 .open(&file_path)
-                .unwrap();
+            {
+                Ok(file) => file,
+                Err(e) => {
+                    eprintln!("Failed to open log file: {}", e);
+                    return;
+                }
+            };
 
             for log_entry in receiver {
                 if let Err(e) = writeln!(file, "{}", log_entry) {
@@ -29,6 +39,7 @@ impl Logger {
                 }
             }
         });
+
         Logger { sender }
     }
 
@@ -39,11 +50,11 @@ impl Logger {
     }
 
     pub fn info(&self, message: &str) {
-        self.log("INFO", message);
+        self.log(LOG_LEVEL_INFO, message);
     }
 
     pub fn error(&self, message: &str) {
-        self.log("ERROR", message);
+        self.log(LOG_LEVEL_ERROR, message);
     }
 
     pub fn log_successful_subscription(&self, client_id: &[u8], subscribe_packet: &Subscribe) {
@@ -119,6 +130,24 @@ impl Logger {
             "Error getting stream for client {} when sending {} packet",
             std::str::from_utf8(client_id).unwrap(),
             packet_type
+        );
+        self.error(message.as_str());
+    }
+
+    pub fn log_sent_message(&self, message: &str, client_id: &str) {
+        let message = format!(
+            "Sent message: {} to client {}",
+            message,
+            client_id,
+        );
+        self.info(message.as_str());
+    }
+    
+    pub fn log_sending_message_error(&self, message: &str, client_id: &str) {
+        let message = format!(
+            "Error sending message: {} to client {}",
+            message,
+            client_id
         );
         self.error(message.as_str());
     }

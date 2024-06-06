@@ -187,16 +187,16 @@ impl TaskHandler {
             self.log_file.error(message.as_str());
         };
 
+        self.log_file
+            .log_successful_publish(&client_id, publish_packet);
+
         let message = Message::new(client_id.clone(), publish_packet.clone());
 
         for client_id in clients {
             if let Some(client) = self.clients.read().unwrap().get(client_id) {
-                client.send_message(message.clone());
+                client.send_message(message.clone(), &self.log_file);
             }
         }
-
-        self.log_file
-            .log_successful_publish(&client_id, publish_packet);
 
         let mut clients = self.clients.write().unwrap();
         // si el qos no es at most (qos 0), se debe mandar un puback al cliente
@@ -239,7 +239,7 @@ impl TaskHandler {
 
         let active_connections = self.active_connections.write().unwrap();
 
-        match stream.write(connack_packet_bytes) {
+        match stream.write_all(connack_packet_bytes) {
             Ok(_) => {
                 drop(active_connections);
                 let message = format!(
@@ -273,8 +273,8 @@ impl TaskHandler {
             }
         };
 
-        match stream.write(suback_packet_bytes) {
-            Ok(_) => self.log_file.log_info_sent_packet("Susback", &client.id),
+        match stream.write_all(suback_packet_bytes) {
+            Ok(_) => self.log_file.log_info_sent_packet("Suback", &client.id),
             Err(_) => self.log_file.log_error_sending_packet("Suback", &client.id),
         };
     }
@@ -293,7 +293,7 @@ impl TaskHandler {
             }
         };
 
-        match stream.write(puback_packet_bytes) {
+        match stream.write_all(puback_packet_bytes) {
             Ok(_) => self.log_file.log_info_sent_packet("Puback", &client.id),
             Err(_) => self.log_file.log_error_sending_packet("Puback", &client.id),
         };
@@ -313,7 +313,7 @@ impl TaskHandler {
             }
         };
 
-        match stream.write(unsuback_packet_bytes) {
+        match stream.write_all(unsuback_packet_bytes) {
             Ok(_) => self.log_file.log_info_sent_packet("Unsuback", &client.id),
             Err(_) => self
                 .log_file
@@ -339,7 +339,7 @@ impl TaskHandler {
             }
         };
 
-        match stream.write(pingresp_packet_bytes) {
+        match stream.write_all(pingresp_packet_bytes) {
             Ok(_) => {
                 self.log_file
                     .log_info_sent_packet("Ping response", &client_id);
