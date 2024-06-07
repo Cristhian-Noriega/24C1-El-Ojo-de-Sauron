@@ -61,8 +61,8 @@ impl Display for TopicLevel {
                 let string = String::from_utf8(bytes.clone()).unwrap();
                 write!(f, "{}", string)
             }
-            TopicLevel::MultiLevelWildcard => write!(f, "#"),
-            TopicLevel::SingleLevelWildcard => write!(f, "+"),
+            TopicLevel::MultiLevelWildcard => write!(f, "{}", MULTI_LEVEL_WILDCARD as char),
+            TopicLevel::SingleLevelWildcard => write!(f, "{}", SINGLE_LEVEL_WILDCARD as char),
         }
     }
 }

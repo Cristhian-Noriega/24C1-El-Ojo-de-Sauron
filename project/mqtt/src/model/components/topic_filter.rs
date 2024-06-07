@@ -110,7 +110,7 @@ impl TopicFilter {
 impl Display for TopicFilter {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         let levels: Vec<String> = self.levels.iter().map(|level| level.to_string()).collect();
-        write!(f, "{}", levels.join("/"))
+        write!(f, "{}", levels.join(&(FORWARD_SLASH as char).to_string()))
     }
 }
 

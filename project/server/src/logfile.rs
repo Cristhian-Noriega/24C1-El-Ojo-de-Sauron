@@ -7,7 +7,6 @@ use std::{
     thread,
 };
 
-
 const LOG_LEVEL_INFO: &str = "INFO";
 const LOG_LEVEL_ERROR: &str = "ERROR";
 
@@ -135,20 +134,12 @@ impl Logger {
     }
 
     pub fn log_sent_message(&self, message: &str, client_id: &str) {
-        let message = format!(
-            "Sent message: {} to client {}",
-            message,
-            client_id,
-        );
+        let message = format!("Sent message: {} to client {}", message, client_id,);
         self.info(message.as_str());
     }
-    
+
     pub fn log_sending_message_error(&self, message: &str, client_id: &str) {
-        let message = format!(
-            "Error sending message: {} to client {}",
-            message,
-            client_id
-        );
+        let message = format!("Error sending message: {} to client {}", message, client_id);
         self.error(message.as_str());
     }
 }

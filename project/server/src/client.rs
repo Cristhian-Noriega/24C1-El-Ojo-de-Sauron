@@ -61,15 +61,13 @@ impl Client {
     pub fn send_message(&self, message: Message, logfile: &Arc<crate::logfile::Logger>) {
         let message_str = std::str::from_utf8(message.packet().message()).unwrap();
         let client_id_str = std::str::from_utf8(&self.id).unwrap();
-    
+
         let mut stream = self.stream.lock().unwrap();
         match stream.write_all(message.packet().to_bytes().as_slice()) {
             Ok(_) => {
                 logfile.log_sent_message(message_str, client_id_str);
             }
-            Err(e) => {
-                logfile.log_sending_message_error(message_str, client_id_str)
-            }
+            Err(e) => logfile.log_sending_message_error(message_str, client_id_str),
         }
     }
 }
