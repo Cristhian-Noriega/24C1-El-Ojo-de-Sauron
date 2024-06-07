@@ -10,14 +10,22 @@ enum Layout {
     IncidentMap,
     IncidentList,
     NewIncident,
+    DroneOperations,
 }
 
 pub struct UIApplication {
     client: Arc<Mutex<Client>>,
+    
     pub new_incident_name: String,
     pub new_incident_description: String,
     pub new_incident_x_coordenate: String,
     pub new_incident_y_coordenate: String,
+    
+    pub new_drone_id: String,
+    pub new_drone_password: String,
+    pub new_drone_anchor_x_coordenate: String,
+    pub new_drone_anchor_y_coordenate: String,
+    
     pub ui_receiver: mpsc::Receiver<String>,
     current_layout: Layout,
     tiles: Tiles,
@@ -33,6 +41,10 @@ impl UIApplication {
             new_incident_description: "".to_owned(),
             new_incident_x_coordenate: "".to_owned(),
             new_incident_y_coordenate: "".to_owned(),
+            new_drone_id: "".to_owned(),
+            new_drone_password: "".to_owned(),
+            new_drone_anchor_x_coordenate: "".to_owned(),
+            new_drone_anchor_y_coordenate: "".to_owned(),
             ui_receiver: receiver,
             current_layout: Layout::IncidentMap,
             tiles: Tiles::new(OpenStreetMap, egui_ctx),
@@ -61,6 +73,7 @@ impl eframe::App for UIApplication {
                     }
                 }
                 ui.add_space(500.0);
+                
 
                 if *client.connection_status.lock().unwrap() == "connected" {
                     ui.label(egui::RichText::new("Connected").color(egui::Color32::GREEN));
@@ -72,7 +85,10 @@ impl eframe::App for UIApplication {
             ui.add_space(20.0);
 
             ui.horizontal(|ui| {
-                ui.selectable_value(&mut self.current_layout, Layout::IncidentMap, "Map");
+                ui.selectable_value(
+                    &mut self.current_layout, 
+                    Layout::IncidentMap,
+                    "Map");
                 ui.selectable_value(
                     &mut self.current_layout,
                     Layout::IncidentList,
@@ -82,6 +98,11 @@ impl eframe::App for UIApplication {
                     &mut self.current_layout,
                     Layout::NewIncident,
                     "Create incident",
+                );
+                ui.selectable_value(
+                    &mut self.current_layout,
+                    Layout::DroneOperations,
+                    "Drones",
                 );
             });
 
@@ -176,6 +197,100 @@ impl eframe::App for UIApplication {
                             });
                         }
                     });
+            }
+
+            if self.current_layout == Layout::DroneOperations {
+                egui::Frame::group(ui.style()).show(ui, |ui| {
+                    ui.label("New Drone Registration:");
+            
+                    ui.add_space(10.0);
+                    ui.horizontal(|ui| {
+                        ui.label("Drone ID:");
+                        ui.add_space(22.0);
+                        ui.add(egui::TextEdit::singleline(&mut self.new_drone_id).desired_width(340.0));
+                    });
+            
+                    ui.add_space(10.0);
+                    ui.horizontal(|ui| {
+                        ui.label("Password:");
+                        ui.add_space(20.0);
+                        ui.add(egui::TextEdit::singleline(&mut self.new_drone_password).desired_width(340.0));
+                    });
+            
+                    ui.add_space(10.0);
+                    ui.horizontal(|ui| {
+                        ui.label("Anchor Point Coordinates:");
+
+                        ui.add_space(10.0);
+                        ui.label("x:");
+                        ui.add(egui::TextEdit::singleline(&mut self.new_drone_anchor_x_coordenate).desired_width(100.0));
+
+                        ui.add_space(10.0);
+                        ui.label("y:");
+                        ui.add(egui::TextEdit::singleline(&mut self.new_drone_anchor_y_coordenate).desired_width(100.0));
+                        ui.add_space(263.0);
+                        if ui.button("Register").clicked() {
+                            match client.new_drone(
+                                &self.new_drone_id,
+                                &self.new_drone_password,
+                                &self.new_drone_anchor_x_coordenate,
+                                &self.new_drone_anchor_y_coordenate,
+                            ) {
+                                Ok(_) => println!("New drone created"),
+                                Err(e) => {
+                                    println!("Error creating drone: {:?}", e);
+                                }
+                            }
+                        }
+                    });
+                });
+
+                ui.add_space(20.0);
+
+                egui::Frame::group(ui.style()).show(ui, |ui| {
+                    ui.label("Active Drones:");
+
+                    ui.add_space(10.0);
+                    let drones = client.drone_list.lock().unwrap();
+
+                    TableBuilder::new(ui)
+                        .striped(true)
+                        .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
+                        .columns(Column::remainder(), 4)
+                        .header(10.0, |mut header| {
+                            header.col(|ui| {
+                                ui.heading("ID");
+                            });
+                            header.col(|ui| {
+                                ui.heading("Position");
+                            });
+                            header.col(|ui| {
+                                ui.heading("State");
+                            });
+                            header.col(|ui| {
+                                ui.heading("Battery");
+                            });
+                        })
+                        .body(|mut body| {
+                            for drone in drones.iter() {
+                                body.row(50.0, |mut row| {
+                                    row.col(|ui| {
+                                        ui.label(drone.id.clone());
+                                    });
+                                    row.col(|ui| {
+                                        let position = format!("({}, {})", drone.x_coordinate, drone.y_coordinate);
+                                        ui.label(position);
+                                    });
+                                    row.col(|ui| {
+                                        ui.label(drone.state.clone());
+                                    });
+                                    row.col(|ui| {
+                                        ui.label(format!("{}%", drone.battery));
+                                    });
+                                });
+                            }
+                        });
+                });
             }
         });
     }

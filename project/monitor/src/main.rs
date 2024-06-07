@@ -2,6 +2,7 @@ use ui_application::UIApplication;
 
 mod client;
 mod incident;
+mod drone;
 mod ui_application;
 
 fn main() -> Result<(), eframe::Error> {

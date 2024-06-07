@@ -14,7 +14,7 @@ use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 use std::{env::args, thread};
 
-use crate::incident::Incident;
+use crate::{drone::Drone, incident::Incident};
 
 static CLIENT_ARGS: usize = 3;
 
@@ -25,6 +25,7 @@ pub struct Client {
     pub to_server_stream: Arc<Mutex<Option<TcpStream>>>,
     pub sender: Sender<String>,
     pub incident_list: Arc<Mutex<Vec<Incident>>>,
+    pub drone_list: Arc<Mutex<Vec<Drone>>>,
 }
 
 impl Client {
@@ -44,6 +45,7 @@ impl Client {
             to_server_stream: Arc::new(Mutex::new(None)),
             sender,
             incident_list: Arc::new(Mutex::new(vec![])),
+            drone_list: Arc::new(Mutex::new(vec![])),
         }
     }
 
@@ -179,6 +181,22 @@ impl Client {
         // self.subscribe(&close_topic)?;
 
         self.incident_list.lock().unwrap().push(new_incident);
+
+        Ok(())
+    }
+
+    pub fn new_drone(&self,
+        id: &str, 
+        password: &str, 
+        x_coordenate: &str, 
+        y_coordenate: &str
+    ) -> std::io::Result<()> {
+        let new_drone_topic = "new-drone";
+        let x_coordenate_float: f64 = x_coordenate.parse().unwrap();
+        let y_coordenate_float: f64 = y_coordenate.parse().unwrap();
+        let message = format!("{},{},{},{}", id, password, x_coordenate_float, y_coordenate_float);
+
+        self.publish(new_drone_topic, &message)?;
 
         Ok(())
     }
