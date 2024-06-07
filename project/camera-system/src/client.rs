@@ -106,7 +106,7 @@ fn publish(
     let dup = false;
     let qos = QoS::AtLeast;
     let retain = false;
-    let package_identifier = None;
+    let package_identifier = Some(1);
     let message_bytes = message;
 
     let publish_packet = Publish::new(
