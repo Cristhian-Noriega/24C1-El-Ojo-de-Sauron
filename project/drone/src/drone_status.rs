@@ -2,7 +2,7 @@
 pub enum DroneStatus {
     Free,
     Traveling,
-    Busy,
+    AttendingIncident,
     Charging,
 }
 
@@ -11,7 +11,7 @@ impl std::fmt::Display for DroneStatus {
         match self {
             DroneStatus::Free => write!(f, "0"),
             DroneStatus::Traveling => write!(f, "1"),
-            DroneStatus::Busy => write!(f, "2"),
+            DroneStatus::AttendingIncident => write!(f, "2"),
             DroneStatus::Charging => write!(f, "3"),
         }
     }

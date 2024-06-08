@@ -36,7 +36,7 @@ pub fn client_run(address: &str) -> std::io::Result<()> {
     publish_camera_state(&mut camera_system, &mut server_stream)?;
 
     let new_incident = TopicFilter::new(vec![TopicLevel::Literal(NEW_INCIDENT.to_vec())], false);
-    subscribe(new_incident, &mut server_stream)?;
+    //subscribe(new_incident, &mut server_stream)?;
 
     let close_incident = TopicFilter::new(
         vec![
@@ -45,7 +45,8 @@ pub fn client_run(address: &str) -> std::io::Result<()> {
         ],
         false,
     );
-    subscribe(close_incident, &mut server_stream)?;
+    let topics = vec![new_incident,close_incident];
+    subscribe(topics, &mut server_stream)?;
 
     loop {
         let incoming_publish = match Packet::from_bytes(&mut server_stream) {
@@ -86,11 +87,16 @@ pub fn client_run(address: &str) -> std::io::Result<()> {
 //     }
 // }
 
-fn subscribe(filter: TopicFilter, server_stream: &mut TcpStream) -> std::io::Result<()> {
-    let packet_id = 1;
-    let qos = QoS::AtLeast;
+fn subscribe(filter: Vec<TopicFilter>, server_stream: &mut TcpStream) -> std::io::Result<()> {
+    let mut topics_filters = vec![];
 
-    let topics_filters = vec![(filter, qos)];
+    for topic_filter in filter {
+        topics_filters.push((topic_filter, QoS::AtLeast));
+    }
+    
+    let packet_id = 1;
+
+    // let topics_filters = vec![(filter, qos)];
 
     let subscribe_packet = Subscribe::new(packet_id, topics_filters);
     println!(
