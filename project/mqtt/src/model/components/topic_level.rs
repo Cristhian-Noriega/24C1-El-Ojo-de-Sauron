@@ -1,3 +1,5 @@
+use std::fmt::{self, Display, Formatter};
+
 use crate::Error;
 
 const MULTI_LEVEL_WILDCARD: u8 = 0x23;
@@ -48,6 +50,19 @@ impl TopicLevel {
             TopicLevel::Literal(bytes) => bytes.len(),
             TopicLevel::MultiLevelWildcard => 1,
             TopicLevel::SingleLevelWildcard => 1,
+        }
+    }
+}
+
+impl Display for TopicLevel {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        match self {
+            TopicLevel::Literal(bytes) => {
+                let string = String::from_utf8(bytes.clone()).unwrap();
+                write!(f, "{}", string)
+            }
+            TopicLevel::MultiLevelWildcard => write!(f, "{}", MULTI_LEVEL_WILDCARD as char),
+            TopicLevel::SingleLevelWildcard => write!(f, "{}", SINGLE_LEVEL_WILDCARD as char),
         }
     }
 }

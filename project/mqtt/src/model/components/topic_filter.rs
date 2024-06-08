@@ -1,3 +1,5 @@
+use std::fmt::{self, Display, Formatter};
+
 use super::{FORWARD_SLASH, SERVER_RESERVED};
 use crate::{EncodedString, Error, Read, TopicLevel, TopicName};
 
@@ -102,6 +104,13 @@ impl TopicFilter {
 
     pub fn server_reserved(&self) -> bool {
         self.server_reserved
+    }
+}
+
+impl Display for TopicFilter {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        let levels: Vec<String> = self.levels.iter().map(|level| level.to_string()).collect();
+        write!(f, "{}", levels.join(&(FORWARD_SLASH as char).to_string()))
     }
 }
 

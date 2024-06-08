@@ -1,0 +1,48 @@
+[2024-06-06 12:33:45] INFO: Server running on address: 127.0.0.1:8080
+
+[2024-06-06 12:34:05] INFO: New connection received
+[2024-06-06 12:34:05] INFO: Received Connect Packet from client with ID: monitor
+[2024-06-06 12:34:05] INFO: New client connected! ID: "monitor"
+[2024-06-06 12:34:05] INFO: Sent Connack packet to client monitor
+[2024-06-06 12:34:05] INFO: Received Subscribe packet from client: monitor
+[2024-06-06 12:34:05] INFO: Client monitor subscribed to topics new-incident, 
+[2024-06-06 12:34:05] INFO: Sent Suback packet to client monitor
+[2024-06-06 12:34:05] INFO: Received Subscribe packet from client: monitor
+[2024-06-06 12:34:05] INFO: Client monitor subscribed to topics camera-data, 
+[2024-06-06 12:34:05] INFO: Sent Suback packet to client monitor
+[2024-06-06 12:34:05] INFO: Received Subscribe packet from client: monitor
+[2024-06-06 12:34:05] INFO: Client monitor subscribed to topics camera-update, 
+[2024-06-06 12:34:05] INFO: Sent Suback packet to client monitor
+[2024-06-06 12:34:05] INFO: Received Subscribe packet from client: monitor
+[2024-06-06 12:34:05] INFO: Client monitor subscribed to topics attending-incident/+, 
+[2024-06-06 12:34:05] INFO: Sent Suback packet to client monitor
+[2024-06-06 12:34:05] INFO: Received Subscribe packet from client: monitor
+[2024-06-06 12:34:05] INFO: Client monitor subscribed to topics close-incident/+, 
+[2024-06-06 12:34:05] INFO: Sent Suback packet to client monitor
+[2024-06-06 12:34:17] INFO: New connection received
+[2024-06-06 12:34:17] INFO: Received Connect Packet from client with ID: camera system
+[2024-06-06 12:34:17] INFO: New client connected! ID: "camera system"
+[2024-06-06 12:34:17] INFO: Sent Connack packet to client camera system
+[2024-06-06 12:34:17] INFO: Received Publish packet from client: camera system
+[2024-06-06 12:34:17] INFO: Client camera system published message 0;0;0;0|1;1;1;0|2;2;2;0 to topic camera-data
+[2024-06-06 12:34:17] INFO: Sent message: 0;0;0;0|1;1;1;0|2;2;2;0 to client monitor
+[2024-06-06 12:34:17] INFO: Sent Puback packet to client camera system
+[2024-06-06 12:34:17] INFO: Received Subscribe packet from client: camera system
+[2024-06-06 12:34:17] INFO: Client camera system subscribed to topics new-incident, 
+[2024-06-06 12:34:17] INFO: Sent Suback packet to client camera system
+[2024-06-06 12:35:02] INFO: Received Publish packet from client: monitor
+[2024-06-06 12:35:02] INFO: Client monitor published message fe07f12f-0c3d-41af-9a2f-499833696094;incidente1;se cayo un arbol;0;0;Open to topic new-incident
+[2024-06-06 12:35:02] INFO: Sent message: fe07f12f-0c3d-41af-9a2f-499833696094;incidente1;se cayo un arbol;0;0;Open to client monitor
+[2024-06-06 12:35:02] INFO: Sent message: fe07f12f-0c3d-41af-9a2f-499833696094;incidente1;se cayo un arbol;0;0;Open to client camera system
+[2024-06-06 12:35:02] INFO: Sent Puback packet to client monitor
+[2024-06-06 12:35:02] INFO: Received Publish packet from client: camera system
+[2024-06-06 12:35:02] INFO: Client camera system published message 0;0;0;1|1;1;1;1|2;2;2;1 to topic camera-data
+[2024-06-06 12:35:02] INFO: Sent message: 0;0;0;1|1;1;1;1|2;2;2;1 to client monitor
+[2024-06-06 12:35:02] INFO: Sent Puback packet to client camera system
+[2024-06-06 12:35:02] INFO: Received Subscribe packet from client: camera system
+[2024-06-06 12:35:02] INFO: Client camera system subscribed to topics close-incident/fe07f12f-0c3d-41af-9a2f-499833696094, 
+[2024-06-06 12:35:02] INFO: Sent Suback packet to client camera system
+[2024-06-06 12:35:51] ERROR: Connection Error: Error { _message: "IO error: failed to fill whole buffer" }
+[2024-06-06 12:35:51] INFO: Closing connection
+[2024-06-06 12:35:54] ERROR: Connection Error: Error { _message: "IO error: failed to fill whole buffer" }
+[2024-06-06 12:35:54] INFO: Closing connection
