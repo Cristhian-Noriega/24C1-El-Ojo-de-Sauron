@@ -281,13 +281,11 @@ impl Client {
     }
 
     fn make_initial_subscribes(&self) -> std::io::Result<()> {
-        let new_incident_topic = "new-incident";
         let camera_topic = "camera-data";
         let camera_update = "camera-update";
         let attending_topic = "attending-incident/+";
         let close_topic = "close-incident/+";
 
-        self.subscribe(new_incident_topic)?;
         self.subscribe(camera_topic)?;
         self.subscribe(camera_update)?;
         self.subscribe(attending_topic)?;
