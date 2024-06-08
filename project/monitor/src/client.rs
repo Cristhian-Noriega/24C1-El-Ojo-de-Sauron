@@ -112,8 +112,18 @@ impl Client {
 
                                 let message = publish.message();
                                 let message_str = String::from_utf8_lossy(message).to_string();
+                                let full_topic = publish.topic().to_string();
+                                let topic_type = full_topic.split('/').next().unwrap();
 
-                                println!("Message: {:?}", message_str);
+                                println!("Topic: {}, Message {}", full_topic, message_str);
+
+                                match topic_type {
+                                    "camera-data" => todo!("Parse camera data"),
+                                    "dron-data" => todo!("Parse dron data"),
+                                    "attend-incident" => todo!("Parse attending incident"),
+                                    "close-incident" => todo!("Parse close incident"),
+                                    _ => println!("Received unsupported topic"),
+                                }
                             }
                             Packet::Puback(puback) => {
                                 println!("Received Puback packet!\n");
@@ -282,12 +292,14 @@ impl Client {
 
     fn make_initial_subscribes(&self) -> std::io::Result<()> {
         let camera_topic = "camera-data";
-        let camera_update = "camera-update";
+        let dron_topic = "dron-data";
+        //let camera_update = "camera-update";
         let attending_topic = "attending-incident/+";
         let close_topic = "close-incident/+";
 
         self.subscribe(camera_topic)?;
-        self.subscribe(camera_update)?;
+        self.subscribe(dron_topic)?;
+        //self.subscribe(camera_update)?;
         self.subscribe(attending_topic)?;
         self.subscribe(close_topic)?;
 
