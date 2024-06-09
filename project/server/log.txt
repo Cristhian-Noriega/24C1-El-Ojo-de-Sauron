@@ -1,0 +1,304 @@
+[2024-06-09 18:52:56] INFO: Server running on address: 127.0.0.1:8080
+
+[2024-06-09 18:53:01] INFO: New connection received
+[2024-06-09 18:53:01] INFO: Received Connect Packet from client with ID: monitor
+[2024-06-09 18:53:01] INFO: New client connected! ID: "monitor"
+[2024-06-09 18:53:01] INFO: Sent Connack packet to client monitor
+[2024-06-09 18:53:01] INFO: Received Subscribe packet from client: monitor
+[2024-06-09 18:53:01] INFO: Client monitor subscribed to topics camera-data, camera-update, attending-incident/+, close-incident/+, 
+[2024-06-09 18:53:01] INFO: Sent Suback packet to client monitor
+[2024-06-09 18:53:05] INFO: New connection received
+[2024-06-09 18:53:05] INFO: Received Connect Packet from client with ID: drone
+[2024-06-09 18:53:05] INFO: New client connected! ID: "drone"
+[2024-06-09 18:53:05] INFO: Sent Connack packet to client drone
+[2024-06-09 18:53:05] INFO: Received Subscribe packet from client: drone
+[2024-06-09 18:53:05] INFO: Client drone subscribed to topics new-incident, 
+[2024-06-09 18:53:05] INFO: Sent Suback packet to client drone
+[2024-06-09 18:53:05] INFO: Received Publish packet from client: drone
+[2024-06-09 18:53:05] ERROR: No clients subscribed to topic: drone-data/0
+[2024-06-09 18:53:05] INFO: Client drone published message 0;0 to topic drone-data/0
+[2024-06-09 18:53:05] INFO: Sent Puback packet to client drone
+[2024-06-09 18:53:10] INFO: Received Publish packet from client: drone
+[2024-06-09 18:53:10] ERROR: No clients subscribed to topic: drone-data/0
+[2024-06-09 18:53:10] INFO: Client drone published message 0;0 to topic drone-data/0
+[2024-06-09 18:53:10] INFO: Sent Puback packet to client drone
+[2024-06-09 18:53:15] INFO: Received Publish packet from client: drone
+[2024-06-09 18:53:15] ERROR: No clients subscribed to topic: drone-data/0
+[2024-06-09 18:53:15] INFO: Client drone published message 0;0 to topic drone-data/0
+[2024-06-09 18:53:15] INFO: Sent Puback packet to client drone
+[2024-06-09 18:53:18] INFO: Received Publish packet from client: monitor
+[2024-06-09 18:53:18] INFO: Client monitor published message cb36082e-9228-4d7c-827b-62fe9069bd46;incidente;aaa;0;0;Open to topic new-incident
+[2024-06-09 18:53:18] INFO: Sent message: cb36082e-9228-4d7c-827b-62fe9069bd46;incidente;aaa;0;0;Open to client drone
+[2024-06-09 18:53:18] INFO: Sent Puback packet to client monitor
+[2024-06-09 18:53:20] ERROR: Connection Error: Error { _message: "IO error: failed to fill whole buffer" }
+[2024-06-09 18:53:20] INFO: Closing connection
+[2024-06-09 18:53:47] ERROR: Connection Error: Error { _message: "IO error: failed to fill whole buffer" }
+[2024-06-09 18:53:47] INFO: Closing connection
+[2024-06-09 18:53:58] INFO: Server running on address: 127.0.0.1:8080
+
+[2024-06-09 18:54:04] INFO: New connection received
+[2024-06-09 18:54:04] INFO: Received Connect Packet from client with ID: monitor
+[2024-06-09 18:54:04] INFO: New client connected! ID: "monitor"
+[2024-06-09 18:54:04] INFO: Sent Connack packet to client monitor
+[2024-06-09 18:54:04] INFO: Received Subscribe packet from client: monitor
+[2024-06-09 18:54:04] INFO: Client monitor subscribed to topics camera-data, camera-update, attending-incident/+, close-incident/+, 
+[2024-06-09 18:54:04] INFO: Sent Suback packet to client monitor
+[2024-06-09 18:54:09] INFO: New connection received
+[2024-06-09 18:54:09] INFO: Received Connect Packet from client with ID: drone
+[2024-06-09 18:54:09] INFO: New client connected! ID: "drone"
+[2024-06-09 18:54:09] INFO: Sent Connack packet to client drone
+[2024-06-09 18:54:09] INFO: Received Subscribe packet from client: drone
+[2024-06-09 18:54:09] INFO: Client drone subscribed to topics new-incident, 
+[2024-06-09 18:54:09] INFO: Sent Suback packet to client drone
+[2024-06-09 18:54:09] INFO: Received Publish packet from client: drone
+[2024-06-09 18:54:09] ERROR: No clients subscribed to topic: drone-data/0
+[2024-06-09 18:54:09] INFO: Client drone published message 0;0 to topic drone-data/0
+[2024-06-09 18:54:09] INFO: Sent Puback packet to client drone
+[2024-06-09 18:54:14] INFO: Received Publish packet from client: drone
+[2024-06-09 18:54:14] ERROR: No clients subscribed to topic: drone-data/0
+[2024-06-09 18:54:14] INFO: Client drone published message 0;0 to topic drone-data/0
+[2024-06-09 18:54:14] INFO: Sent Puback packet to client drone
+[2024-06-09 18:54:19] INFO: Received Publish packet from client: drone
+[2024-06-09 18:54:19] ERROR: No clients subscribed to topic: drone-data/0
+[2024-06-09 18:54:19] INFO: Client drone published message 0;0 to topic drone-data/0
+[2024-06-09 18:54:19] INFO: Sent Puback packet to client drone
+[2024-06-09 18:54:20] INFO: Received Publish packet from client: monitor
+[2024-06-09 18:54:20] INFO: Client monitor published message 3b71ab0c-caf2-4bd8-8d7b-0e418e9d6e2c;incidente;aaaa;0;0;Open to topic new-incident
+[2024-06-09 18:54:20] INFO: Sent message: 3b71ab0c-caf2-4bd8-8d7b-0e418e9d6e2c;incidente;aaaa;0;0;Open to client drone
+[2024-06-09 18:54:20] INFO: Sent Puback packet to client monitor
+[2024-06-09 18:54:24] ERROR: Connection Error: Error { _message: "IO error: failed to fill whole buffer" }
+[2024-06-09 18:54:24] INFO: Closing connection
+[2024-06-09 18:55:42] ERROR: Connection Error: Error { _message: "IO error: failed to fill whole buffer" }
+[2024-06-09 18:55:42] INFO: Closing connection
+[2024-06-09 18:55:51] INFO: Server running on address: 127.0.0.1:8080
+
+[2024-06-09 18:55:55] INFO: New connection received
+[2024-06-09 18:55:55] INFO: Received Connect Packet from client with ID: monitor
+[2024-06-09 18:55:55] INFO: New client connected! ID: "monitor"
+[2024-06-09 18:55:55] INFO: Sent Connack packet to client monitor
+[2024-06-09 18:55:55] INFO: Received Subscribe packet from client: monitor
+[2024-06-09 18:55:55] INFO: Client monitor subscribed to topics camera-data, camera-update, attending-incident/+, close-incident/+, 
+[2024-06-09 18:55:55] INFO: Sent Suback packet to client monitor
+[2024-06-09 18:55:59] INFO: New connection received
+[2024-06-09 18:55:59] INFO: Received Connect Packet from client with ID: drone
+[2024-06-09 18:55:59] INFO: New client connected! ID: "drone"
+[2024-06-09 18:55:59] INFO: Sent Connack packet to client drone
+[2024-06-09 18:55:59] INFO: Received Subscribe packet from client: drone
+[2024-06-09 18:55:59] INFO: Client drone subscribed to topics new-incident, 
+[2024-06-09 18:55:59] INFO: Sent Suback packet to client drone
+[2024-06-09 18:55:59] INFO: Received Publish packet from client: drone
+[2024-06-09 18:55:59] ERROR: No clients subscribed to topic: drone-data/0
+[2024-06-09 18:55:59] INFO: Client drone published message 0;0 to topic drone-data/0
+[2024-06-09 18:55:59] INFO: Sent Puback packet to client drone
+[2024-06-09 18:56:04] INFO: Received Publish packet from client: drone
+[2024-06-09 18:56:04] ERROR: No clients subscribed to topic: drone-data/0
+[2024-06-09 18:56:04] INFO: Client drone published message 0;0 to topic drone-data/0
+[2024-06-09 18:56:04] INFO: Sent Puback packet to client drone
+[2024-06-09 18:56:09] INFO: Received Publish packet from client: drone
+[2024-06-09 18:56:09] ERROR: No clients subscribed to topic: drone-data/0
+[2024-06-09 18:56:09] INFO: Client drone published message 0;0 to topic drone-data/0
+[2024-06-09 18:56:09] INFO: Sent Puback packet to client drone
+[2024-06-09 18:56:11] INFO: Received Publish packet from client: monitor
+[2024-06-09 18:56:11] INFO: Client monitor published message b74dee0b-2b0c-49dd-bf20-816994f43965;ioncidentre;aaa;0;0;Open to topic new-incident
+[2024-06-09 18:56:11] INFO: Sent message: b74dee0b-2b0c-49dd-bf20-816994f43965;ioncidentre;aaa;0;0;Open to client drone
+[2024-06-09 18:56:11] INFO: Sent Puback packet to client monitor
+[2024-06-09 18:57:57] INFO: Server running on address: 127.0.0.1:8080
+
+[2024-06-09 18:58:03] INFO: New connection received
+[2024-06-09 18:58:03] INFO: Received Connect Packet from client with ID: monitor
+[2024-06-09 18:58:03] INFO: New client connected! ID: "monitor"
+[2024-06-09 18:58:03] INFO: Sent Connack packet to client monitor
+[2024-06-09 18:58:03] INFO: Received Subscribe packet from client: monitor
+[2024-06-09 18:58:03] INFO: Client monitor subscribed to topics camera-data, camera-update, attending-incident/+, close-incident/+, 
+[2024-06-09 18:58:03] INFO: Sent Suback packet to client monitor
+[2024-06-09 18:58:09] INFO: New connection received
+[2024-06-09 18:58:09] INFO: Received Connect Packet from client with ID: drone
+[2024-06-09 18:58:09] INFO: New client connected! ID: "drone"
+[2024-06-09 18:58:09] INFO: Sent Connack packet to client drone
+[2024-06-09 18:58:09] INFO: Received Subscribe packet from client: drone
+[2024-06-09 18:58:09] INFO: Client drone subscribed to topics new-incident, 
+[2024-06-09 18:58:09] INFO: Sent Suback packet to client drone
+[2024-06-09 18:58:09] INFO: Received Publish packet from client: drone
+[2024-06-09 18:58:09] ERROR: No clients subscribed to topic: drone-data/0
+[2024-06-09 18:58:09] INFO: Client drone published message 0;0 to topic drone-data/0
+[2024-06-09 18:58:09] INFO: Sent Puback packet to client drone
+[2024-06-09 18:58:14] INFO: Received Publish packet from client: drone
+[2024-06-09 18:58:14] ERROR: No clients subscribed to topic: drone-data/0
+[2024-06-09 18:58:14] INFO: Client drone published message 0;0 to topic drone-data/0
+[2024-06-09 18:58:14] INFO: Sent Puback packet to client drone
+[2024-06-09 18:58:19] INFO: Received Publish packet from client: drone
+[2024-06-09 18:58:19] ERROR: No clients subscribed to topic: drone-data/0
+[2024-06-09 18:58:19] INFO: Client drone published message 0;0 to topic drone-data/0
+[2024-06-09 18:58:19] INFO: Sent Puback packet to client drone
+[2024-06-09 18:58:21] INFO: Received Publish packet from client: monitor
+[2024-06-09 18:58:21] INFO: Client monitor published message 9adc8f4f-6645-4cea-99dc-e60260bd4fa7;incidente;a;1;1;Open to topic new-incident
+[2024-06-09 18:58:21] INFO: Sent message: 9adc8f4f-6645-4cea-99dc-e60260bd4fa7;incidente;a;1;1;Open to client drone
+[2024-06-09 18:58:21] INFO: Sent Puback packet to client monitor
+[2024-06-09 19:00:41] ERROR: Connection Error: Error { _message: "IO error: failed to fill whole buffer" }
+[2024-06-09 19:00:41] INFO: Closing connection
+[2024-06-09 19:00:45] ERROR: Connection Error: Error { _message: "IO error: failed to fill whole buffer" }
+[2024-06-09 19:00:45] INFO: Closing connection
+[2024-06-09 19:00:49] INFO: Server running on address: 127.0.0.1:8080
+
+[2024-06-09 19:00:54] INFO: New connection received
+[2024-06-09 19:00:54] INFO: Received Connect Packet from client with ID: monitor
+[2024-06-09 19:00:54] INFO: New client connected! ID: "monitor"
+[2024-06-09 19:00:54] INFO: Sent Connack packet to client monitor
+[2024-06-09 19:00:54] INFO: Received Subscribe packet from client: monitor
+[2024-06-09 19:00:54] INFO: Client monitor subscribed to topics camera-data, camera-update, attending-incident/+, close-incident/+, 
+[2024-06-09 19:00:54] INFO: Sent Suback packet to client monitor
+[2024-06-09 19:00:58] INFO: New connection received
+[2024-06-09 19:00:58] INFO: Received Connect Packet from client with ID: drone
+[2024-06-09 19:00:58] INFO: New client connected! ID: "drone"
+[2024-06-09 19:00:58] INFO: Sent Connack packet to client drone
+[2024-06-09 19:00:58] INFO: Received Subscribe packet from client: drone
+[2024-06-09 19:00:58] INFO: Client drone subscribed to topics new-incident, 
+[2024-06-09 19:00:58] INFO: Sent Suback packet to client drone
+[2024-06-09 19:00:58] INFO: Received Publish packet from client: drone
+[2024-06-09 19:00:58] ERROR: No clients subscribed to topic: drone-data/0
+[2024-06-09 19:00:58] INFO: Client drone published message 0;0 to topic drone-data/0
+[2024-06-09 19:00:58] INFO: Sent Puback packet to client drone
+[2024-06-09 19:01:03] INFO: Received Publish packet from client: drone
+[2024-06-09 19:01:03] ERROR: No clients subscribed to topic: drone-data/0
+[2024-06-09 19:01:03] INFO: Client drone published message 0;0 to topic drone-data/0
+[2024-06-09 19:01:03] INFO: Sent Puback packet to client drone
+[2024-06-09 19:01:08] INFO: Received Publish packet from client: drone
+[2024-06-09 19:01:08] ERROR: No clients subscribed to topic: drone-data/0
+[2024-06-09 19:01:08] INFO: Client drone published message 0;0 to topic drone-data/0
+[2024-06-09 19:01:08] INFO: Sent Puback packet to client drone
+[2024-06-09 19:01:13] INFO: Received Publish packet from client: monitor
+[2024-06-09 19:01:13] INFO: Client monitor published message a0611a66-e008-44a2-90fd-727d762ad1c2;incidente;aa;1;1;Open to topic new-incident
+[2024-06-09 19:01:13] INFO: Sent message: a0611a66-e008-44a2-90fd-727d762ad1c2;incidente;aa;1;1;Open to client drone
+[2024-06-09 19:01:13] INFO: Sent Puback packet to client monitor
+[2024-06-09 19:01:13] INFO: Received Publish packet from client: drone
+[2024-06-09 19:01:13] ERROR: No clients subscribed to topic: drone-data/0
+[2024-06-09 19:01:13] INFO: Client drone published message 0;0 to topic drone-data/0
+[2024-06-09 19:01:13] INFO: Sent Puback packet to client drone
+[2024-06-09 19:01:27] INFO: Received Publish packet from client: monitor
+[2024-06-09 19:01:27] INFO: Client monitor published message 96e400d0-94f3-4063-8c82-bfd10f9ef562;incidente;aa;1;1;Open to topic new-incident
+[2024-06-09 19:01:27] INFO: Sent message: 96e400d0-94f3-4063-8c82-bfd10f9ef562;incidente;aa;1;1;Open to client drone
+[2024-06-09 19:01:27] INFO: Sent Puback packet to client monitor
+[2024-06-09 19:02:45] ERROR: Connection Error: Error { _message: "IO error: failed to fill whole buffer" }
+[2024-06-09 19:02:45] INFO: Closing connection
+[2024-06-09 19:02:47] ERROR: Connection Error: Error { _message: "IO error: failed to fill whole buffer" }
+[2024-06-09 19:02:47] INFO: Closing connection
+[2024-06-09 19:02:52] INFO: Server running on address: 127.0.0.1:8080
+
+[2024-06-09 19:02:58] INFO: New connection received
+[2024-06-09 19:02:58] INFO: Received Connect Packet from client with ID: monitor
+[2024-06-09 19:02:58] INFO: New client connected! ID: "monitor"
+[2024-06-09 19:02:58] INFO: Sent Connack packet to client monitor
+[2024-06-09 19:02:58] INFO: Received Subscribe packet from client: monitor
+[2024-06-09 19:02:58] INFO: Client monitor subscribed to topics camera-data, camera-update, attending-incident/+, close-incident/+, 
+[2024-06-09 19:02:58] INFO: Sent Suback packet to client monitor
+[2024-06-09 19:03:01] INFO: New connection received
+[2024-06-09 19:03:01] INFO: Received Connect Packet from client with ID: drone
+[2024-06-09 19:03:01] INFO: New client connected! ID: "drone"
+[2024-06-09 19:03:01] INFO: Sent Connack packet to client drone
+[2024-06-09 19:03:01] INFO: Received Subscribe packet from client: drone
+[2024-06-09 19:03:01] INFO: Client drone subscribed to topics new-incident, 
+[2024-06-09 19:03:01] INFO: Sent Suback packet to client drone
+[2024-06-09 19:03:01] INFO: Received Publish packet from client: drone
+[2024-06-09 19:03:01] ERROR: No clients subscribed to topic: drone-data/0
+[2024-06-09 19:03:01] INFO: Client drone published message 0;0 to topic drone-data/0
+[2024-06-09 19:03:01] INFO: Sent Puback packet to client drone
+[2024-06-09 19:03:06] INFO: Received Publish packet from client: drone
+[2024-06-09 19:03:06] ERROR: No clients subscribed to topic: drone-data/0
+[2024-06-09 19:03:06] INFO: Client drone published message 0;0 to topic drone-data/0
+[2024-06-09 19:03:06] INFO: Sent Puback packet to client drone
+[2024-06-09 19:03:11] INFO: Received Publish packet from client: drone
+[2024-06-09 19:03:11] ERROR: No clients subscribed to topic: drone-data/0
+[2024-06-09 19:03:11] INFO: Client drone published message 0;0 to topic drone-data/0
+[2024-06-09 19:03:11] INFO: Sent Puback packet to client drone
+[2024-06-09 19:03:11] INFO: Received Publish packet from client: monitor
+[2024-06-09 19:03:11] INFO: Client monitor published message 96413458-ceea-489a-ba9b-3f7d9eddffc1;incidente;aa;1;1;Open to topic new-incident
+[2024-06-09 19:03:11] INFO: Sent message: 96413458-ceea-489a-ba9b-3f7d9eddffc1;incidente;aa;1;1;Open to client drone
+[2024-06-09 19:03:11] INFO: Sent Puback packet to client monitor
+[2024-06-09 19:04:11] ERROR: Connection Error: Error { _message: "IO error: failed to fill whole buffer" }
+[2024-06-09 19:04:11] INFO: Closing connection
+[2024-06-09 19:04:14] ERROR: Connection Error: Error { _message: "IO error: failed to fill whole buffer" }
+[2024-06-09 19:04:14] INFO: Closing connection
+[2024-06-09 19:06:55] INFO: Server running on address: 127.0.0.1:8080
+
+[2024-06-09 19:07:02] INFO: New connection received
+[2024-06-09 19:07:02] INFO: Received Connect Packet from client with ID: monitor
+[2024-06-09 19:07:02] INFO: New client connected! ID: "monitor"
+[2024-06-09 19:07:02] INFO: Sent Connack packet to client monitor
+[2024-06-09 19:07:02] INFO: Received Subscribe packet from client: monitor
+[2024-06-09 19:07:02] INFO: Client monitor subscribed to topics camera-data, camera-update, attending-incident/+, close-incident/+, 
+[2024-06-09 19:07:02] INFO: Sent Suback packet to client monitor
+[2024-06-09 19:07:12] INFO: New connection received
+[2024-06-09 19:07:12] INFO: Received Connect Packet from client with ID: drone
+[2024-06-09 19:07:12] INFO: New client connected! ID: "drone"
+[2024-06-09 19:07:12] INFO: Sent Connack packet to client drone
+[2024-06-09 19:07:12] INFO: Received Subscribe packet from client: drone
+[2024-06-09 19:07:12] INFO: Client drone subscribed to topics new-incident, 
+[2024-06-09 19:07:12] INFO: Sent Suback packet to client drone
+[2024-06-09 19:07:12] INFO: Received Publish packet from client: drone
+[2024-06-09 19:07:12] ERROR: No clients subscribed to topic: drone-data/0
+[2024-06-09 19:07:12] INFO: Client drone published message 0;0 to topic drone-data/0
+[2024-06-09 19:07:12] INFO: Sent Puback packet to client drone
+[2024-06-09 19:07:17] INFO: Received Publish packet from client: drone
+[2024-06-09 19:07:17] ERROR: No clients subscribed to topic: drone-data/0
+[2024-06-09 19:07:17] INFO: Client drone published message 0;0 to topic drone-data/0
+[2024-06-09 19:07:17] INFO: Sent Puback packet to client drone
+[2024-06-09 19:07:22] INFO: Received Publish packet from client: drone
+[2024-06-09 19:07:22] ERROR: No clients subscribed to topic: drone-data/0
+[2024-06-09 19:07:22] INFO: Client drone published message 0;0 to topic drone-data/0
+[2024-06-09 19:07:22] INFO: Sent Puback packet to client drone
+[2024-06-09 19:07:25] INFO: Received Publish packet from client: monitor
+[2024-06-09 19:07:25] INFO: Client monitor published message 4e9ba57e-3c72-4513-bb66-fc5b75dc238b;incidente;aaa;1;1;Open to topic new-incident
+[2024-06-09 19:07:25] INFO: Sent message: 4e9ba57e-3c72-4513-bb66-fc5b75dc238b;incidente;aaa;1;1;Open to client drone
+[2024-06-09 19:07:25] INFO: Sent Puback packet to client monitor
+[2024-06-09 19:08:22] ERROR: Connection Error: Error { _message: "IO error: failed to fill whole buffer" }
+[2024-06-09 19:08:22] INFO: Closing connection
+[2024-06-09 19:08:39] ERROR: Connection Error: Error { _message: "IO error: failed to fill whole buffer" }
+[2024-06-09 19:08:39] INFO: Closing connection
+[2024-06-09 19:08:43] INFO: Server running on address: 127.0.0.1:8080
+
+[2024-06-09 19:08:50] INFO: New connection received
+[2024-06-09 19:08:50] INFO: Received Connect Packet from client with ID: monitor
+[2024-06-09 19:08:50] INFO: New client connected! ID: "monitor"
+[2024-06-09 19:08:50] INFO: Sent Connack packet to client monitor
+[2024-06-09 19:08:50] INFO: Received Subscribe packet from client: monitor
+[2024-06-09 19:08:50] INFO: Client monitor subscribed to topics camera-data, camera-update, attending-incident/+, close-incident/+, 
+[2024-06-09 19:08:50] INFO: Sent Suback packet to client monitor
+[2024-06-09 19:08:54] INFO: New connection received
+[2024-06-09 19:08:54] INFO: Received Connect Packet from client with ID: drone
+[2024-06-09 19:08:54] INFO: New client connected! ID: "drone"
+[2024-06-09 19:08:54] INFO: Sent Connack packet to client drone
+[2024-06-09 19:08:54] INFO: Received Subscribe packet from client: drone
+[2024-06-09 19:08:54] INFO: Client drone subscribed to topics new-incident, 
+[2024-06-09 19:08:54] INFO: Sent Suback packet to client drone
+[2024-06-09 19:08:54] INFO: Received Publish packet from client: drone
+[2024-06-09 19:08:54] ERROR: No clients subscribed to topic: drone-data/0
+[2024-06-09 19:08:54] INFO: Client drone published message 0;0 to topic drone-data/0
+[2024-06-09 19:08:54] INFO: Sent Puback packet to client drone
+[2024-06-09 19:08:59] INFO: Received Publish packet from client: drone
+[2024-06-09 19:08:59] ERROR: No clients subscribed to topic: drone-data/0
+[2024-06-09 19:08:59] INFO: Client drone published message 0;0 to topic drone-data/0
+[2024-06-09 19:08:59] INFO: Sent Puback packet to client drone
+[2024-06-09 19:09:04] INFO: Received Publish packet from client: drone
+[2024-06-09 19:09:04] ERROR: No clients subscribed to topic: drone-data/0
+[2024-06-09 19:09:04] INFO: Client drone published message 0;0 to topic drone-data/0
+[2024-06-09 19:09:04] INFO: Sent Puback packet to client drone
+[2024-06-09 19:09:05] INFO: Received Publish packet from client: monitor
+[2024-06-09 19:09:05] INFO: Client monitor published message 4949af27-ac2d-455e-be45-e5fc93b02b73;incidtente;aaa;1;1;Open to topic new-incident
+[2024-06-09 19:09:05] INFO: Sent message: 4949af27-ac2d-455e-be45-e5fc93b02b73;incidtente;aaa;1;1;Open to client drone
+[2024-06-09 19:09:05] INFO: Sent Puback packet to client monitor
+[2024-06-09 19:09:14] INFO: Received Publish packet from client: drone
+[2024-06-09 19:09:14] ERROR: No clients subscribed to topic: drone-data/0
+[2024-06-09 19:09:14] INFO: Client drone published message 1;0 to topic drone-data/0
+[2024-06-09 19:09:14] INFO: Sent Puback packet to client drone
+[2024-06-09 19:09:19] INFO: Received Publish packet from client: drone
+[2024-06-09 19:09:19] ERROR: No clients subscribed to topic: drone-data/0
+[2024-06-09 19:09:19] INFO: Client drone published message 1;0 to topic drone-data/0
+[2024-06-09 19:09:19] INFO: Sent Puback packet to client drone
+[2024-06-09 19:09:24] INFO: Received Publish packet from client: drone
+[2024-06-09 19:09:24] ERROR: No clients subscribed to topic: drone-data/0
+[2024-06-09 19:09:24] INFO: Client drone published message 1;0 to topic drone-data/0
+[2024-06-09 19:09:24] INFO: Sent Puback packet to client drone
+[2024-06-09 19:09:28] ERROR: Connection Error: Error { _message: "IO error: failed to fill whole buffer" }
+[2024-06-09 19:09:28] INFO: Closing connection
+[2024-06-09 19:10:48] ERROR: Connection Error: Error { _message: "IO error: failed to fill whole buffer" }
+[2024-06-09 19:10:48] INFO: Closing connection

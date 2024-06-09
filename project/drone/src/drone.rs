@@ -1,8 +1,11 @@
 use crate::drone_status::DroneStatus;
+use std::{sync::{Arc, Mutex}, thread, time::Duration};
 
 const ACTIVE_RANGE: f64 = 10.0;
 const MINIMUM_BATTERY_LEVEL: usize = 50;
 const MAXIMUM_BATTERY_LEVEL: usize = 100;
+const VELOCITY: f64 = 0.1;
+const DISCRETE_INTERVAL: f64 = 0.5;
 
 #[derive(Debug, Clone)]
 pub struct Drone {
@@ -23,8 +26,8 @@ impl Drone {
             y_coordinate: 0.0,
             state: DroneStatus::Free,
             battery: MAXIMUM_BATTERY_LEVEL,
-            x_central: 0.0,
-            y_central: 0.0,
+            x_central: 10.0,
+            y_central: 10.0,
         }
     }
 
@@ -43,13 +46,9 @@ impl Drone {
     pub fn update_state(&mut self) {
         self.consume_battery();
 
-        if self.is_below_minimun() {
-            self.return_to_central();
-        }
-    }
-
-    pub fn return_to_central(&mut self) {
-        self.set_position(self.x_central, self.y_central);
+        // if self.is_below_minimun() {
+        //     self.return_to_central();
+        // }
     }
 
     pub fn consume_battery(&mut self) {
@@ -62,7 +61,8 @@ impl Drone {
         self.battery = MAXIMUM_BATTERY_LEVEL;
     }
 
-    pub fn set_position(&mut self, x: f64, y: f64) {
+
+    pub fn set_coordinates(&mut self, x: f64, y: f64) {
         self.x_coordinate = x;
         self.y_coordinate = y;
     }
@@ -79,16 +79,32 @@ impl Drone {
         self.state = state;
     }
 
-    // pub fn is_near(&self, incident: Incident) -> bool {
-    //     let distance = euclidean_distance(
-    //         self.x_coordinate,
-    //         self.y_coordinate,
-    //         incident.x_coordinate,
-    //         incident.y_coordinate,
-    //     );
+    pub fn distance_to(&self, x: f64, y: f64) -> f64 {
+        euclidean_distance(self.x_coordinate, self.y_coordinate, x, y)
+    }
 
-    //     distance < ACTIVE_RANGE
-    // }
+    pub fn x_central_coordinate(&self) -> f64 {
+        self.x_central
+    }
+
+    pub fn y_central_coordinate(&self) -> f64 {
+        self.y_central
+    }
+
+    pub fn travel_to(&mut self, x: f64, y: f64) {
+        let distance = euclidean_distance(self.x_coordinate, self.y_coordinate, x, y);
+
+        if distance > VELOCITY {
+            let angle = (y - self.y_coordinate).atan2(x - self.x_coordinate);
+
+            self.x_coordinate += VELOCITY * angle.cos();
+            self.y_coordinate += VELOCITY * angle.sin();
+        } else {
+            self.x_coordinate = x;
+            self.y_coordinate = y;
+        }
+    }
+
 
     pub fn is_within_range(&self, x: f64, y: f64) -> bool {
         let distance = euclidean_distance(self.x_coordinate, self.y_coordinate, x, y);
