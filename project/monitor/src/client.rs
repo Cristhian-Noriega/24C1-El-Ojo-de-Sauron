@@ -245,22 +245,26 @@ impl Client {
         Ok(())
     }
 
-    pub fn subscribe(&self, topic: &str) -> std::io::Result<()> {
-        let mut levels = vec![];
-        for level in topic.split('/') {
-            if let Ok(topic_level) = TopicLevel::from_bytes(level.as_bytes().to_vec()) {
-                levels.push(topic_level);
+    pub fn subscribe(&self, topics: Vec<&str>) -> std::io::Result<()> {
+        let mut topics_filters = vec![];
+    
+        for topic in topics {
+            let mut levels = vec![];
+            for level in topic.split('/') {
+                if let Ok(topic_level) = TopicLevel::from_bytes(level.as_bytes().to_vec()) {
+                    levels.push(topic_level);
+                }
             }
+    
+            let topic_filter = TopicFilter::new(levels, false);
+            let qos = QoS::AtLeast;
+    
+            topics_filters.push((topic_filter, qos));
         }
-
-        let topic_filter = TopicFilter::new(levels, false);
+    
         let packet_id = 1;
-        let qos = QoS::AtLeast;
-
-        let topics_filters = vec![(topic_filter, qos)];
-
         let subscribe_packet = Subscribe::new(packet_id, topics_filters);
-
+    
         println!("Packet ID: {:?}", subscribe_packet.packet_identifier());
         let _ = self
             .to_server_stream
@@ -270,7 +274,7 @@ impl Client {
             .unwrap()
             .write(subscribe_packet.to_bytes().as_slice());
         println!("Sent Subscribe packet");
-
+    
         match Packet::from_bytes(self.to_server_stream.lock().unwrap().as_mut().unwrap()) {
             Ok(Packet::Suback(_)) => Ok(()),
             _ => Err(std::io::Error::new(
@@ -279,20 +283,15 @@ impl Client {
             )),
         }
     }
-
+    
     fn make_initial_subscribes(&self) -> std::io::Result<()> {
-        let new_incident_topic = "new-incident";
-        let camera_topic = "camera-data";
-        let camera_update = "camera-update";
-        let attending_topic = "attending-incident/+";
-        let close_topic = "close-incident/+";
-
-        self.subscribe(new_incident_topic)?;
-        self.subscribe(camera_topic)?;
-        self.subscribe(camera_update)?;
-        self.subscribe(attending_topic)?;
-        self.subscribe(close_topic)?;
-
-        Ok(())
+        let topics = vec![
+            "camera-data",
+            "camera-update",
+            "attending-incident/+",
+            "close-incident/+",
+        ];
+    
+        self.subscribe(topics)
     }
 }
