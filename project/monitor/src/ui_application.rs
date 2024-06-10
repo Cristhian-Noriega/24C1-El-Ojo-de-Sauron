@@ -1,4 +1,4 @@
-use crate::client::Client;
+use crate::{client::Client, monitor::Monitor};
 use eframe::egui;
 use egui::Context;
 use egui_extras::{Column, TableBuilder};
@@ -30,6 +30,7 @@ pub struct UIApplication {
     current_layout: Layout,
     tiles: Tiles,
     map_memory: MapMemory,
+    monitor: Monitor,
 }
 
 impl UIApplication {
@@ -49,6 +50,7 @@ impl UIApplication {
             current_layout: Layout::IncidentMap,
             tiles: Tiles::new(OpenStreetMap, egui_ctx),
             map_memory: MapMemory::default(),
+            monitor: Monitor::new(),
         }
     }
 }
@@ -65,7 +67,7 @@ impl eframe::App for UIApplication {
             ui.add_space(15.0);
             ui.horizontal(|ui| {
                 if ui.button("Connect").clicked() {
-                    match client.client_run() {
+                    match client.client_run(&self.monitor) {
                         Ok(_) => println!("Conectado"),
                         Err(e) => {
                             println!("Error al conectar: {:?}", e);
@@ -138,11 +140,12 @@ impl eframe::App for UIApplication {
                 ui.add_space(20.0);
                 ui.vertical_centered(|ui| {
                     if ui.button("Send").clicked() {
-                        match client.new_incident(
+                        match self.monitor.new_incident(
                             &self.new_incident_name,
                             &self.new_incident_description,
                             &self.new_incident_x_coordenate,
                             &self.new_incident_y_coordenate,
+                            &client,
                         ) {
                             Ok(_) => println!("Nuevo incidente enviado"),
                             Err(e) => {
@@ -154,7 +157,7 @@ impl eframe::App for UIApplication {
             }
 
             if self.current_layout == Layout::IncidentList {
-                let incidents = client.incident_list.lock().unwrap();
+                let incidents = self.monitor.incident_list.lock().unwrap();
                 TableBuilder::new(ui)
                     .striped(true)
                     .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
@@ -230,11 +233,12 @@ impl eframe::App for UIApplication {
                         ui.add(egui::TextEdit::singleline(&mut self.new_drone_anchor_y_coordenate).desired_width(100.0));
                         ui.add_space(263.0);
                         if ui.button("Register").clicked() {
-                            match client.new_drone(
+                            match self.monitor.new_drone(
                                 &self.new_drone_id,
                                 &self.new_drone_password,
                                 &self.new_drone_anchor_x_coordenate,
                                 &self.new_drone_anchor_y_coordenate,
+                                &client,
                             ) {
                                 Ok(_) => println!("New drone created"),
                                 Err(e) => {
@@ -251,7 +255,7 @@ impl eframe::App for UIApplication {
                     ui.label("Active Drones:");
 
                     ui.add_space(10.0);
-                    let drones = client.drone_list.lock().unwrap();
+                    let drones = self.monitor.drone_list.lock().unwrap();
 
                     TableBuilder::new(ui)
                         .striped(true)

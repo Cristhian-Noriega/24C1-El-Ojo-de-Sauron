@@ -14,18 +14,20 @@ use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 use std::{env::args, thread};
 
-use crate::{drone::Drone, incident::Incident};
+use crate::monitor::Monitor;
 
 static CLIENT_ARGS: usize = 3;
 
+const CAMERA_DATA: &[u8] = b"camera-data";
+const DRON_DATA: &[u8] = b"dron-data";
+const ATTEND_INCIDENT: &[u8] = b"attend-incident";
+const CLOSE_INCIDENT: &[u8] = b"close-incident";
+
 pub struct Client {
     pub connection_status: Arc<Mutex<String>>,
-    pub response_text: Arc<Mutex<String>>,
     pub address: String,
     pub to_server_stream: Arc<Mutex<Option<TcpStream>>>,
     pub sender: Sender<String>,
-    pub incident_list: Arc<Mutex<Vec<Incident>>>,
-    pub drone_list: Arc<Mutex<Vec<Drone>>>,
 }
 
 impl Client {
@@ -40,12 +42,9 @@ impl Client {
 
         Self {
             connection_status: Arc::new(Mutex::new("disconnected".to_owned())),
-            response_text: Arc::new(Mutex::new("".to_owned())),
             address,
             to_server_stream: Arc::new(Mutex::new(None)),
             sender,
-            incident_list: Arc::new(Mutex::new(vec![])),
-            drone_list: Arc::new(Mutex::new(vec![])),
         }
     }
 
@@ -70,10 +69,8 @@ impl Client {
                     connack.connect_return_code(),
                     connack.session_present()
                 );
-                let response_text = Arc::clone(&self.response_text);
                 let connection_status = Arc::clone(&self.connection_status);
                 "connected".clone_into(&mut connection_status.lock().unwrap());
-                *response_text.lock().unwrap() = format!("{}", connack);
                 Ok(to_server_stream)
             }
             _ => Err(std::io::Error::new(
@@ -83,15 +80,14 @@ impl Client {
         }
     }
 
-    pub fn client_run(&mut self) -> std::io::Result<()> {
+    pub fn client_run(&mut self, monitor: &Monitor) -> std::io::Result<()> {
         let to_server_stream = self.connect_to_server()?;
-        let response_text = Arc::clone(&self.response_text);
 
         self.make_initial_subscribes()?;
 
         let mut to_server_stream_clone = to_server_stream.try_clone()?;
         let sender = self.sender.clone();
-        thread::spawn(move || {
+        let thread_packet = thread::spawn(move || {
             loop {
                 let mut buffer = [0; 1024];
                 match to_server_stream_clone.read(&mut buffer) {
@@ -108,21 +104,22 @@ impl Client {
                             //     *response_text.lock().unwrap() = format!("{}", connack);
                             // }
                             Packet::Publish(publish) => {
-                                println!("Received Publish packet!\n");
+                                let topic_levels = publish.topic().levels();
 
-                                let message = publish.message();
-                                let message_str = String::from_utf8_lossy(message).to_string();
-                                let full_topic = publish.topic().to_string();
-                                let topic_type = full_topic.split('/').next().unwrap();
-
-                                println!("Topic: {}, Message {}", full_topic, message_str);
-
-                                match topic_type {
-                                    "camera-data" => todo!("Parse camera data"),
-                                    "dron-data" => todo!("Parse dron data"),
-                                    "attend-incident" => todo!("Parse attending incident"),
-                                    "close-incident" => todo!("Parse close incident"),
-                                    _ => println!("Received unsupported topic"),
+                                if topic_levels.len() == 2 && topic_levels[0] == CAMERA_DATA {
+                                    println!("Camera data received\n");
+                                    //monitor.handle_camera_data(publish);
+                                } else if topic_levels.len() == 2 && topic_levels[0] == DRON_DATA {
+                                    println!("Dron data received\n");
+                                    //monitor.handle_dron_data(publish);
+                                } else if topic_levels.len() == 2 && topic_levels[0] == ATTEND_INCIDENT {
+                                    println!("Attend Incident received\n");
+                                    //monitor.handle_attend_incident_data(publish);
+                                } else if topic_levels.len() == 2 && topic_levels[0] == CLOSE_INCIDENT {
+                                    println!("Close Incident received\n");
+                                    //monitor.handle_close_incident_data(publish);
+                                } else {
+                                    println!("Unknown topic received\n");
                                 }
                             }
                             Packet::Puback(puback) => {
@@ -130,7 +127,6 @@ impl Client {
                                 // *response_text.lock().unwrap() = format!("{:?}", puback);
                                 let puback_info = format!("{}", puback);
                                 // Update the response_text field with the Puback packet information
-                                *response_text.lock().unwrap() = puback_info;
                                 sender.send(format!("{}", puback)).unwrap();
                             }
                             Packet::Pingresp(_pingresp) => {
@@ -159,54 +155,7 @@ impl Client {
             }
         });
 
-        Ok(())
-    }
-
-    pub fn new_incident(
-        &self,
-        name: &str,
-        description: &str,
-        x_coordenate: &str,
-        y_coordenate: &str,
-    ) -> std::io::Result<()> {
-        println!("Building new incident {:?}", name);
-
-        let new_incident_topic = "new-incident";
-        let x_coordenate_float: f64 = x_coordenate.parse().unwrap();
-        let y_coordenate_float: f64 = y_coordenate.parse().unwrap();
-        let new_incident = Incident::new(
-            name.to_string(),
-            description.to_string(),
-            x_coordenate_float,
-            y_coordenate_float,
-            "Open".to_string(),
-        );
-        let message = new_incident.build_new_incident_message();
-
-        self.publish(new_incident_topic, &message)?;
-
-        // let attending_topic = format!("attending-incident/{}", new_incident.uuid);
-        // let close_topic = format!("close-incident/{}", new_incident.uuid);
-        // self.subscribe(&attending_topic)?;
-        // self.subscribe(&close_topic)?;
-
-        self.incident_list.lock().unwrap().push(new_incident);
-
-        Ok(())
-    }
-
-    pub fn new_drone(&self,
-        id: &str, 
-        password: &str, 
-        x_coordenate: &str, 
-        y_coordenate: &str
-    ) -> std::io::Result<()> {
-        let new_drone_topic = "new-drone";
-        let x_coordenate_float: f64 = x_coordenate.parse().unwrap();
-        let y_coordenate_float: f64 = y_coordenate.parse().unwrap();
-        let message = format!("{},{},{},{}", id, password, x_coordenate_float, y_coordenate_float);
-
-        self.publish(new_drone_topic, &message)?;
+        thread_packet.join().unwrap();
 
         Ok(())
     }
