@@ -1,9 +1,10 @@
 use crate::{drone_status::DroneStatus, incident::Incident};
 
 const ACTIVE_RANGE: f64 = 20.0;
-const MINIMUM_BATTERY_LEVEL: usize = 50;
+const MINIMUM_BATTERY_LEVEL: usize = 20;
 const MAXIMUM_BATTERY_LEVEL: usize = 100;
-const VELOCITY: f64 = 2.0;
+const VELOCITY: f64 = 1.0;
+const BATTERY_UNIT: usize = 1;
 
 #[derive(Debug, Clone)]
 pub struct Drone {
@@ -14,9 +15,9 @@ pub struct Drone {
     battery: usize,
     x_central: f64,
     y_central: f64,
-    x_default: f64,
-    y_default: f64,
-    actual_incident: Option<(Incident, usize)>,
+    x_anchor: f64,
+    y_anchor: f64,
+    current_incident: Option<(Incident, usize)>,
 }
 
 impl Drone {
@@ -29,9 +30,9 @@ impl Drone {
             battery: MAXIMUM_BATTERY_LEVEL,
             x_central: 10.0,
             y_central: 10.0,
-            x_default: 0.0,
-            y_default: 0.0,
-            actual_incident: None,
+            x_anchor: 0.0,
+            y_anchor: 0.0,
+            current_incident: None,
         }
     }
 
@@ -48,24 +49,6 @@ impl Drone {
 
     pub fn is_below_minimun(&self) -> bool {
         self.battery < MINIMUM_BATTERY_LEVEL
-    }
-
-    // pub fn update_state(&mut self) {
-    //     self.consume_battery();
-
-    //     // if self.is_below_minimun() {
-    //     //     self.return_to_central();
-    //     // }
-    // }
-
-    pub fn consume_battery(&mut self) {
-        if self.battery > 0 {
-            self.battery -= 10;
-        }
-    }
-
-    pub fn recharge_battery(&mut self) {
-        self.battery = MAXIMUM_BATTERY_LEVEL;
     }
 
     pub fn set_coordinates(&mut self, x: f64, y: f64) {
@@ -97,12 +80,12 @@ impl Drone {
         self.y_central
     }
 
-    pub fn x_default_coordinate(&self) -> f64 {
-        self.x_default
+    pub fn x_anchor_coordinate(&self) -> f64 {
+        self.x_anchor
     }
 
-    pub fn y_default_coordinate(&self) -> f64 {
-        self.y_default
+    pub fn y_anchor_coordinate(&self) -> f64 {
+        self.y_anchor
     }
 
     pub fn travel_to(&mut self, x: f64, y: f64) {
@@ -119,10 +102,30 @@ impl Drone {
         }
     }
 
+    pub fn discharge_battery(&mut self) {
+        if self.battery > 0 {
+            self.battery -= BATTERY_UNIT;
+        }
+    }
+
+    pub fn recharge_battery(&mut self) {
+        if self.battery < MAXIMUM_BATTERY_LEVEL {
+            self.battery += BATTERY_UNIT;
+        }
+    }
+
+    pub fn is_fully_charged(&self) -> bool {
+        self.battery == MAXIMUM_BATTERY_LEVEL
+    }
+
     pub fn is_within_range(&self, x: f64, y: f64) -> bool {
-        let distance = euclidean_distance(self.x_default, self.y_default, x, y);
+        let distance = euclidean_distance(self.x_anchor, self.y_anchor, x, y);
 
         distance < ACTIVE_RANGE
+    }
+
+    pub fn battery(&self) -> usize {
+        self.battery
     }
 
     pub fn status(&self) -> DroneStatus {
@@ -132,16 +135,16 @@ impl Drone {
     pub fn set_incident(&mut self, incident: Option<Incident>) {
         match incident {
             Some(incident) => {
-                self.actual_incident = Some((incident, 0));
+                self.current_incident = Some((incident, 0));
             }
             None => {
-                self.actual_incident = None;
+                self.current_incident = None;
             }
         }
     }
 
     pub fn increment_attending_counter(&mut self) {
-        match &mut self.actual_incident {
+        match &mut self.current_incident {
             Some((_, counter)) => {
                 *counter += 1;
             }
@@ -150,14 +153,14 @@ impl Drone {
     }
 
     pub fn attending_counter(&self) -> usize {
-        match &self.actual_incident {
+        match &self.current_incident {
             Some((_, counter)) => *counter,
             None => 0,
         }
     }
 
     pub fn incident(&self) -> Option<Incident> {
-        match &self.actual_incident {
+        match &self.current_incident {
             Some((incident, _)) => Some(incident.clone()),
             None => None,
         }
