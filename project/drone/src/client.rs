@@ -15,7 +15,7 @@ use mqtt::model::{
     packets::{connect::Connect, publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe},
 };
 
-use crate::{drone::Drone, drone_status::DroneStatus};
+use crate::{drone::Drone, drone_status::DroneStatus, incident::Incident};
 
 const NEW_INCIDENT: &[u8] = b"new-incident";
 const ATTENDING_INCIDENT: &[u8] = b"attending-incident";
@@ -132,10 +132,11 @@ fn handle_publish(
         let message = String::from_utf8(publish.message().to_vec()).unwrap();
         handle_new_incident(message, drone, server_stream);
     }
-    // else if topic_levels.len() == 2 && topic_levels[0] == ATTENDING_INCIDENT {
+
+    // if topic_levels.len() == 2 && topic_levels[0] == ATTENDING_INCIDENT {
     //     handle_attending_incident(publish.topic().to_string(), drone, server_stream);
     // } else if topic_levels.len() == 2 && topic_levels[0] == CLOSE_INCIDENT {
-    //     handle_close_incident(publish.topic().to_string(), drone, server_stream);
+    //     handle_close_incident(topic_levels[1].bytes().to_string(), drone, server_stream);
     // }
 }
 
@@ -144,19 +145,18 @@ fn handle_new_incident(
     drone: Arc<Mutex<Drone>>,
     server_stream: Arc<Mutex<TcpStream>>,
 ) {
-    let incident_data: Vec<&str> = message.split(';').collect();
-
-    let incident_uuid = incident_data[0].as_bytes().to_vec();
-    let incident_name = incident_data[1].to_string();
-    let incident_description = incident_data[2].to_string();
-    let x_incident = incident_data[3].parse::<f64>().unwrap();
-    let y_incident = incident_data[4].parse::<f64>().unwrap();
-    // let incident_status = incident_data[5].parse::<u8>().unwrap();
+    let incident = match Incident::from_string(message) {
+        Ok(incident) => incident,
+        Err(_) => {
+            println!("Invalid incident message");
+            return;
+        }
+    };
 
     let topic_filter = TopicFilter::new(
         vec![
             TopicLevel::Literal(ATTENDING_INCIDENT.to_vec()),
-            TopicLevel::Literal(incident_uuid.clone()),
+            TopicLevel::Literal(incident.uuid.clone().into_bytes()),
         ],
         false,
     );
@@ -181,7 +181,7 @@ fn handle_new_incident(
 
     drop(stream_locked);
 
-    let drone_locked = match drone.lock() {
+    let mut drone_locked = match drone.lock() {
         Ok(drone) => drone,
         Err(_) => {
             println!("Mutex was poisoned");
@@ -195,20 +195,21 @@ fn handle_new_incident(
         return;
     }
 
-    if !drone_locked.is_within_range(x_incident, y_incident) {
+    if !drone_locked.is_within_range(incident.x_coordinate, incident.y_coordinate) {
         println!("Drone is not within range of the incident");
         drop(drone_locked);
         return;
     }
 
+    drone_locked.set_incident(Some(incident.clone()));
     drop(drone_locked);
 
     println!(
         "Traveling to incident location: {}, {}",
-        x_incident, y_incident
+        incident.x_coordinate, incident.y_coordinate
     );
 
-    travel(drone.clone(), x_incident, y_incident);
+    travel(drone.clone(), incident.x_coordinate, incident.y_coordinate);
 
     let mut drone_locked = match drone.lock() {
         Ok(drone) => drone,
@@ -223,6 +224,8 @@ fn handle_new_incident(
 
         let x = drone_locked.x_default_coordinate();
         let y = drone_locked.y_default_coordinate();
+        drone_locked.set_incident(None);
+
         drop(drone_locked);
 
         travel(drone.clone(), x, y);
@@ -255,7 +258,7 @@ fn handle_new_incident(
     let topic_filter = TopicFilter::new(
         vec![
             TopicLevel::Literal(ATTENDING_INCIDENT.to_vec()),
-            TopicLevel::Literal(incident_uuid.clone()),
+            TopicLevel::Literal(incident.uuid.clone().into_bytes()),
         ],
         false,
     );
@@ -268,7 +271,7 @@ fn handle_new_incident(
     let topic_name = TopicName::new(
         vec![
             TopicLevel::Literal(ATTENDING_INCIDENT.to_vec()).to_bytes(),
-            TopicLevel::Literal(incident_uuid.clone()).to_bytes(),
+            TopicLevel::Literal(incident.uuid.clone().into_bytes()).to_bytes(),
         ],
         false,
     );
@@ -282,7 +285,7 @@ fn handle_new_incident(
     let topic_filter = TopicFilter::new(
         vec![
             TopicLevel::Literal(CLOSE_INCIDENT.to_vec()),
-            TopicLevel::Literal(incident_uuid.clone()),
+            TopicLevel::Literal(incident.uuid.clone().into_bytes()),
         ],
         false,
     );

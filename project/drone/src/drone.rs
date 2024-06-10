@@ -1,4 +1,4 @@
-use crate::drone_status::DroneStatus;
+use crate::{drone_status::DroneStatus, incident::Incident};
 
 const ACTIVE_RANGE: f64 = 20.0;
 const MINIMUM_BATTERY_LEVEL: usize = 50;
@@ -16,6 +16,7 @@ pub struct Drone {
     y_central: f64,
     x_default: f64,
     y_default: f64,
+    actual_incident: Option<(Incident, usize)>,
 }
 
 impl Drone {
@@ -30,6 +31,7 @@ impl Drone {
             y_central: 10.0,
             x_default: 0.0,
             y_default: 0.0,
+            actual_incident: None,
         }
     }
 
@@ -125,6 +127,40 @@ impl Drone {
 
     pub fn status(&self) -> DroneStatus {
         self.status.clone()
+    }
+
+    pub fn set_incident(&mut self, incident: Option<Incident>) {
+        match incident {
+            Some(incident) => {
+                self.actual_incident = Some((incident, 0));
+            }
+            None => {
+                self.actual_incident = None;
+            }
+        }
+    }
+
+    pub fn increment_attending_counter(&mut self) {
+        match &mut self.actual_incident {
+            Some((_, counter)) => {
+                *counter += 1;
+            }
+            None => {}
+        }
+    }
+
+    pub fn attending_counter(&self) -> usize {
+        match &self.actual_incident {
+            Some((_, counter)) => *counter,
+            None => 0,
+        }
+    }
+
+    pub fn incident(&self) -> Option<Incident> {
+        match &self.actual_incident {
+            Some((incident, _)) => Some(incident.clone()),
+            None => None,
+        }
     }
 }
 
