@@ -12,14 +12,14 @@ pub enum Packet {
     Connect(Connect),
     Connack(Connack),
     Publish(Publish),
+    Puback(Puback),
     Subscribe(Subscribe),
     Suback(Suback),
-    Puback(Puback),
-    Disconnect(Disconnect),
-    Pingreq(Pingreq),
-    Pingresp(Pingresp),
     Unsubscribe(Unsubscribe),
     Unsuback(Unsuback),
+    Pingreq(Pingreq),
+    Pingresp(Pingresp),
+    Disconnect(Disconnect),
 }
 
 impl Packet {

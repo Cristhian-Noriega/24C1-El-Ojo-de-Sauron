@@ -1,15 +1,16 @@
-use std::io::ErrorKind;
-use std::io::Write;
-use std::net::TcpStream;
-
-pub use mqtt::model::{
-    components::{qos::QoS, topic_filter::TopicFilter, topic_level::TopicLevel},
-    packet::Packet,
-    packets::{connect::Connect, publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe},
+use std::{
+    io::{ErrorKind, Write},
+    net::TcpStream,
 };
 
-use mqtt::model::components::encoded_string::EncodedString;
-use mqtt::model::components::topic_name::TopicName;
+use mqtt::model::{
+    components::{
+        encoded_string::EncodedString, qos::QoS, topic_filter::TopicFilter,
+        topic_level::TopicLevel, topic_name::TopicName,
+    },
+    packet::Packet,
+    packets::{connect::Connect, publish::Publish, subscribe::Subscribe},
+};
 
 use crate::camera::Camera;
 use crate::camera_system::CameraSystem;
@@ -26,6 +27,7 @@ pub fn client_run(address: &str) -> std::io::Result<()> {
 
     let mut camera_system = CameraSystem::new();
 
+    // TODO: camaras reales
     for i in 0..CAMERA_QUANTITY {
         let camara = Camera::new(i as u8, i as f64, i as f64);
         camera_system.add_camera(camara);
@@ -33,9 +35,16 @@ pub fn client_run(address: &str) -> std::io::Result<()> {
 
     publish_camera_state(&mut camera_system, &mut server_stream)?;
 
-    let topic_filter = TopicFilter::new(vec![TopicLevel::Literal(NEW_INCIDENT.to_vec())], false);
-
-    subscribe(topic_filter, &mut server_stream)?;
+    let new_incident = TopicFilter::new(vec![TopicLevel::Literal(NEW_INCIDENT.to_vec())], false);
+    let close_incident = TopicFilter::new(
+        vec![
+            TopicLevel::Literal(CLOSE_INCIDENT.to_vec()),
+            TopicLevel::SingleLevelWildcard,
+        ],
+        false,
+    );
+    let topics = vec![new_incident, close_incident];
+    subscribe(topics, &mut server_stream)?;
 
     loop {
         let incoming_publish = match Packet::from_bytes(&mut server_stream) {
@@ -58,29 +67,34 @@ pub fn client_run(address: &str) -> std::io::Result<()> {
     }
 }
 
-fn unsubscribe(filter: TopicFilter, server_stream: &mut TcpStream) -> std::io::Result<()> {
-    let packet_id = 1;
+// fn unsubscribe(filter: TopicFilter, server_stream: &mut TcpStream) -> std::io::Result<()> {
+//     let packet_id = 1;
 
-    let topics_filters = vec![(filter)];
+//     let topics_filters = vec![(filter)];
 
-    let unsubscribe_packet = Unsubscribe::new(packet_id, topics_filters);
+//     let unsubscribe_packet = Unsubscribe::new(packet_id, topics_filters);
 
-    let _ = server_stream.write(unsubscribe_packet.to_bytes().as_slice());
+//     let _ = server_stream.write(unsubscribe_packet.to_bytes().as_slice());
 
-    match Packet::from_bytes(server_stream) {
-        Ok(Packet::Unsuback(_)) => Ok(()),
-        _ => Err(std::io::Error::new(
-            ErrorKind::Other,
-            "Unsuback was not received.",
-        )),
+//     match Packet::from_bytes(server_stream) {
+//         Ok(Packet::Unsuback(_)) => Ok(()),
+//         _ => Err(std::io::Error::new(
+//             ErrorKind::Other,
+//             "Unsuback was not received.",
+//         )),
+//     }
+// }
+
+fn subscribe(filter: Vec<TopicFilter>, server_stream: &mut TcpStream) -> std::io::Result<()> {
+    let mut topics_filters = vec![];
+
+    for topic_filter in filter {
+        topics_filters.push((topic_filter, QoS::AtLeast));
     }
-}
 
-fn subscribe(filter: TopicFilter, server_stream: &mut TcpStream) -> std::io::Result<()> {
     let packet_id = 1;
-    let qos = QoS::AtLeast;
 
-    let topics_filters = vec![(filter, qos)];
+    // let topics_filters = vec![(filter, qos)];
 
     let subscribe_packet = Subscribe::new(packet_id, topics_filters);
     println!(
@@ -190,16 +204,6 @@ fn handle_new_incident(
     camera_system.new_incident(incident.clone());
 
     publish_camera_state(camera_system, server_stream)?;
-
-    let incident_id = incident.uuid();
-
-    let topic_levels = vec![
-        TopicLevel::Literal(CLOSE_INCIDENT.to_vec()),
-        TopicLevel::Literal(incident_id.as_bytes().to_vec()),
-    ];
-    let topic_filter = TopicFilter::new(topic_levels, false);
-
-    subscribe(topic_filter, server_stream)?;
     Ok(())
 }
 
@@ -219,12 +223,5 @@ fn handle_close_incident(
 
     publish_camera_state(camera_system, server_stream)?;
 
-    let topic_levels = vec![
-        TopicLevel::Literal(CLOSE_INCIDENT.to_vec()),
-        TopicLevel::Literal(topic_levels[1].to_vec()),
-    ];
-    let topic_filter = TopicFilter::new(topic_levels, false);
-
-    unsubscribe(topic_filter, server_stream)?;
     Ok(())
 }

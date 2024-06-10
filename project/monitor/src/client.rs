@@ -112,10 +112,14 @@ impl Client {
                                 } else if topic_levels.len() == 2 && topic_levels[0] == DRON_DATA {
                                     println!("Dron data received\n");
                                     //monitor.handle_dron_data(publish);
-                                } else if topic_levels.len() == 2 && topic_levels[0] == ATTEND_INCIDENT {
+                                } else if topic_levels.len() == 2
+                                    && topic_levels[0] == ATTEND_INCIDENT
+                                {
                                     println!("Attend Incident received\n");
                                     //monitor.handle_attend_incident_data(publish);
-                                } else if topic_levels.len() == 2 && topic_levels[0] == CLOSE_INCIDENT {
+                                } else if topic_levels.len() == 2
+                                    && topic_levels[0] == CLOSE_INCIDENT
+                                {
                                     println!("Close Incident received\n");
                                     //monitor.handle_close_incident_data(publish);
                                 } else {
@@ -204,20 +208,24 @@ impl Client {
         Ok(())
     }
 
-    pub fn subscribe(&self, topic: &str) -> std::io::Result<()> {
-        let mut levels = vec![];
-        for level in topic.split('/') {
-            if let Ok(topic_level) = TopicLevel::from_bytes(level.as_bytes().to_vec()) {
-                levels.push(topic_level);
+    pub fn subscribe(&self, topics: Vec<&str>) -> std::io::Result<()> {
+        let mut topics_filters = vec![];
+
+        for topic in topics {
+            let mut levels = vec![];
+            for level in topic.split('/') {
+                if let Ok(topic_level) = TopicLevel::from_bytes(level.as_bytes().to_vec()) {
+                    levels.push(topic_level);
+                }
             }
+
+            let topic_filter = TopicFilter::new(levels, false);
+            let qos = QoS::AtLeast;
+
+            topics_filters.push((topic_filter, qos));
         }
 
-        let topic_filter = TopicFilter::new(levels, false);
         let packet_id = 1;
-        let qos = QoS::AtLeast;
-
-        let topics_filters = vec![(topic_filter, qos)];
-
         let subscribe_packet = Subscribe::new(packet_id, topics_filters);
 
         println!("Packet ID: {:?}", subscribe_packet.packet_identifier());
@@ -240,18 +248,13 @@ impl Client {
     }
 
     fn make_initial_subscribes(&self) -> std::io::Result<()> {
-        let camera_topic = "camera-data";
-        let dron_topic = "dron-data";
-        //let camera_update = "camera-update";
-        let attending_topic = "attending-incident/+";
-        let close_topic = "close-incident/+";
+        let topics = vec![
+            "camera-data",
+            "camera-update",
+            "attending-incident/+",
+            "close-incident/+",
+        ];
 
-        self.subscribe(camera_topic)?;
-        self.subscribe(dron_topic)?;
-        //self.subscribe(camera_update)?;
-        self.subscribe(attending_topic)?;
-        self.subscribe(close_topic)?;
-
-        Ok(())
+        self.subscribe(topics)
     }
 }
