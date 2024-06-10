@@ -496,7 +496,14 @@ fn travel(drone: Arc<Mutex<Drone>>, x: f64, y: f64) {
 
     println!("Traveling to ({}, {})", x, y);
     let thread = thread::spawn(move || {
-        let mut locked_drone = drone.lock().unwrap();
+        let mut locked_drone = match drone.lock() {
+            Ok(drone) => drone,
+            Err(_) => {
+                println!("Mutex was poisoned");
+                return;
+            }
+        };
+
         let mut distance = locked_drone.distance_to(x, y);
         let mut status = DroneStatus::Traveling;
         locked_drone.set_status(DroneStatus::Traveling);
