@@ -1,7 +1,7 @@
 use crate::{drone_status::DroneStatus, incident::Incident};
 
 const ACTIVE_RANGE: f64 = 20.0;
-const MINIMUM_BATTERY_LEVEL: usize = 20;
+const MINIMUM_BATTERY_LEVEL: usize = 95;
 const MAXIMUM_BATTERY_LEVEL: usize = 100;
 const VELOCITY: f64 = 1.0;
 const BATTERY_UNIT: usize = 1;
@@ -51,19 +51,6 @@ impl Drone {
         self.battery < MINIMUM_BATTERY_LEVEL
     }
 
-    pub fn set_coordinates(&mut self, x: f64, y: f64) {
-        self.x_coordinate = x;
-        self.y_coordinate = y;
-    }
-
-    pub fn x_coordinate(&self) -> f64 {
-        self.x_coordinate
-    }
-
-    pub fn y_coordinate(&self) -> f64 {
-        self.y_coordinate
-    }
-
     pub fn set_status(&mut self, status: DroneStatus) {
         self.status = status;
     }
@@ -100,10 +87,13 @@ impl Drone {
             self.x_coordinate = x;
             self.y_coordinate = y;
         }
+
+        self.discharge_battery();
     }
 
     pub fn discharge_battery(&mut self) {
         if self.battery > 0 {
+            println!("Discharging battery: {}", self.battery);
             self.battery -= BATTERY_UNIT;
         }
     }
@@ -160,10 +150,7 @@ impl Drone {
     }
 
     pub fn incident(&self) -> Option<Incident> {
-        match &self.current_incident {
-            Some((incident, _)) => Some(incident.clone()),
-            None => None,
-        }
+        self.current_incident.as_ref().map(|(incident, _)| incident.clone())
     }
 }
 

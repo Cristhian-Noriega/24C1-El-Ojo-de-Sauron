@@ -170,13 +170,6 @@ fn handle_new_incident(
     drone: Arc<Mutex<Drone>>,
     server_stream: Arc<Mutex<TcpStream>>,
 ) {
-    // let incident = match Incident::from_string(message) {
-    //     Ok(incident) => incident,
-    //     Err(_) => {
-    //         println!("Invalid incident message");
-    //         return;
-    //     }
-    // };
 
     let topic_filter = TopicFilter::new(
         vec![
@@ -224,6 +217,16 @@ fn handle_new_incident(
         println!("Drone is not within range of the incident");
         drop(drone_locked);
         return;
+    }
+
+    match drone_locked.status(){
+        DroneStatus::Free => (),
+        DroneStatus::Travelling(TravelLocation::Anchor) => (),
+        _ => {
+            println!("Drone is not free");
+            drop(drone_locked);
+            return;
+        }
     }
 
     drone_locked.set_incident(Some(incident.clone()));
@@ -347,7 +350,7 @@ fn handle_attending_incident(
         }
     };
 
-    if drone_locked.incident() == None {
+    if drone_locked.incident().is_none() {
         println!("Drone has no incident assigned");
         return;
     }
@@ -370,7 +373,22 @@ fn handle_attending_incident(
             ],
             false,
         );
-        unsubscribe(topic_filter, &mut server_stream.lock().unwrap());
+
+        let mut locked_stream = match server_stream.lock() {
+            Ok(stream) => stream,
+            Err(_) => {
+                println!("Mutex was poisoned");
+                return;
+            }
+        };
+        
+        match unsubscribe(topic_filter, &mut locked_stream){
+            Ok(_) => println!("Unsubscribed from the attending incident topic"),
+            Err(e) => eprintln!("Error: {:?}", e),
+        };
+
+        drop(locked_stream);
+
         println!("Unsubscribing from the incident topic");
     } else if drone_locked.attending_counter() == 0 {
         drone_locked.increment_attending_counter();
@@ -382,7 +400,21 @@ fn handle_attending_incident(
             ],
             false,
         );
-        unsubscribe(topic_filter, &mut server_stream.lock().unwrap());
+
+        let mut locked_stream = match server_stream.lock() {
+            Ok(stream) => stream,
+            Err(_) => {
+                println!("Mutex was poisoned");
+                return;
+            }
+        };
+        
+        match unsubscribe(topic_filter, &mut locked_stream) {
+            Ok(_) => println!("Unsubscribed from the close incident topic"),
+            Err(e) => eprintln!("Error: {:?}", e),
+        }
+
+        drop(locked_stream);
 
         //vuelvo a la anchor location
         let x_anchor_point = drone_locked.x_anchor_coordinate();
@@ -448,8 +480,7 @@ fn update_drone_status(server_stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<Dr
             }
         };
 
-        let mut levels = vec![];
-        levels.push(DRONE_DATA.to_vec());
+        let mut levels = vec![DRONE_DATA.to_vec()];
         levels.push(drone.id().to_string().into_bytes());
 
         let topic_name = TopicName::new(levels, false);
@@ -555,7 +586,6 @@ fn publish(
     let mut server_stream = server_stream.try_clone().unwrap();
 
     let dup = false;
-    let qos = qos;
     let retain = false;
     let mut package_identifier = None;
     if qos == QoS::AtLeast {

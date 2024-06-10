@@ -18,9 +18,9 @@ impl std::fmt::Display for DroneStatus {
         match self {
             DroneStatus::Free => write!(f, "0"),
             DroneStatus::AttendingIncident => write!(f, "1"),
-            DroneStatus::Travelling(Central) => write!(f, "2"),
-            DroneStatus::Travelling(Anchor) => write!(f, "3"),
-            DroneStatus::Travelling(Incident) => write!(f, "4"),
+            DroneStatus::Travelling(TravelLocation::Central) => write!(f, "2"),
+            DroneStatus::Travelling(TravelLocation::Anchor) => write!(f, "3"),
+            DroneStatus::Travelling(TravelLocation::Incident) => write!(f, "4"),
             DroneStatus::Recharging => write!(f, "5"),
         }
     }
