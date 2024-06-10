@@ -55,6 +55,20 @@ pub fn client_run(address: &str) -> std::io::Result<()> {
         read_incoming_packets(server_stream_cloned, drone_cloned);
     });
 
+    // let publish = Publish::new(
+    //     false,
+    //     QoS::AtLeast,
+    //     false,
+    //     TopicName::new(
+    //         vec![TopicLevel::Literal(NEW_INCIDENT.to_vec()).to_bytes()],
+    //         false,
+    //     ),
+    //     None,
+    //     b"1;Incidente 1;Incidente de prueba;10.0;10.0;0".to_vec(),
+    // );
+
+    // handle_publish(publish, drone.clone(), server_stream.clone());
+
     // JUST FOR TESTING
     // travel(drone.clone(), 10.0, 10.0);
 
@@ -120,7 +134,7 @@ fn handle_publish(
         let message = String::from_utf8(publish.message().to_vec()).unwrap();
         println!("Le llego un publish!!!!");
         handle_new_incident(message, drone, server_stream);
-    } 
+    }
     // else if topic_levels.len() == 2 && topic_levels[0] == ATTENDING_INCIDENT {
     //     handle_attending_incident(publish.topic().to_string(), drone, server_stream);
     // } else if topic_levels.len() == 2 && topic_levels[0] == CLOSE_INCIDENT {
@@ -157,11 +171,10 @@ fn handle_new_incident(
             "Drone moved to the new incident location: ({}, {})",
             x_incident, y_incident
         );
-        
+
         travel(drone.clone(), x_incident, y_incident);
 
         println!("Drone arrived to the incident location");
-
 
         // Comentado esto de aca abajo, luego de mover el drone a la central, vuelve a enviar su estado correctamente y no se traba
 
@@ -394,7 +407,7 @@ fn publish(
 
 const DISCRETE_INTERVAL: f64 = 0.5;
 
- fn travel(drone: Arc<Mutex<Drone>>, x: f64, y: f64) {
+fn travel(drone: Arc<Mutex<Drone>>, x: f64, y: f64) {
     let drone = drone.clone();
 
     println!("Traveling to ({}, {})", x, y);

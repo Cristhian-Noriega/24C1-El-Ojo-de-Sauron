@@ -1,10 +1,14 @@
 use crate::drone_status::DroneStatus;
-use std::{sync::{Arc, Mutex}, thread, time::Duration};
+use std::{
+    sync::{Arc, Mutex},
+    thread,
+    time::Duration,
+};
 
-const ACTIVE_RANGE: f64 = 10.0;
+const ACTIVE_RANGE: f64 = 20.0;
 const MINIMUM_BATTERY_LEVEL: usize = 50;
 const MAXIMUM_BATTERY_LEVEL: usize = 100;
-const VELOCITY: f64 = 0.1;
+const VELOCITY: f64 = 1.0;
 const DISCRETE_INTERVAL: f64 = 0.5;
 
 #[derive(Debug, Clone)]
@@ -61,7 +65,6 @@ impl Drone {
         self.battery = MAXIMUM_BATTERY_LEVEL;
     }
 
-
     pub fn set_coordinates(&mut self, x: f64, y: f64) {
         self.x_coordinate = x;
         self.y_coordinate = y;
@@ -104,7 +107,6 @@ impl Drone {
             self.y_coordinate = y;
         }
     }
-
 
     pub fn is_within_range(&self, x: f64, y: f64) -> bool {
         let distance = euclidean_distance(self.x_coordinate, self.y_coordinate, x, y);
