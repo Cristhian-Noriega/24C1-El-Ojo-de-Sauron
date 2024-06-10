@@ -1,25 +1,21 @@
 use crate::drone_status::DroneStatus;
-use std::{
-    sync::{Arc, Mutex},
-    thread,
-    time::Duration,
-};
 
 const ACTIVE_RANGE: f64 = 20.0;
 const MINIMUM_BATTERY_LEVEL: usize = 50;
 const MAXIMUM_BATTERY_LEVEL: usize = 100;
-const VELOCITY: f64 = 1.0;
-const DISCRETE_INTERVAL: f64 = 0.5;
+const VELOCITY: f64 = 2.0;
 
 #[derive(Debug, Clone)]
 pub struct Drone {
     id: u8,
     x_coordinate: f64,
     y_coordinate: f64,
-    state: DroneStatus,
+    status: DroneStatus,
     battery: usize,
     x_central: f64,
     y_central: f64,
+    x_default: f64,
+    y_default: f64,
 }
 
 impl Drone {
@@ -28,15 +24,20 @@ impl Drone {
             id: 0,
             x_coordinate: 0.0,
             y_coordinate: 0.0,
-            state: DroneStatus::Free,
+            status: DroneStatus::Free,
             battery: MAXIMUM_BATTERY_LEVEL,
             x_central: 10.0,
             y_central: 10.0,
+            x_default: 0.0,
+            y_default: 0.0,
         }
     }
 
     pub fn data(&self) -> String {
-        format!("{};{};{}", self.x_coordinate, self.y_coordinate, self.state)
+        format!(
+            "{};{};{}",
+            self.x_coordinate, self.y_coordinate, self.status
+        )
     }
 
     pub fn id(&self) -> u8 {
@@ -47,13 +48,13 @@ impl Drone {
         self.battery < MINIMUM_BATTERY_LEVEL
     }
 
-    pub fn update_state(&mut self) {
-        self.consume_battery();
+    // pub fn update_state(&mut self) {
+    //     self.consume_battery();
 
-        // if self.is_below_minimun() {
-        //     self.return_to_central();
-        // }
-    }
+    //     // if self.is_below_minimun() {
+    //     //     self.return_to_central();
+    //     // }
+    // }
 
     pub fn consume_battery(&mut self) {
         if self.battery > 0 {
@@ -78,8 +79,8 @@ impl Drone {
         self.y_coordinate
     }
 
-    pub fn set_state(&mut self, state: DroneStatus) {
-        self.state = state;
+    pub fn set_status(&mut self, status: DroneStatus) {
+        self.status = status;
     }
 
     pub fn distance_to(&self, x: f64, y: f64) -> f64 {
@@ -92,6 +93,14 @@ impl Drone {
 
     pub fn y_central_coordinate(&self) -> f64 {
         self.y_central
+    }
+
+    pub fn x_default_coordinate(&self) -> f64 {
+        self.x_default
+    }
+
+    pub fn y_default_coordinate(&self) -> f64 {
+        self.y_default
     }
 
     pub fn travel_to(&mut self, x: f64, y: f64) {
@@ -109,9 +118,13 @@ impl Drone {
     }
 
     pub fn is_within_range(&self, x: f64, y: f64) -> bool {
-        let distance = euclidean_distance(self.x_coordinate, self.y_coordinate, x, y);
+        let distance = euclidean_distance(self.x_default, self.y_default, x, y);
 
         distance < ACTIVE_RANGE
+    }
+
+    pub fn status(&self) -> DroneStatus {
+        self.status.clone()
     }
 }
 
