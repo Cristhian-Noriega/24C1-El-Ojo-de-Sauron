@@ -44,13 +44,7 @@ pub fn client_run(address: &str) -> std::io::Result<()> {
         false,
     );
     let topics = vec![new_incident, close_incident];
-    // subscribe(topics, &mut server_stream)?;
-
-    let topic_name = TopicName::new(vec![NEW_INCIDENT.to_vec()], false);
-
-    let message = b"uuid;title;description;10.0;10.0;0".to_vec();
-
-    publish(topic_name, message, &mut server_stream);
+    subscribe(topics, &mut server_stream)?;
 
     loop {
         let incoming_publish = match Packet::from_bytes(&mut server_stream) {
