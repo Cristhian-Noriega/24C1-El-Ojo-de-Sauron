@@ -26,6 +26,7 @@ const ATTENDING_INCIDENT: &[u8] = b"attending-incident";
 const CLOSE_INCIDENT: &[u8] = b"close-incident";
 const DRONE_DATA: &[u8] = b"drone-data";
 
+const READ_MESSAGE_INTERVAL: u64 = 1;
 const UPDATE_DATA_INTERVAL: u64 = 10;
 const CHECK_BATTERY_INTERVAL: u64 = 5;
 
@@ -82,22 +83,23 @@ pub fn client_run(address: &str) -> std::io::Result<()> {
     Ok(())
 }
 
-fn read_incoming_packets(server_stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<Drone>>) {
+fn read_incoming_packets(stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<Drone>>) {
     loop {
         let mut buffer = [0; 1024];
-        let mut stream = server_stream.lock().unwrap();
+        let mut locked_stream = stream.lock().unwrap();
 
         println!("Reading incoming packets");
 
-        stream.set_nonblocking(true).unwrap();
-        match stream.read(&mut buffer) {
+        locked_stream.set_nonblocking(true).unwrap();
+        match locked_stream.read(&mut buffer) {
             Ok(_) => {
                 let packet = Packet::from_bytes(&mut buffer.as_slice()).unwrap();
+                drop(locked_stream);
+
                 match packet {
                     Packet::Publish(publish) => {
                         let cloned_drone = drone.clone();
-                        let cloned_stream = server_stream.clone();
-                        drop(stream);
+                        let cloned_stream = stream.clone();
 
                         handle_publish(publish, cloned_drone, cloned_stream);
                     }
@@ -114,8 +116,8 @@ fn read_incoming_packets(server_stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<
                 }
             }
             Err(e) if e.kind() == ErrorKind::WouldBlock => {
-                drop(stream);
-                thread::sleep(Duration::from_secs(1));
+                drop(locked_stream);
+                thread::sleep(Duration::from_secs(READ_MESSAGE_INTERVAL));
                 continue;
             }
             Err(e) => {
@@ -170,7 +172,6 @@ fn handle_new_incident(
     drone: Arc<Mutex<Drone>>,
     server_stream: Arc<Mutex<TcpStream>>,
 ) {
-
     let topic_filter = TopicFilter::new(
         vec![
             TopicLevel::Literal(ATTENDING_INCIDENT.to_vec()),
@@ -219,7 +220,7 @@ fn handle_new_incident(
         return;
     }
 
-    match drone_locked.status(){
+    match drone_locked.status() {
         DroneStatus::Free => (),
         DroneStatus::Travelling(TravelLocation::Anchor) => (),
         _ => {
@@ -381,8 +382,8 @@ fn handle_attending_incident(
                 return;
             }
         };
-        
-        match unsubscribe(topic_filter, &mut locked_stream){
+
+        match unsubscribe(topic_filter, &mut locked_stream) {
             Ok(_) => println!("Unsubscribed from the attending incident topic"),
             Err(e) => eprintln!("Error: {:?}", e),
         };
@@ -408,7 +409,7 @@ fn handle_attending_incident(
                 return;
             }
         };
-        
+
         match unsubscribe(topic_filter, &mut locked_stream) {
             Ok(_) => println!("Unsubscribed from the close incident topic"),
             Err(e) => eprintln!("Error: {:?}", e),
@@ -693,7 +694,7 @@ fn recharge_battery(drone: Arc<Mutex<Drone>>) {
             continue;
         }
 
-        // RECHARGE BATTERY 
+        // RECHARGE BATTERY
         println!("RECHARGE BATTERY POR FAVOR");
 
         let x = locked_drone.x_central_coordinate();
@@ -758,6 +759,5 @@ fn recharge_battery(drone: Arc<Mutex<Drone>>) {
 
         locked_drone.set_status(DroneStatus::Free);
         drop(locked_drone);
-
     }
 }
