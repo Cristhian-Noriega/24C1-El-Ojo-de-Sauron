@@ -1,23 +1,28 @@
-use ui_application::UIApplication;
+use std::env::args;
 
+mod camera;
 mod client;
-mod incident;
 mod drone;
-mod ui_application;
+mod incident;
 mod monitor;
+mod new_client;
+mod ui_application;
 
-fn main() -> Result<(), eframe::Error> {
-    let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default(),
-        ..Default::default()
-    };
+const CLIENT_ARGS: usize = 3;
 
-    eframe::run_native(
-        "Monitor",
-        options,
-        Box::new(|cc| {
-            egui_extras::install_image_loaders(&cc.egui_ctx);
-            Box::new(UIApplication::new(cc.egui_ctx.clone()))
-        }),
-    )
+fn main() {
+    let argv = args().collect::<Vec<String>>();
+    if argv.len() != CLIENT_ARGS {
+        println!("Cantidad de argumentos inválidos");
+        let app_name = &argv[0];
+        println!("{:?} <host> <puerto>", app_name);
+
+        return;
+    }
+
+    let address = argv[1].clone() + ":" + &argv[2];
+
+    if let Err(e) = new_client::client_run(&address) {
+        println!("Error: {:?}", e);
+    }
 }

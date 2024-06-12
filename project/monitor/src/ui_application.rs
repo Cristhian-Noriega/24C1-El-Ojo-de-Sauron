@@ -1,9 +1,12 @@
-use crate::{client::Client, monitor::Monitor};
+use crate::{camera::Camera, drone::Drone, incident::Incident, monitor::Monitor};
 use eframe::egui;
 use egui::Context;
 use egui_extras::{Column, TableBuilder};
-use std::sync::{mpsc, Arc, Mutex};
+use std::sync::mpsc::{Receiver, Sender};
 use walkers::{sources::OpenStreetMap, Map, MapMemory, Position, Tiles};
+
+const DEFAULT_LONGITUDE: f64 = -58.3717;
+const DEFAULT_LONGITUD: f64 = -34.6081;
 
 #[derive(PartialEq)]
 enum Layout {
@@ -13,31 +16,66 @@ enum Layout {
     DroneOperations,
 }
 
+enum UIAction {
+    Connect,
+    Disconnect,
+    RegistrateDrone(DroneRegistration),
+    RegistrateIncident(IncidentRegistration),
+}
+
+struct DroneRegistration {
+    id: String,
+    password: String,
+    anchor_x: f64,
+    anchor_y: f64,
+}
+
+struct IncidentRegistration {
+    name: String,
+    description: String,
+    x: f64,
+    y: f64,
+}
+
+enum MonitorAction {
+    Connect,
+    Disconnect,
+    DroneData(Drone),
+    CameraData(Camera),
+    IncidentData(Incident),
+}
+
 pub struct UIApplication {
-    client: Arc<Mutex<Client>>,
-    
-    pub new_incident_name: String,
-    pub new_incident_description: String,
-    pub new_incident_x_coordenate: String,
-    pub new_incident_y_coordenate: String,
-    
-    pub new_drone_id: String,
-    pub new_drone_password: String,
-    pub new_drone_anchor_x_coordenate: String,
-    pub new_drone_anchor_y_coordenate: String,
-    
-    pub ui_receiver: mpsc::Receiver<String>,
+    new_incident_name: String,
+    new_incident_description: String,
+    new_incident_x_coordenate: String,
+    new_incident_y_coordenate: String,
+
+    new_drone_id: String,
+    new_drone_password: String,
+    new_drone_anchor_x_coordenate: String,
+    new_drone_anchor_y_coordenate: String,
+
+    conection_status: bool,
     current_layout: Layout,
     tiles: Tiles,
     map_memory: MapMemory,
-    monitor: Monitor,
+
+    sender: Sender<UIAction>,
+    receiver: Receiver<MonitorAction>,
+
+    drone_list: Vec<Drone>,
+    incident_list: Vec<Incident>,
+    camera_list: Vec<Camera>,
 }
 
 impl UIApplication {
-    pub fn new(egui_ctx: Context) -> Self {
-        let (sender, receiver) = mpsc::channel();
+    pub fn new(
+        egui_ctx: Context,
+        sender: Sender<UIAction>,
+        receiver: Receiver<MonitorAction>,
+    ) -> Self {
         Self {
-            client: Arc::new(Mutex::new(Client::new(sender))),
             new_incident_name: "".to_owned(),
             new_incident_description: "".to_owned(),
             new_incident_x_coordenate: "".to_owned(),
@@ -46,18 +84,90 @@ impl UIApplication {
             new_drone_password: "".to_owned(),
             new_drone_anchor_x_coordenate: "".to_owned(),
             new_drone_anchor_y_coordenate: "".to_owned(),
-            ui_receiver: receiver,
+            conection_status: false,
             current_layout: Layout::IncidentMap,
             tiles: Tiles::new(OpenStreetMap, egui_ctx),
             map_memory: MapMemory::default(),
-            monitor: Monitor::new(),
+            sender,
+            receiver,
+            drone_list: Vec::new(),
+            incident_list: Vec::new(),
+            camera_list: Vec::new(),
         }
+    }
+}
+
+fn update_drone_list(drone_list: &mut Vec<Drone>, drone: Drone) {
+    let mut found = false;
+    for d in drone_list.iter_mut() {
+        if d.id == drone.id {
+            *d = drone;
+            found = true;
+            break;
+        }
+    }
+
+    if !found {
+        drone_list.push(drone);
+    }
+}
+
+fn update_incident_list(incident_list: &mut Vec<Incident>, incident: Incident) {
+    let mut found = false;
+    for i in incident_list.iter_mut() {
+        if i.uuid == incident.uuid {
+            *i = incident;
+            found = true;
+            break;
+        }
+    }
+
+    if !found {
+        incident_list.push(incident);
+    }
+}
+
+fn update_camera_list(camera_list: &mut Vec<Camera>, camera: Camera) {
+    let mut found = false;
+    for c in camera_list.iter_mut() {
+        if c.id == camera.id {
+            *c = camera;
+            found = true;
+            break;
+        }
+    }
+
+    if !found {
+        camera_list.push(camera);
     }
 }
 
 impl eframe::App for UIApplication {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        let mut client = self.client.lock().unwrap();
+        // leer todo lo que haya en el receiver
+
+        loop {
+            match self.receiver.try_recv() {
+                Ok(action) => match action {
+                    MonitorAction::Connect => {
+                        self.conection_status = true;
+                    }
+                    MonitorAction::Disconnect => {
+                        self.conection_status = false;
+                    }
+                    MonitorAction::DroneData(drone) => {
+                        update_drone_list(&mut self.drone_list, drone);
+                    }
+                    MonitorAction::IncidentData(incident) => {
+                        update_incident_list(&mut self.incident_list, incident);
+                    }
+                    MonitorAction::CameraData(camera) => {
+                        update_camera_list(&mut self.camera_list, camera);
+                    }
+                },
+                Err(_) => break,
+            }
+        }
 
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.horizontal(|ui| {
@@ -67,17 +177,11 @@ impl eframe::App for UIApplication {
             ui.add_space(15.0);
             ui.horizontal(|ui| {
                 if ui.button("Connect").clicked() {
-                    match client.client_run(&self.monitor) {
-                        Ok(_) => println!("Conectado"),
-                        Err(e) => {
-                            println!("Error al conectar: {:?}", e);
-                        }
-                    }
+                    self.sender.send(UIAction::Connect).unwrap();
                 }
                 ui.add_space(500.0);
-                
 
-                if *client.connection_status.lock().unwrap() == "connected" {
+                if self.conection_status {
                     ui.label(egui::RichText::new("Connected").color(egui::Color32::GREEN));
                 } else {
                     ui.label(egui::RichText::new("Disconnected").color(egui::Color32::RED));
@@ -87,10 +191,7 @@ impl eframe::App for UIApplication {
             ui.add_space(20.0);
 
             ui.horizontal(|ui| {
-                ui.selectable_value(
-                    &mut self.current_layout, 
-                    Layout::IncidentMap,
-                    "Map");
+                ui.selectable_value(&mut self.current_layout, Layout::IncidentMap, "Map");
                 ui.selectable_value(
                     &mut self.current_layout,
                     Layout::IncidentList,
@@ -101,11 +202,7 @@ impl eframe::App for UIApplication {
                     Layout::NewIncident,
                     "Create incident",
                 );
-                ui.selectable_value(
-                    &mut self.current_layout,
-                    Layout::DroneOperations,
-                    "Drones",
-                );
+                ui.selectable_value(&mut self.current_layout, Layout::DroneOperations, "Drones");
             });
 
             ui.add_space(20.0);
@@ -114,7 +211,7 @@ impl eframe::App for UIApplication {
                 ui.add(Map::new(
                     Some(&mut self.tiles),
                     &mut self.map_memory,
-                    Position::from_lon_lat(-58.3717, -34.6081),
+                    Position::from_lon_lat(DEFAULT_LONGITUDE, DEFAULT_LONGITUD),
                 ));
             }
 
@@ -140,18 +237,16 @@ impl eframe::App for UIApplication {
                 ui.add_space(20.0);
                 ui.vertical_centered(|ui| {
                     if ui.button("Send").clicked() {
-                        match self.monitor.new_incident(
-                            &self.new_incident_name,
-                            &self.new_incident_description,
-                            &self.new_incident_x_coordenate,
-                            &self.new_incident_y_coordenate,
-                            &client,
-                        ) {
-                            Ok(_) => println!("Nuevo incidente enviado"),
-                            Err(e) => {
-                                println!("Error al publicar mensaje: {:?}", e);
-                            }
-                        }
+                        let incident = IncidentRegistration {
+                            name: self.new_incident_name.clone(),
+                            description: self.new_incident_description.clone(),
+                            x: self.new_incident_x_coordenate.parse().unwrap(),
+                            y: self.new_incident_y_coordenate.parse().unwrap(),
+                        };
+
+                        self.sender
+                            .send(UIAction::RegistrateIncident(incident))
+                            .unwrap();
                     }
                 });
             }
@@ -192,7 +287,10 @@ impl eframe::App for UIApplication {
                                     ui.label(item.description.clone());
                                 });
                                 row.col(|ui| {
-                                    ui.label("x,y");
+                                    ui.label(format!(
+                                        "({}, {})",
+                                        item.x_coordinate, item.y_coordinate
+                                    ));
                                 });
                                 row.col(|ui| {
                                     ui.label(item.state.clone());
@@ -205,46 +303,53 @@ impl eframe::App for UIApplication {
             if self.current_layout == Layout::DroneOperations {
                 egui::Frame::group(ui.style()).show(ui, |ui| {
                     ui.label("New Drone Registration:");
-            
+
                     ui.add_space(10.0);
                     ui.horizontal(|ui| {
                         ui.label("Drone ID:");
                         ui.add_space(22.0);
-                        ui.add(egui::TextEdit::singleline(&mut self.new_drone_id).desired_width(340.0));
+                        ui.add(
+                            egui::TextEdit::singleline(&mut self.new_drone_id).desired_width(340.0),
+                        );
                     });
-            
+
                     ui.add_space(10.0);
                     ui.horizontal(|ui| {
                         ui.label("Password:");
                         ui.add_space(20.0);
-                        ui.add(egui::TextEdit::singleline(&mut self.new_drone_password).desired_width(340.0));
+                        ui.add(
+                            egui::TextEdit::singleline(&mut self.new_drone_password)
+                                .desired_width(340.0),
+                        );
                     });
-            
+
                     ui.add_space(10.0);
                     ui.horizontal(|ui| {
                         ui.label("Anchor Point Coordinates:");
 
                         ui.add_space(10.0);
                         ui.label("x:");
-                        ui.add(egui::TextEdit::singleline(&mut self.new_drone_anchor_x_coordenate).desired_width(100.0));
+                        ui.add(
+                            egui::TextEdit::singleline(&mut self.new_drone_anchor_x_coordenate)
+                                .desired_width(100.0),
+                        );
 
                         ui.add_space(10.0);
                         ui.label("y:");
-                        ui.add(egui::TextEdit::singleline(&mut self.new_drone_anchor_y_coordenate).desired_width(100.0));
+                        ui.add(
+                            egui::TextEdit::singleline(&mut self.new_drone_anchor_y_coordenate)
+                                .desired_width(100.0),
+                        );
                         ui.add_space(263.0);
                         if ui.button("Register").clicked() {
-                            match self.monitor.new_drone(
-                                &self.new_drone_id,
-                                &self.new_drone_password,
-                                &self.new_drone_anchor_x_coordenate,
-                                &self.new_drone_anchor_y_coordenate,
-                                &client,
-                            ) {
-                                Ok(_) => println!("New drone created"),
-                                Err(e) => {
-                                    println!("Error creating drone: {:?}", e);
-                                }
-                            }
+                            let drone = DroneRegistration {
+                                id: self.new_drone_id.clone(),
+                                password: self.new_drone_password.clone(),
+                                anchor_x: self.new_drone_anchor_x_coordenate.parse().unwrap(),
+                                anchor_y: self.new_drone_anchor_y_coordenate.parse().unwrap(),
+                            };
+
+                            self.sender.send(UIAction::RegistrateDrone(drone)).unwrap();
                         }
                     });
                 });
@@ -282,7 +387,10 @@ impl eframe::App for UIApplication {
                                         ui.label(drone.id.clone());
                                     });
                                     row.col(|ui| {
-                                        let position = format!("({}, {})", drone.x_coordinate, drone.y_coordinate);
+                                        let position = format!(
+                                            "({}, {})",
+                                            drone.x_coordinate, drone.y_coordinate
+                                        );
                                         ui.label(position);
                                     });
                                     row.col(|ui| {
