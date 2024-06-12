@@ -1,41 +1,26 @@
 #[derive(Debug, PartialEq)]
 pub struct Drone {
-    pub id: String,
-    pub password: String,
+    pub id: Vec<u8>,
     pub state: String,
-    pub battery: f64,
+    pub battery: usize,
     pub x_coordinate: f64,
     pub y_coordinate: f64,
 }
 
 impl Drone {
-    // pub fn new(
-    //     id: String,
-    //     password: String,
-    //     state: String,
-    //     battery: f64,
-    //     x_coordinate: f64,
-    //     y_coordinate: f64,
-    // ) -> Self {
-    //     Self {
-    //         id,
-    //         password,
-    //         state,
-    //         battery,
-    //         x_coordinate,
-    //         y_coordinate,
-    //     }
-    // }
-
-    // pub fn build_new_drone_message(&self) -> String {
-    //     format!(
-    //         "{};{};{};{};{};{}",
-    //         self.id,
-    //         self.password,
-    //         self.state,
-    //         self.battery,
-    //         self.x_coordinate,
-    //         self.y_coordinate,
-    //     )
-    // }
+    pub fn new(
+        id: Vec<u8>,
+        state: String, //pasarlo quizas a enum
+        battery: usize,
+        x_coordinate: f64,
+        y_coordinate: f64,
+    ) -> Self {
+        Self {
+            id,
+            state,
+            battery,
+            x_coordinate,
+            y_coordinate,
+        }
+    }
 }

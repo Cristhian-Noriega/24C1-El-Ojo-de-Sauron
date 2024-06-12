@@ -45,7 +45,7 @@ impl Monitor {
         // self.subscribe(&attending_topic)?;
         // self.subscribe(&close_topic)?;
 
-        self.incidents.lock().unwrap().push(new_incident);
+        self.incidents.push(new_incident);
 
         Ok(())
     }
@@ -89,5 +89,45 @@ impl Monitor {
     pub fn handle_close_incident_data(&self, packet: Publish) -> std::io::Result<()> {
         println!("Handling close incident data {:?}", packet);
         Ok(())
+    }
+
+    pub fn has_registred_drone(&self, drone_id: Vec<u8>) -> bool {
+        self.drones.iter().any(|drone| drone.id == drone_id)
+    }
+
+    pub fn add_drone(&self, drone: Drone) {
+        self.drones.push(drone);
+    }
+
+    pub fn add_camera(&self, camera: Camera) {
+        self.cameras.push(camera);
+    }
+
+    pub fn add_incident(&self, incident: Incident) {
+        self.incidents.push(incident);
+    }
+
+    pub fn update_drone(
+        &self,
+        id: Vec<u8>,
+        state: String,
+        battery: usize,
+        x_coordinate: f64,
+        y_coordinate: f64,
+    ) {
+        let drone = self
+            .drones
+            .iter_mut()
+            .find(|drone| drone.id == id)
+            .unwrap();
+
+        drone.state = state;
+        drone.battery = battery;
+        drone.x_coordinate = x_coordinate;
+        drone.y_coordinate = y_coordinate;
+    }
+
+    pub fn get_drone(&self, id: Vec<u8>) -> Option<&Drone> {
+        self.drones.iter().find(|drone| drone.id == id)
     }
 }

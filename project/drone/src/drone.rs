@@ -38,8 +38,8 @@ impl Drone {
 
     pub fn data(&self) -> String {
         format!(
-            "{};{};{}",
-            self.x_coordinate, self.y_coordinate, self.status
+            "{};{};{};{}",
+            self.x_coordinate, self.y_coordinate, self.status, self.battery
         )
     }
 
