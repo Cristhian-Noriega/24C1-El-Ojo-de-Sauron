@@ -1,4 +1,9 @@
-use crate::{camera::Camera, drone::Drone, incident::Incident};
+use crate::{
+    camera::Camera,
+    channels_tasks::{DroneRegistration, IncidentRegistration, MonitorAction, UIAction},
+    drone::Drone,
+    incident::Incident,
+};
 use eframe::egui;
 use egui::Context;
 use egui_extras::{Column, TableBuilder};
@@ -15,37 +20,6 @@ enum Layout {
     NewIncident,
     DroneList,
     NewDrone,
-}
-
-enum UIAction {
-    Connect,
-    Disconnect,
-    RegistrateDrone(DroneRegistration),
-    RegistrateIncident(IncidentRegistration),
-}
-
-#[derive(Clone)]
-struct DroneRegistration {
-    id: String,
-    password: String,
-    anchor_x: String,
-    anchor_y: String,
-}
-
-#[derive(Clone)]
-struct IncidentRegistration {
-    name: String,
-    description: String,
-    x: String,
-    y: String,
-}
-
-enum MonitorAction {
-    Connect,
-    Disconnect,
-    DroneData(Drone),
-    CameraData(Camera),
-    IncidentData(Incident),
 }
 
 pub struct UIApplication {

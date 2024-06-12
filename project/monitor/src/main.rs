@@ -1,6 +1,7 @@
 use std::env::args;
 
 mod camera;
+mod channels_tasks;
 mod client;
 mod drone;
 mod incident;
@@ -22,7 +23,7 @@ fn main() {
 
     let address = argv[1].clone() + ":" + &argv[2];
 
-    if let Err(e) = new_client::client_run(&address) {
+    if let Err(e) = new_client::client_run(address) {
         println!("Error: {:?}", e);
     }
 }

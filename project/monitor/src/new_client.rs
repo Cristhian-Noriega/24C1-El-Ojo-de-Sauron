@@ -1,8 +1,12 @@
 use std::sync::mpsc::{channel, Receiver, Sender};
 
-use crate::{monitor::Monitor, ui_application::UIApplication};
+use crate::{
+    channels_tasks::{MonitorAction, UIAction},
+    monitor::Monitor,
+    ui_application::UIApplication,
+};
 
-pub fn client_run(address: &str) -> Result<(), String> {
+pub fn client_run(address: String) -> Result<(), String> {
     let (monitor_sender, from_monitor_receiver) = channel();
     let (ui_sender, from_ui_receiver) = channel();
 
@@ -21,8 +25,8 @@ pub fn client_run(address: &str) -> Result<(), String> {
 }
 
 fn start_ui(
-    ui_sender: Sender<()>,
-    from_monitor_receiver: Receiver<()>,
+    ui_sender: Sender<UIAction>,
+    from_monitor_receiver: Receiver<MonitorAction>,
 ) -> Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default(),
@@ -43,7 +47,9 @@ fn start_ui(
     )
 }
 
-fn start_monitor(address: &str, monitor_sender: Sender<()>, ui_receiver: Receiver<()>) {
-    // let mut client = Monitor::new(address, monitor_sender, ui_receiver);
-    // client.run();
+fn start_monitor(
+    address: String,
+    monitor_sender: Sender<MonitorAction>,
+    ui_receiver: Receiver<UIAction>,
+) {
 }
