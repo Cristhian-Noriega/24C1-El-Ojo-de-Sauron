@@ -75,53 +75,41 @@ impl UIApplication {
 }
 
 fn update_drones(drones: &mut Vec<Drone>, drone: Drone) {
-    let mut found = false;
     for d in drones.iter_mut() {
         if d.id == drone.id {
             *d = drone;
-            found = true;
-            break;
+            return;
         }
     }
 
-    if !found {
-        drones.push(drone);
-    }
+    drones.push(drone);
 }
 
 fn update_incidents(incidents: &mut Vec<Incident>, incident: Incident) {
-    let mut found = false;
     for i in incidents.iter_mut() {
         if i.uuid == incident.uuid {
             *i = incident;
-            found = true;
-            break;
+            return;
         }
     }
 
-    if !found {
-        incidents.push(incident);
-    }
+    incidents.push(incident);
 }
 
 fn update_cameras(cameras: &mut Vec<Camera>, camera: Camera) {
-    let mut found = false;
     for c in cameras.iter_mut() {
         if c.id == camera.id {
             *c = camera;
-            found = true;
-            break;
+            return;
         }
     }
 
-    if !found {
-        cameras.push(camera);
-    }
+    cameras.push(camera);
 }
 
 fn display_incident_map(ui: &mut egui::Ui, tiles: &mut Tiles, map_memory: &mut MapMemory) {
     let position = Position::from_lon_lat(DEFAULT_LONGITUDE, DEFAULT_LONGITUD);
-    let mut map = Map::new(Some(tiles), map_memory, position);
+    let map = Map::new(Some(tiles), map_memory, position);
     ui.add(map);
 }
 
