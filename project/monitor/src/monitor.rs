@@ -1,13 +1,13 @@
-use crate::{drone::Drone, incident::Incident, client::Client};
-use std::sync::{Arc, Mutex};
+use crate::{client::Client, drone::Drone, incident::Incident};
 use mqtt::model::packets::publish::Publish;
+use std::sync::{mpsc::channel, Arc, Mutex};
 
 pub struct Monitor {
     pub incident_list: Arc<Mutex<Vec<Incident>>>,
     pub drone_list: Arc<Mutex<Vec<Drone>>>,
 }
 
-impl Monitor{
+impl Monitor {
     pub fn new() -> Self {
         Self {
             incident_list: Arc::new(Mutex::new(vec![])),
@@ -49,51 +49,43 @@ impl Monitor{
         Ok(())
     }
 
-    pub fn new_drone(&self,
-        id: &str, 
-        password: &str, 
-        x_coordenate: &str, 
+    pub fn new_drone(
+        &self,
+        id: &str,
+        password: &str,
+        x_coordenate: &str,
         y_coordenate: &str,
         client: &Client,
     ) -> std::io::Result<()> {
         let new_drone_topic = "new-drone";
         let x_coordenate_float: f64 = x_coordenate.parse().unwrap();
         let y_coordenate_float: f64 = y_coordenate.parse().unwrap();
-        let message = format!("{},{},{},{}", id, password, x_coordenate_float, y_coordenate_float);
+        let message = format!(
+            "{},{},{},{}",
+            id, password, x_coordenate_float, y_coordenate_float
+        );
 
         client.publish(new_drone_topic, &message)?;
 
         Ok(())
     }
 
-    pub fn handle_camera_data(
-        &self,
-        packet: Publish
-    ) -> std::io::Result<()> {
+    pub fn handle_camera_data(&self, packet: Publish) -> std::io::Result<()> {
         println!("Handling camera data {:?}", packet);
         Ok(())
     }
 
-    pub fn handle_dron_data(
-        &self,
-        packet: Publish
-    ) -> std::io::Result<()> {
+    pub fn handle_dron_data(&self, packet: Publish) -> std::io::Result<()> {
         println!("Handling dron data {:?}", packet);
         Ok(())
     }
 
-    pub fn handle_attend_incident_data(
-        &self,
-        packet: Publish
-    ) -> std::io::Result<()> {
+    pub fn handle_attend_incident_data(&self, packet: Publish) -> std::io::Result<()> {
         println!("Handling attending incident data {:?}", packet);
         Ok(())
     }
 
-    pub fn handle_close_incident_data(
-        &self,
-        packet: Publish
-    ) -> std::io::Result<()> {
+    pub fn handle_close_incident_data(&self, packet: Publish) -> std::io::Result<()> {
         println!("Handling close incident data {:?}", packet);
         Ok(())
     }

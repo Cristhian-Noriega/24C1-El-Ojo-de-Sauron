@@ -1,4 +1,3 @@
-
 #[derive(Debug, PartialEq)]
 pub struct Drone {
     pub id: String,

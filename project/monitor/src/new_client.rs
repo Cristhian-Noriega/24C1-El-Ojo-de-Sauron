@@ -10,15 +10,22 @@ pub fn client_run(address: String) -> Result<(), String> {
     let (monitor_sender, from_monitor_receiver) = channel();
     let (ui_sender, from_ui_receiver) = channel();
 
-    let ui_thread = std::thread::spawn(move || {
-        start_ui(ui_sender, from_monitor_receiver);
-    });
+    // let ui_thread = std::thread::spawn(move || {
+    //     start_ui(ui_sender, from_monitor_receiver);
+    // });
+
+    match start_ui(ui_sender, from_monitor_receiver) {
+        Ok(_) => {}
+        Err(_) => {
+            return Err("Error starting UI".to_string());
+        }
+    }
 
     let monitor_thread = std::thread::spawn(move || {
         start_monitor(address, monitor_sender, from_ui_receiver);
     });
 
-    ui_thread.join().unwrap();
+    //ui_thread.join().unwrap();
     monitor_thread.join().unwrap();
 
     Ok(())

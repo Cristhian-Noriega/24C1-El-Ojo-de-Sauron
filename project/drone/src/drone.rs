@@ -150,7 +150,9 @@ impl Drone {
     }
 
     pub fn incident(&self) -> Option<Incident> {
-        self.current_incident.as_ref().map(|(incident, _)| incident.clone())
+        self.current_incident
+            .as_ref()
+            .map(|(incident, _)| incident.clone())
     }
 }
 
