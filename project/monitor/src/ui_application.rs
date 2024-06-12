@@ -302,16 +302,16 @@ fn display_header(
     });
     ui.add_space(15.0);
     ui.horizontal(|ui| {
-        if ui.button("Connect").clicked() {
-            sender.send(UIAction::Connect).unwrap();
-        }
-        ui.add_space(500.0);
+        // if ui.button("Connect").clicked() {
+        //     sender.send(UIAction::Connect).unwrap();
+        // }
+        // ui.add_space(500.0);
 
-        if conection_status {
-            ui.label(egui::RichText::new("Connected").color(egui::Color32::GREEN));
-        } else {
-            ui.label(egui::RichText::new("Disconnected").color(egui::Color32::RED));
-        }
+        // if conection_status {
+        ui.label(egui::RichText::new("Connected").color(egui::Color32::GREEN));
+        // } else {
+        //     ui.label(egui::RichText::new("Disconnected").color(egui::Color32::RED));
+        // }
     });
 
     ui.add_space(20.0);
@@ -331,12 +331,12 @@ impl eframe::App for UIApplication {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         loop {
             match self.receiver.try_recv() {
-                Ok(MonitorAction::Disconnect) => {
-                    self.conection_status = false;
-                }
-                Ok(MonitorAction::Connect) => {
-                    self.conection_status = true;
-                }
+                // Ok(MonitorAction::Disconnect) => {
+                //     self.conection_status = false;
+                // }
+                // Ok(MonitorAction::Connect) => {
+                //     self.conection_status = true;
+                // }
                 Ok(MonitorAction::DroneData(drone)) => {
                     update_drones(&mut self.drones, drone);
                 }

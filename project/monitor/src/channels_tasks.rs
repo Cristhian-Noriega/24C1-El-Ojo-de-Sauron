@@ -2,8 +2,8 @@ use crate::{camera::Camera, drone::Drone, incident::Incident};
 
 // A REFACTORIZAR EN VARIOS ARCHIVOS
 pub enum UIAction {
-    Connect,
-    Disconnect,
+    // Connect,
+    // Disconnect,
     RegistrateDrone(DroneRegistration),
     RegistrateIncident(IncidentRegistration),
 }
@@ -25,8 +25,8 @@ pub struct IncidentRegistration {
 }
 
 pub enum MonitorAction {
-    Connect,
-    Disconnect,
+    // Connect,
+    // Disconnect,
     DroneData(Drone),
     CameraData(Camera),
     IncidentData(Incident),

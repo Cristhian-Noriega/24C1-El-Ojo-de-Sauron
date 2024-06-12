@@ -1,17 +1,18 @@
-use crate::{client::Client, drone::Drone, incident::Incident};
+use crate::{camera::Camera, client::Client, drone::Drone, incident::Incident};
 use mqtt::model::packets::publish::Publish;
-use std::sync::{mpsc::channel, Arc, Mutex};
 
 pub struct Monitor {
-    pub incident_list: Arc<Mutex<Vec<Incident>>>,
-    pub drone_list: Arc<Mutex<Vec<Drone>>>,
+    pub incidents: Vec<Incident>,
+    pub drones: Vec<Drone>,
+    pub cameras: Vec<Camera>,
 }
 
 impl Monitor {
     pub fn new() -> Self {
         Self {
-            incident_list: Arc::new(Mutex::new(vec![])),
-            drone_list: Arc::new(Mutex::new(vec![])),
+            incidents: Vec::new(),
+            drones: Vec::new(),
+            cameras: Vec::new(),
         }
     }
 
@@ -44,7 +45,7 @@ impl Monitor {
         // self.subscribe(&attending_topic)?;
         // self.subscribe(&close_topic)?;
 
-        self.incident_list.lock().unwrap().push(new_incident);
+        self.incidents.lock().unwrap().push(new_incident);
 
         Ok(())
     }
