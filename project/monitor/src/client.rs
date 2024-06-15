@@ -12,12 +12,10 @@ use std::io::Write;
 use std::net::TcpStream;
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
-use std::{env::args, thread};
+use std::thread;
 use std::path::Path;
 
 use crate::{drone::Drone, incident::Incident, config::Config};
-
-static CLIENT_ARGS: usize = 3;
 
 pub struct Client {
     pub connection_status: Arc<Mutex<String>>,
