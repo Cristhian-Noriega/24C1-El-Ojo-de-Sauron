@@ -12,23 +12,21 @@ use mqtt::model::{
     packets::{connect::Connect, publish::Publish, subscribe::Subscribe},
 };
 
-use crate::camera::Camera;
+use crate::{camera::Camera, config::Config};
 use crate::camera_system::CameraSystem;
 use crate::incident::Incident;
-
-const CAMERA_QUANTITY: usize = 3;
 
 const NEW_INCIDENT: &[u8] = b"new-incident";
 const CLOSE_INCIDENT: &[u8] = b"close-incident";
 const CAMERA_DATA: &[u8] = b"camera-data";
 
-pub fn client_run(address: &str) -> std::io::Result<()> {
+pub fn client_run(address: &str, config: Config) -> std::io::Result<()> {
     let mut server_stream = connect_to_server(address)?;
 
     let mut camera_system = CameraSystem::new();
 
     // TODO: camaras reales
-    for i in 0..CAMERA_QUANTITY {
+    for i in 0..config.get_number_of_cameras() {
         let camara = Camera::new(i as u8, i as f64, i as f64);
         camera_system.add_camera(camara);
     }

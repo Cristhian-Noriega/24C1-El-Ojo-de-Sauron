@@ -1,0 +1,3 @@
+port=8080
+address="127.0.0.1"
+number_of_cameras=10
