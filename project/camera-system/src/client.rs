@@ -26,8 +26,8 @@ pub fn client_run(address: &str, config: Config) -> std::io::Result<()> {
     let mut camera_system = CameraSystem::new();
 
     // TODO: camaras reales
-    for i in 0..config.get_number_of_cameras() {
-        let camara = Camera::new(i as u8, i as f64, i as f64);
+    for (i, camera) in config.get_cameras().iter().enumerate(){
+        let camara = Camera::new(i as u8, camera.x_coordinate.to_owned(), camera.y_coordinate.to_owned());
         camera_system.add_camera(camara);
     }
 

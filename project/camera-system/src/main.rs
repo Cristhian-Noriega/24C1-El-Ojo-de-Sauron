@@ -9,7 +9,7 @@ mod incident;
 mod config;
 
 fn main() {
-    let path = Path::new("monitor/Settings.toml");
+    let path = Path::new("camera-system/config.json");
 
     let config = match Config::from_file(&path) {
         Ok(config) => config,

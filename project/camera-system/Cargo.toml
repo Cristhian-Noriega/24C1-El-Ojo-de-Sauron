@@ -7,3 +7,5 @@ edition = "2021"
 
 [dependencies]
 mqtt = { path = "../mqtt"} 
+serde = "1.0.203"
+serde_json = "1.0.117"

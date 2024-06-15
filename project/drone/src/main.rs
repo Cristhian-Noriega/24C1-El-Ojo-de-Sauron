@@ -8,7 +8,7 @@ mod incident;
 mod config;
 
 fn main() {
-    let path = Path::new("monitor/Settings.toml");
+    let path = Path::new("drone/Settings.toml");
 
     let config = match Config::from_file(&path) {
         Ok(config) => config,

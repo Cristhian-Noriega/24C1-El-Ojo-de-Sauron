@@ -1,37 +1,31 @@
 use std::{
     path::Path,
-    fs,
-    io
+    fs::File,
+    io::Read,
 };
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Position {
+    pub x_coordinate: f64,
+    pub y_coordinate: f64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Config {
     port: u16,
     address: String,
-    number_of_cameras: usize,
+    cameras: Vec<Position>,
 }
 
 impl Config {
     pub fn from_file(path: &Path) -> std::io::Result<Self> {
-        let content = fs::read_to_string(path)?;
+        let mut file = File::open(path)?;
+        let mut contents = String::new();
 
-        let mut config = Config {
-            port: 0,
-            address: String::new(),
-            number_of_cameras: 0,
-        };
+        file.read_to_string(&mut contents)?;
 
-        for line in content.lines() {
-            let parts: Vec<&str> = line.split('=').map(|s| s.trim()).collect();
-            if parts.len() == 2 {
-                match parts[0] {
-                    "port" => config.port = parts[1].parse().map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid port value"))?,
-                    "address" => config.address = parts[1].trim_matches('"').to_string(),
-                    "number_of_cameras" => config.number_of_cameras = parts[1].parse().map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid segs_to_disconnect value"))?,
-                    _ => {}
-                }
-            }
-        }
+        let config: Config = serde_json::from_str(&contents)?;
 
         Ok(config)
     }
@@ -44,7 +38,7 @@ impl Config {
         &self.address
     }
 
-    pub fn get_number_of_cameras(&self) -> usize {
-        self.number_of_cameras
+    pub fn get_cameras(&self) -> Vec<Position> {
+        self.cameras.clone()
     }
 }
