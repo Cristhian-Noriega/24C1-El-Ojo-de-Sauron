@@ -1,24 +1,35 @@
 use std::{
-    collections::HashMap, io::{ErrorKind, Write}, net::TcpStream, sync::{
+    collections::HashMap,
+    io::{ErrorKind, Write},
+    net::TcpStream,
+    sync::{
         mpsc::{channel, Receiver, Sender},
         Arc, Mutex,
-    }
+    },
 };
 
 use mqtt::model::{
-    components::{encoded_string::EncodedString, qos::QoS, topic_level::TopicLevel, topic_name::TopicName},
+    components::{
+        encoded_string::EncodedString, qos::QoS, topic_level::TopicLevel, topic_name::TopicName,
+    },
     packet::Packet,
     packets::{connect::Connect, puback::Puback, publish::Publish},
 };
 
 use crate::{
-    channels_tasks::{MonitorAction, UIAction}, drone::Drone, monitor::Monitor, ui_application::UIApplication
+    channels_tasks::{MonitorAction, UIAction},
+    drone::Drone,
+    incident::Incident,
+    monitor::Monitor,
+    ui_application::UIApplication,
 };
 
 pub fn client_run(address: String) -> Result<(), String> {
+    // Create the channels to communicate between the monitor and the UI
     let (monitor_sender, monitor_receiver) = channel();
     let (ui_sender, ui_receiver) = channel();
 
+    // Connect to the server
     let stream = match connect_to_server(address) {
         Ok(stream) => stream,
         Err(e) => {
@@ -26,14 +37,12 @@ pub fn client_run(address: String) -> Result<(), String> {
         }
     };
 
+    // monitor start in a thread to avoid blocking the main thread
     let monitor_thread = std::thread::spawn(move || {
-        start_monitor(
-            stream,
-            monitor_sender,
-            ui_receiver
-        );
+        start_monitor(stream, monitor_sender, ui_receiver);
     });
 
+    // start the ui in the main thread
     match start_ui(ui_sender, monitor_receiver) {
         Ok(_) => {}
         Err(_) => {
@@ -41,6 +50,7 @@ pub fn client_run(address: String) -> Result<(), String> {
         }
     }
 
+    // wait for the monitor thread to finish
     monitor_thread.join().unwrap();
 
     Ok(())
@@ -97,7 +107,7 @@ fn start_ui(
 const DRONE_DATA: &[u8] = b"drone-data";
 const DRONE_REGISTER: &[u8] = b"drone-register";
 const NEW_INCIDENT: &[u8] = b"new-incident";
-const SEPARATOR: char = ';';    
+const SEPARATOR: char = ';';
 const CAMERA_DATA: &[u8] = b"camera-data";
 
 fn start_monitor(
@@ -105,7 +115,6 @@ fn start_monitor(
     monitor_sender: Sender<MonitorAction>,
     ui_reciver: Receiver<UIAction>,
 ) {
-
     let mut monitor = Monitor::new();
     let mut unacknowledged_publish = HashMap::new();
     let mut publish_counter = 0;
@@ -115,23 +124,23 @@ fn start_monitor(
     stream.set_nonblocking(true);
 
     loop {
+        // the monitor will receive packets from the server and the UI
         match Packet::from_bytes(&mut stream) {
             Ok(Packet::Puback(puback)) => {
                 let packet_id = puback.packet_identifier();
-                
+
                 if unacknowledged_publish.remove(&packet_id).is_none() {
                     println!("Publish id does not match the puback id");
                 }
             }
             Ok(Packet::Publish(publish)) => {
                 unacknowledged_publish.insert(publish.package_identifier(), publish.clone());
-                
+
                 let topic_name = publish.topic();
 
                 let topic_levels = topic_name.levels();
 
                 if topic_levels.len() == 2 && topic_levels[0] == DRONE_DATA {
-
                     let id = topic_levels[1].as_slice();
 
                     let id = String::from_utf8_lossy(id.to_vec().as_slice()).to_string();
@@ -147,14 +156,8 @@ fn start_monitor(
                     //let id_cloned = id.clone();
 
                     if !monitor.has_registered_drone(&id) {
-
-                        let drone = Drone::new(
-                            id.clone(),
-                            state,
-                            battery,
-                            x_coordinate,
-                            y_coordinate,
-                        );
+                        let drone =
+                            Drone::new(id.clone(), state, battery, x_coordinate, y_coordinate);
 
                         monitor.add_drone(drone)
                     } else {
@@ -176,15 +179,12 @@ fn start_monitor(
                         }
                     }
                 }
-
-
             }
             Ok(_) => {}
             // CAMERA DATA
             // ATTENDING INCIDENT
-
             Err(_) => {
-                println!("Error reading packet from server");
+                // println!("Error reading packet from server");
             }
         }
 
@@ -196,13 +196,23 @@ fn start_monitor(
                 let anchor_coords_y = drone_registration.anchor_y;
 
                 let topic_name = TopicName::new(vec![CAMERA_DATA.to_vec()], true);
-                let message = format!("{};{};{};{}", drone_id, password, anchor_coords_x, anchor_coords_y);
+                let message = format!(
+                    "{};{};{};{}",
+                    drone_id, password, anchor_coords_x, anchor_coords_y
+                );
                 let dup = false;
                 let qos = QoS::AtLeast;
                 let retain = false;
                 let package_identifier = Some(1);
 
-                let publish = Publish::new(dup, qos, retain, topic_name, package_identifier, message.as_bytes().to_vec());
+                let publish = Publish::new(
+                    dup,
+                    qos,
+                    retain,
+                    topic_name,
+                    package_identifier,
+                    message.as_bytes().to_vec(),
+                );
 
                 publish_counter += 1;
 
@@ -224,7 +234,14 @@ fn start_monitor(
                 let retain = false;
                 let package_identifier = Some(1);
 
-                let publish = Publish::new(dup, qos, retain, topic_name, package_identifier, message.as_bytes().to_vec());
+                let publish = Publish::new(
+                    dup,
+                    qos,
+                    retain,
+                    topic_name,
+                    package_identifier,
+                    message.as_bytes().to_vec(),
+                );
 
                 publish_counter += 1;
 
@@ -236,11 +253,10 @@ fn start_monitor(
                         println!("Error sending publish packet");
                     }
                 }
-
-
             }
 
             Ok(UIAction::RegistrateIncident(incident_registration)) => {
+                println!("Registrating incident");
                 let name = incident_registration.name;
                 let description = incident_registration.description;
                 let x = incident_registration.x;
@@ -253,7 +269,14 @@ fn start_monitor(
                 let retain = false;
                 let package_identifier = Some(1);
 
-                let publish = Publish::new(dup, qos, retain, topic_name, package_identifier, message.as_bytes().to_vec());
+                let publish = Publish::new(
+                    dup,
+                    qos,
+                    retain,
+                    topic_name,
+                    package_identifier,
+                    message.as_bytes().to_vec(),
+                );
 
                 publish_counter += 1;
 
@@ -265,14 +288,29 @@ fn start_monitor(
                         println!("Error sending publish packet");
                     }
                 }
+
+                let x_coordenate_float: f64 = x.parse().unwrap();
+                let y_coordenate_float: f64 = y.parse().unwrap();
+
+                let incident = Incident::new(
+                    name,
+                    description,
+                    x_coordenate_float,
+                    y_coordenate_float,
+                    "pending".to_string(),
+                );
+
+                //monitor.add_incident(incident);
+
+                match monitor_sender.send(MonitorAction::IncidentData(incident.clone())) {
+                    Ok(_) => {}
+                    Err(_) => {
+                        println!("Error sending incident data to UI");
+                    }
+                }
             }
 
-            Err(_) => {
-
-            }
+            Err(_) => {}
         }
     }
 }
-
-
-

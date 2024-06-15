@@ -76,7 +76,7 @@ impl Monitor {
         Ok(())
     }
 
-    pub fn handle_dron_data(&self, packet: Publish) -> std::io::Result<()> {
+    pub fn handle_drone_data(&self, packet: Publish) -> std::io::Result<()> {
         println!("Handling dron data {:?}", packet);
         Ok(())
     }
