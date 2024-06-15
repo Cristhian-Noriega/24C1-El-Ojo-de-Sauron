@@ -14,6 +14,7 @@ use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::path::Path;
+use std::env;
 
 use crate::{drone::Drone, incident::Incident, config::Config};
 
@@ -27,9 +28,17 @@ pub struct Client {
     pub drone_list: Arc<Mutex<Vec<Drone>>>,
 }
 
+static CLIENT_ARGS: usize = 2;
+
 impl Client {
     pub fn new(sender: Sender<String>) -> Self {
-        let path = Path::new("monitor/Settings.toml");
+        let argv = env::args().collect::<Vec<String>>();
+        if argv.len() != CLIENT_ARGS {
+            let app_name = &argv[0];
+            println!("Usage:\n{:?} <toml file>", app_name);
+        }
+
+        let path = Path::new(&argv[1]);
 
         let config = match Config::from_file(&path) {
             Ok(config) => config,

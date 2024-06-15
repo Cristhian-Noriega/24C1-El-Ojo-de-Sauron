@@ -1,5 +1,6 @@
 use error::Error;
 use std::path::Path;
+use std::env;
 
 mod client;
 mod config;
@@ -8,8 +9,17 @@ mod logfile;
 mod server;
 mod task_handler;
 
+static SERVER_ARGS: usize = 2;
+
 pub fn main() -> Result<(), Error> {
-    let path = Path::new("server/Settings.toml");
+    let argv = env::args().collect::<Vec<String>>();
+    if argv.len() != SERVER_ARGS {
+        let app_name = &argv[0];
+        println!("Usage:\n{:?} <toml-file>", app_name);
+        return Err(Error::new("Cantidad de argumentos inválido".to_string()));
+    }
+
+    let path = Path::new(&argv[1]);
 
     let config = config::Config::from_file(&path)?;
 

@@ -16,9 +16,7 @@ use mqtt::model::{
 };
 
 use crate::{
-    drone::Drone,
-    drone_status::{DroneStatus, TravelLocation},
-    incident::Incident,
+    config::Config, drone::Drone, drone_status::{DroneStatus, TravelLocation}, incident::Incident
 };
 
 const NEW_INCIDENT: &[u8] = b"new-incident";
@@ -33,11 +31,13 @@ const TRAVEL_INTERVAL: u64 = 1;
 const BATTERY_DISCHARGE_INTERVAL: u64 = 5;
 const BATTERY_RECHARGE_INTERVAL: u64 = 1;
 
-pub fn client_run(address: &str) -> std::io::Result<()> {
-    let server_stream = connect_to_server(address)?;
+pub fn client_run(config: Config) -> std::io::Result<()> {
+    let address = config.get_address().to_owned() + ":" + config.get_port().to_string().as_str();
+
+    let server_stream = connect_to_server(&address)?;
     let server_stream = Arc::new(Mutex::new(server_stream));
 
-    let drone = Arc::new(Mutex::new(Drone::new()));
+    let drone = Arc::new(Mutex::new(Drone::new(config.get_id(), config.get_x_position(), config.get_y_position(), config.get_x_central_position(), config.get_y_central_position(), config.get_x_anchor_position(), config.get_y_anchor_position(), config.get_velocity(), config.get_active_range())));
 
     let new_incident = TopicFilter::new(vec![TopicLevel::Literal(NEW_INCIDENT.to_vec())], false);
 

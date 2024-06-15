@@ -20,8 +20,9 @@ const NEW_INCIDENT: &[u8] = b"new-incident";
 const CLOSE_INCIDENT: &[u8] = b"close-incident";
 const CAMERA_DATA: &[u8] = b"camera-data";
 
-pub fn client_run(address: &str, config: Config) -> std::io::Result<()> {
-    let mut server_stream = connect_to_server(address)?;
+pub fn client_run(config: Config) -> std::io::Result<()> {
+    let address = config.get_address().to_owned() + ":" + config.get_port().to_string().as_str();
+    let mut server_stream = connect_to_server(&address)?;
 
     let mut camera_system = CameraSystem::new();
 

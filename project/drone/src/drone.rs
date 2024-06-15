@@ -1,9 +1,7 @@
 use crate::{drone_status::DroneStatus, incident::Incident};
 
-const ACTIVE_RANGE: f64 = 20.0;
 const MINIMUM_BATTERY_LEVEL: usize = 95;
 const MAXIMUM_BATTERY_LEVEL: usize = 100;
-const VELOCITY: f64 = 1.0;
 const BATTERY_UNIT: usize = 1;
 
 #[derive(Debug, Clone)]
@@ -18,21 +16,35 @@ pub struct Drone {
     x_anchor: f64,
     y_anchor: f64,
     current_incident: Option<(Incident, usize)>,
+    velocity: f64,
+    active_range: f64,
 }
 
 impl Drone {
-    pub fn new() -> Self {
+    pub fn new(
+        id: u8,
+        x_coordinate: f64,
+        y_coordinate: f64,
+        x_central: f64,
+        y_central: f64,
+        x_anchor: f64,
+        y_anchor: f64,
+        velocity: f64,
+        active_range: f64,
+    ) -> Self {
         Drone {
-            id: 0,
-            x_coordinate: 0.0,
-            y_coordinate: 0.0,
+            id: id,
+            x_coordinate: x_coordinate,
+            y_coordinate: y_coordinate,
             status: DroneStatus::Free,
             battery: MAXIMUM_BATTERY_LEVEL,
-            x_central: 10.0,
-            y_central: 10.0,
-            x_anchor: 0.0,
-            y_anchor: 0.0,
+            x_central: x_central,
+            y_central: y_central,
+            x_anchor: x_anchor,
+            y_anchor: y_anchor,
             current_incident: None,
+            velocity: velocity,
+            active_range: active_range,
         }
     }
 
@@ -78,11 +90,11 @@ impl Drone {
     pub fn travel_to(&mut self, x: f64, y: f64) {
         let distance = euclidean_distance(self.x_coordinate, self.y_coordinate, x, y);
 
-        if distance > VELOCITY {
+        if distance > self.velocity {
             let angle = (y - self.y_coordinate).atan2(x - self.x_coordinate);
 
-            self.x_coordinate += VELOCITY * angle.cos();
-            self.y_coordinate += VELOCITY * angle.sin();
+            self.x_coordinate += self.velocity * angle.cos();
+            self.y_coordinate += self.velocity * angle.sin();
         } else {
             self.x_coordinate = x;
             self.y_coordinate = y;
@@ -111,7 +123,7 @@ impl Drone {
     pub fn is_within_range(&self, x: f64, y: f64) -> bool {
         let distance = euclidean_distance(self.x_anchor, self.y_anchor, x, y);
 
-        distance < ACTIVE_RANGE
+        distance < self.active_range
     }
 
     pub fn battery(&self) -> usize {

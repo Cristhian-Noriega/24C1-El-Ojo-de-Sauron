@@ -1,5 +1,6 @@
 use std::path::Path;
 use config::Config;
+use std::env::args;
 
 mod client;
 mod drone;
@@ -7,8 +8,19 @@ mod drone_status;
 mod incident;
 mod config;
 
+static CLIENT_ARGS: usize = 2;
+
 fn main() {
-    let path = Path::new("drone/Settings.toml");
+    let argv = args().collect::<Vec<String>>();
+    if argv.len() != CLIENT_ARGS {
+        println!("Cantidad de argumentos inválidos");
+        let app_name = &argv[0];
+        println!("{:?} <config-path>", app_name);
+
+        return;
+    }
+
+    let path = Path::new(&argv[1]);
 
     let config = match Config::from_file(&path) {
         Ok(config) => config,
@@ -18,9 +30,7 @@ fn main() {
         }
     };
 
-    let address = config.get_address().to_owned() + ":" + config.get_port().to_string().as_str();
-
-    if let Err(e) = client::client_run(&address) {
+    if let Err(e) = client::client_run(config) {
         println!("Error: {:?}", e);
     }
 }
