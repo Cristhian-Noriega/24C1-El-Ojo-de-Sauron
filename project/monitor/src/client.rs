@@ -13,8 +13,9 @@ use std::net::TcpStream;
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 use std::{env::args, thread};
+use std::path::Path;
 
-use crate::{drone::Drone, incident::Incident};
+use crate::{drone::Drone, incident::Incident, config::Config};
 
 static CLIENT_ARGS: usize = 3;
 
@@ -30,13 +31,17 @@ pub struct Client {
 
 impl Client {
     pub fn new(sender: Sender<String>) -> Self {
-        let argv = args().collect::<Vec<String>>();
-        if argv.len() != CLIENT_ARGS {
-            let app_name = &argv[0];
-            println!("{:?} <host> <puerto>", app_name);
-        }
+        let path = Path::new("monitor/Settings.toml");
 
-        let address = argv[1].clone() + ":" + &argv[2];
+        let config = match Config::from_file(&path) {
+            Ok(config) => config,
+            Err(e) => {
+                println!("Error reading the configuration file: {:?}", e);
+                std::process::exit(1);
+            }
+        };
+
+        let address = config.get_address().to_owned() + ":" + config.get_port().to_string().as_str();
 
         Self {
             connection_status: Arc::new(Mutex::new("disconnected".to_owned())),

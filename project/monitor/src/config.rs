@@ -8,8 +8,6 @@ use std::{
 pub struct Config {
     port: u16,
     address: String,
-    log_file: String,
-    segs_to_disconnect: u32,
 }
 
 impl Config {
@@ -19,8 +17,6 @@ impl Config {
         let mut config = Config {
             port: 0,
             address: String::new(),
-            log_file: String::new(),
-            segs_to_disconnect: 0,
         };
 
         for line in content.lines() {
@@ -29,8 +25,6 @@ impl Config {
                 match parts[0] {
                     "port" => config.port = parts[1].parse().map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid port value"))?,
                     "address" => config.address = parts[1].trim_matches('"').to_string(),
-                    "log_file" => config.log_file = parts[1].trim_matches('"').to_string(),
-                    "segs_to_disconnect" => config.segs_to_disconnect = parts[1].parse().map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid segs_to_disconnect value"))?,
                     _ => {}
                 }
             }
@@ -45,9 +39,5 @@ impl Config {
 
     pub fn get_address(&self) -> &str {
         &self.address
-    }
-
-    pub fn get_log_file(&self) -> &str {
-        &self.log_file
     }
 }
