@@ -6,6 +6,7 @@ pub enum UIAction {
     // Disconnect,
     RegistrateDrone(DroneRegistration),
     RegistrateIncident(IncidentRegistration),
+    StartIncident(String),
 }
 
 #[derive(Clone)]

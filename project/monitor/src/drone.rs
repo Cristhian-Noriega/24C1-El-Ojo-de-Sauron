@@ -1,6 +1,6 @@
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Drone {
-    pub id: Vec<u8>,
+    pub id: String,
     pub state: String,
     pub battery: usize,
     pub x_coordinate: f64,
@@ -9,7 +9,7 @@ pub struct Drone {
 
 impl Drone {
     pub fn new(
-        id: Vec<u8>,
+        id: String,
         state: String, //pasarlo quizas a enum
         battery: usize,
         x_coordinate: f64,
