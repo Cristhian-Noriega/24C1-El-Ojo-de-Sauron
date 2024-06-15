@@ -1,23 +1,24 @@
-use std::env::args;
+use std::path::Path;
+use config::Config;
 
 mod client;
 mod drone;
 mod drone_status;
 mod incident;
-
-const CLIENT_ARGS: usize = 3;
+mod config;
 
 fn main() {
-    let argv = args().collect::<Vec<String>>();
-    if argv.len() != CLIENT_ARGS {
-        println!("Cantidad de argumentos inválidos");
-        let app_name = &argv[0];
-        println!("{:?} <host> <puerto>", app_name);
+    let path = Path::new("monitor/Settings.toml");
 
-        return;
-    }
+    let config = match Config::from_file(&path) {
+        Ok(config) => config,
+        Err(e) => {
+            println!("Error reading the configuration file: {:?}", e);
+            std::process::exit(1);
+        }
+    };
 
-    let address = argv[1].clone() + ":" + &argv[2];
+    let address = config.get_address().to_owned() + ":" + config.get_port().to_string().as_str();
 
     if let Err(e) = client::client_run(&address) {
         println!("Error: {:?}", e);
