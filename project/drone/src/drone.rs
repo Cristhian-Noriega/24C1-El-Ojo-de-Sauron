@@ -1,4 +1,4 @@
-#[allow(clippy::too_many_arguments)]
+#![allow(clippy::too_many_arguments)]
 
 use crate::{drone_status::DroneStatus, incident::Incident};
 
