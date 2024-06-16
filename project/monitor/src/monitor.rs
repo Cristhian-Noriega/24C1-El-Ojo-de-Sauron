@@ -1,4 +1,4 @@
-use crate::{camera::Camera, client::Client, drone::Drone, incident::Incident};
+use crate::{camera::Camera, drone::Drone,client::Client, incident::Incident};
 use mqtt::model::packets::publish::Publish;
 
 pub struct Monitor {
