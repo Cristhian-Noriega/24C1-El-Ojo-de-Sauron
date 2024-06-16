@@ -38,14 +38,65 @@ impl Client {
 
         let address = argv[1].clone() + ":" + &argv[2];
 
+        // ESTRUCTURA DE DATOS MOCK
+        let incident_1 = Incident::new(
+            "Robo".to_string(),
+            "Robo en el banco central de ciudad ".to_string(),
+            -58.3817,
+            -34.6181,
+            "Open".to_string(),
+        );
+        let incident_2 = Incident::new(
+            "Incendio".to_string(),
+            "Incendio en la fabrica de papel".to_string(),
+            -58.3617,
+            -34.5981,
+            "Open".to_string(),
+        );
+        let incident_3 = Incident::new(
+            "Accidente".to_string(),
+            "Accidente en la autopista".to_string(),
+            -58.4017,
+            -34.5781,
+            "Open".to_string(),
+        );
+        let drone_1 = Drone{
+            id: "D1".to_string(),
+            password: "123".to_string(),
+            state: "Free".to_string(),
+            battery: 100.0,
+            x_coordinate: -58.4200,
+            y_coordinate: -34.6000,
+        };
+        let drone_2 = Drone{
+            id: "D2".to_string(),
+            password: "123".to_string(),
+            state: "Attending Incident".to_string(),
+            battery: 100.0,
+            x_coordinate: -58.3817,
+            y_coordinate: -34.6150,
+        };
+        let drone_3 = Drone{
+            id: "D3".to_string(),
+            password: "123".to_string(),
+            state: "Travelling".to_string(),
+            battery: 100.0,
+            x_coordinate: -58.4200,
+            y_coordinate: -34.5800,
+        };
+
+        let incident_list = Arc::new(Mutex::new(vec![incident_1, incident_2, incident_3]));
+        let drone_list = Arc::new(Mutex::new(vec![drone_1, drone_2, drone_3]));
+        
+        // Fin de Mocks
         Self {
             connection_status: Arc::new(Mutex::new("disconnected".to_owned())),
             response_text: Arc::new(Mutex::new("".to_owned())),
             address,
             to_server_stream: Arc::new(Mutex::new(None)),
             sender,
-            incident_list: Arc::new(Mutex::new(vec![])),
-            drone_list: Arc::new(Mutex::new(vec![])),
+            incident_list,
+            drone_list,
         }
     }
 

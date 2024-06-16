@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Incident {
     pub uuid: String,
     pub name: String,

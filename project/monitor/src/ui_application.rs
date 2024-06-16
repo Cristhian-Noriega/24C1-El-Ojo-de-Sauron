@@ -1,9 +1,9 @@
-use crate::client::Client;
-use eframe::egui;
+use crate::{client::Client, drone::Drone, incident::Incident};
+use eframe::egui::{Color32, FontId, Stroke};
 use egui::Context;
 use egui_extras::{Column, TableBuilder};
-use std::sync::{mpsc, Arc, Mutex};
-use walkers::{sources::OpenStreetMap, Map, MapMemory, Position, Tiles};
+use std::{sync::{mpsc, Arc, Mutex, MutexGuard}, vec};
+use walkers::{sources::OpenStreetMap, Map, MapMemory, Position, Tiles, extras::{Places, Place, Style}};
 
 #[derive(PartialEq)]
 enum Layout {
@@ -109,11 +109,17 @@ impl eframe::App for UIApplication {
             ui.add_space(20.0);
 
             if self.current_layout == Layout::IncidentMap {
-                ui.add(Map::new(
-                    Some(&mut self.tiles),
-                    &mut self.map_memory,
-                    Position::from_lon_lat(-58.3717, -34.6081),
-                ));
+                let center_position = Position::from_lon_lat(-58.3717, -34.6081);
+
+                let incident_list = client.incident_list.lock().unwrap();
+                let drone_list = client.drone_list.lock().unwrap();
+        
+                let places_plugin = update_places(incident_list, drone_list);
+                
+                ui.add(
+                    Map::new(Some(&mut self.tiles), &mut self.map_memory, center_position)
+                        .with_plugin(places_plugin),
+                );
             }
 
             if self.current_layout == Layout::NewIncident {
@@ -294,4 +300,56 @@ impl eframe::App for UIApplication {
             }
         });
     }
+}
+
+fn update_places(incidents: MutexGuard<Vec<Incident>>, drones: MutexGuard<Vec<Drone>>) -> Places{
+    let mut places = vec![];
+
+    let incident_data: Vec<_> = incidents.iter().collect();
+    let drone_data: Vec<_> = drones.iter().collect();
+
+    for incident in incident_data {
+        let place = Place {
+            position: Position::from_lon_lat(incident.x_coordinate, incident.y_coordinate),
+            label: incident.name.clone(),
+            symbol: 'I',
+            style: Style {
+                label_font: FontId::proportional(14.0),
+                label_color: Color32::WHITE,
+                label_background: Color32::from_rgb(255, 0, 0), // Red background
+                symbol_font: FontId::monospace(18.0),
+                symbol_color: Color32::from_rgb(255, 255, 255), // White symbol
+                symbol_background: Color32::from_rgb(255, 0, 0), // Red background
+                symbol_stroke: Stroke::new(2.0, Color32::BLACK), // Black border
+            },
+        };
+        places.push(place);
+    }
+
+    for drone in drone_data {
+        let color = match drone.state.as_str() {
+            "Free" => Color32::from_rgb(0, 255, 0), // Green
+            "Attending Incident" => Color32::from_rgb(255, 0, 0), // Red
+            "Travelling" => Color32::from_rgb(255, 255, 0), // Yellow
+            _ => Color32::from_rgb(255, 255, 255), // White
+        };
+        let place = Place {
+            position: Position::from_lon_lat(drone.x_coordinate, drone.y_coordinate),
+            label: drone.id.clone(),
+            symbol: 'D',
+            style: Style {
+                label_font: FontId::proportional(14.0),
+                label_color: Color32::WHITE,
+                label_background: color, // Blue background
+                symbol_font: FontId::monospace(18.0),
+                symbol_color: Color32::from_rgb(255, 255, 255), // White symbol
+                symbol_background: color, // Blue background
+                symbol_stroke: Stroke::new(2.0, Color32::BLACK), // Black border
+            },
+        };
+        places.push(place);
+    }
+
+    Places::new(places)
+
 }
