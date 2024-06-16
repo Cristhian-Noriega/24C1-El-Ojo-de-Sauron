@@ -21,7 +21,7 @@ pub fn main() -> Result<(), Error> {
 
     let path = Path::new(&argv[1]);
 
-    let config = config::Config::from_file(&path)?;
+    let config = config::Config::from_file(path)?;
 
     let server = server::Server::new(config);
     if let Err(err) = server.server_run() {

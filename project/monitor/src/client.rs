@@ -40,7 +40,7 @@ impl Client {
 
         let path = Path::new(&argv[1]);
 
-        let config = match Config::from_file(&path) {
+        let config = match Config::from_file(path) {
             Ok(config) => config,
             Err(e) => {
                 println!("Error reading the configuration file: {:?}", e);
