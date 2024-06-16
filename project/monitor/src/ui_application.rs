@@ -26,7 +26,7 @@ pub struct UIApplication {
     new_incident_registration: IncidentRegistration,
     new_drone_registration: DroneRegistration,
 
-    conection_status: bool,
+    connection_status: bool,
     current_layout: Layout,
     tiles: Tiles,
     map_memory: MapMemory,
@@ -60,7 +60,7 @@ impl UIApplication {
                 anchor_y: String::new(),
             },
 
-            conection_status: false,
+            connection_status: false,
             current_layout: Layout::IncidentMap,
             tiles: Tiles::new(OpenStreetMap, egui_ctx),
             map_memory: MapMemory::default(),
@@ -146,11 +146,11 @@ fn display_new_incident(
     });
 }
 
-fn display_incident_list(ui: &mut egui::Ui, incidents: &Vec<Incident>) {
+fn display_incident_list(ui: &mut egui::Ui, incidents: &Vec<Incident>,  sender: &Sender<UIAction>) {
     TableBuilder::new(ui)
         .striped(true)
         .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
-        .columns(Column::remainder(), 5)
+        .columns(Column::remainder(), 6)
         .header(10.0, |mut header| {
             header.col(|ui| {
                 ui.heading("UUID");
@@ -166,6 +166,9 @@ fn display_incident_list(ui: &mut egui::Ui, incidents: &Vec<Incident>) {
             });
             header.col(|ui| {
                 ui.heading("State");
+            });
+            header.col(|ui| { 
+                ui.heading("Actions");
             });
         })
         .body(|mut body| {
@@ -188,6 +191,11 @@ fn display_incident_list(ui: &mut egui::Ui, incidents: &Vec<Incident>) {
                     });
                     row.col(|ui| {
                         ui.label(incident.state.clone());
+                    });
+                    row.col(|ui| { 
+                        if ui.button("Resolve").clicked() {
+                            sender.send(UIAction::ResolveIncident(incident.clone())).unwrap();
+                        }
                     });
                 });
             }
@@ -220,19 +228,19 @@ fn display_new_drone(
 
         ui.add_space(10.0);
         ui.horizontal(|ui| {
-            ui.label("Anchor Point Coordinates:");
+            // ui.label("Anchor Point Coordinates:");
 
-            ui.add_space(10.0);
-            ui.label("x:");
-            ui.add(
-                egui::TextEdit::singleline(&mut drone_registration.anchor_x).desired_width(100.0),
-            );
+            // ui.add_space(10.0);
+            // ui.label("x:");
+            // ui.add(
+            //     egui::TextEdit::singleline(&mut drone_registration.anchor_x).desired_width(100.0),
+            // );
 
-            ui.add_space(10.0);
-            ui.label("y:");
-            ui.add(
-                egui::TextEdit::singleline(&mut drone_registration.anchor_y).desired_width(100.0),
-            );
+            // ui.add_space(10.0);
+            // ui.label("y:");
+            // ui.add(
+            //     egui::TextEdit::singleline(&mut drone_registration.anchor_y).desired_width(100.0),
+            // );
             ui.add_space(263.0);
             if ui.button("Register").clicked() {
                 sender
@@ -355,7 +363,7 @@ impl eframe::App for UIApplication {
                 ui,
                 &mut self.current_layout,
                 &self.sender,
-                self.conection_status,
+                self.connection_status,
             );
 
             match self.current_layout {
@@ -365,7 +373,7 @@ impl eframe::App for UIApplication {
                 Layout::NewIncident => {
                     display_new_incident(ui, &mut self.new_incident_registration, &self.sender)
                 }
-                Layout::IncidentList => display_incident_list(ui, &self.incidents),
+                Layout::IncidentList => display_incident_list(ui, &self.incidents, &self.sender),
                 Layout::DroneList => display_drone_list(ui, &self.drones),
                 Layout::NewDrone => {
                     display_new_drone(ui, &mut self.new_drone_registration, &self.sender)

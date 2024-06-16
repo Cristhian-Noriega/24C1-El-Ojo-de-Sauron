@@ -36,7 +36,7 @@ impl Monitor {
             y_coordenate_float,
             "Open".to_string(),
         );
-        let message = new_incident.build_new_incident_message();
+        let message = new_incident.build_incident_message();
 
         client.publish(new_incident_topic, &message)?;
 

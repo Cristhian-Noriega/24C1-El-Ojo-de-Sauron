@@ -30,7 +30,7 @@ impl Incident {
         }
     }
 
-    pub fn build_new_incident_message(&self) -> String {
+    pub fn build_incident_message(&self) -> String {
         format!(
             "{};{};{};{};{};{}",
             self.uuid,

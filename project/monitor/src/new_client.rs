@@ -6,6 +6,8 @@ use std::{
         mpsc::{channel, Receiver, Sender},
         Arc, Mutex,
     },
+    thread,
+    time::Duration,
 };
 
 use mqtt::model::{
@@ -18,7 +20,7 @@ use mqtt::model::{
 
 use crate::{
     channels_tasks::{MonitorAction, UIAction},
-    drone::Drone,
+    drone::{self, Drone},
     incident::Incident,
     monitor::Monitor,
     ui_application::UIApplication,
@@ -38,7 +40,7 @@ pub fn client_run(address: String) -> Result<(), String> {
     };
 
     // monitor start in a thread to avoid blocking the main thread
-    let monitor_thread = std::thread::spawn(move || {
+    let monitor_thread = thread::spawn(move || {
         start_monitor(stream, monitor_sender, ui_receiver);
     });
 
@@ -77,7 +79,7 @@ fn connect_to_server(address: String) -> std::io::Result<TcpStream> {
             );
             Ok(to_server_stream)
         }
-        _ => Err(std::io::Error::new(ErrorKind::Other, "No connack recibed")),
+        _ => Err(std::io::Error::new(ErrorKind::Other, "No connack received")),
     }
 }
 
@@ -107,210 +109,179 @@ fn start_ui(
 const DRONE_DATA: &[u8] = b"drone-data";
 const DRONE_REGISTER: &[u8] = b"drone-register";
 const NEW_INCIDENT: &[u8] = b"new-incident";
+const CLOSE_INCIDENT: &[u8] = b"close-incident";
 const SEPARATOR: char = ';';
 const CAMERA_DATA: &[u8] = b"camera-data";
 
 fn start_monitor(
     stream: TcpStream,
     monitor_sender: Sender<MonitorAction>,
-    ui_reciver: Receiver<UIAction>,
+    ui_receiver: Receiver<UIAction>,
 ) {
-    let mut monitor = Monitor::new();
-    let mut unacknowledged_publish = HashMap::new();
-    let mut publish_counter = 0;
+    let monitor = Arc::new(Mutex::new(Monitor::new()));
 
-    let mut stream = stream;
+    let stream = Arc::new(Mutex::new(stream));
 
-    stream.set_nonblocking(true);
-
-    loop {
-        // the monitor will receive packets from the server and the UI
-        match Packet::from_bytes(&mut stream) {
-            Ok(Packet::Puback(puback)) => {
-                let packet_id = puback.packet_identifier();
-
-                if unacknowledged_publish.remove(&packet_id).is_none() {
-                    println!("Publish id does not match the puback id");
-                }
+    // Thread for receiving data
+    let stream_clone = Arc::clone(&stream);
+    let monitor_sender_clone = monitor_sender.clone();
+    let monitor_clone = Arc::clone(&monitor);
+    thread::spawn(move || loop {
+        let mut stream = stream_clone.lock().unwrap();
+        match Packet::from_bytes(&mut *stream) {
+            Ok(Packet::Puback(_)) => {
+                // Handle Puback if needed
             }
             Ok(Packet::Publish(publish)) => {
-                unacknowledged_publish.insert(publish.package_identifier(), publish.clone());
-
-                let topic_name = publish.topic();
-
-                let topic_levels = topic_name.levels();
-
-                if topic_levels.len() == 2 && topic_levels[0] == DRONE_DATA {
-                    let id = topic_levels[1].as_slice();
-
-                    let id = String::from_utf8_lossy(id.to_vec().as_slice()).to_string();
-                    let content = publish.message();
-                    let content_str = std::str::from_utf8(&content).unwrap();
-                    let splitted_content: Vec<&str> = content_str.split(SEPARATOR).collect();
-
-                    let x_coordinate = splitted_content[0].parse::<f64>().unwrap();
-                    let y_coordinate = splitted_content[1].parse::<f64>().unwrap();
-                    let state = splitted_content[2].to_string();
-                    let battery = splitted_content[3].parse::<usize>().unwrap();
-
-                    //let id_cloned = id.clone();
-
-                    if !monitor.has_registered_drone(&id) {
-                        let drone =
-                            Drone::new(id.clone(), state, battery, x_coordinate, y_coordinate);
-
-                        monitor.add_drone(drone)
-                    } else {
-                        monitor.update_drone(&id, state, battery, x_coordinate, y_coordinate);
-                    }
-
-                    let drone = match monitor.get_drone(&id) {
-                        Some(drone) => drone,
-                        None => {
-                            println!("Drone not found");
-                            continue;
-                        }
-                    };
-
-                    match monitor_sender.send(MonitorAction::DroneData(drone.clone())) {
-                        Ok(_) => {}
-                        Err(_) => {
-                            println!("Error sending drone data to UI");
-                        }
-                    }
-                }
+                handle_publish_packet(&monitor_clone, publish, &monitor_sender_clone);
             }
             Ok(_) => {}
-            // CAMERA DATA
-            // ATTENDING INCIDENT
-            Err(_) => {
-                // println!("Error reading packet from server");
+           
+            Err(e) => {
+                println!("Error reading packet from server: {:?}", e);
+                break;
+            }
+        }
+    });
+
+    // Thread for sending data
+    let stream_clone = Arc::clone(&stream);
+    thread::spawn(move || loop {
+        match ui_receiver.recv() {
+            Ok(action) => handle_ui_action(&stream_clone, &monitor, action),
+            Err(e) => {
+                println!("Error receiving UI action: {:?}", e);
+                break;
+            }
+        }
+    });
+
+    // Main thread loop to keep the monitor running
+    loop {
+        thread::sleep(Duration::from_secs(1));
+    }
+}
+
+fn handle_publish_packet(
+    monitor: &Arc<Mutex<Monitor>>,
+    publish: Publish,
+    monitor_sender: &Sender<MonitorAction>,
+) {
+    let topic_name = publish.topic();
+    let topic_levels = topic_name.levels();
+
+    println!("Received publish packet with topic: {:?}", topic_levels);
+
+    if topic_levels.len() == 2 && topic_levels[0] == DRONE_DATA {
+        println!("Identified that it is drone data");
+        let id = topic_levels[1].as_slice();
+
+        let id = String::from_utf8_lossy(id.to_vec().as_slice()).to_string();
+        let content = publish.message();
+        let content_str = std::str::from_utf8(&content).unwrap();
+        let splitted_content: Vec<&str> = content_str.split(SEPARATOR).collect();
+
+        let x_coordinate = splitted_content[0].parse::<f64>().unwrap();
+        let y_coordinate = splitted_content[1].parse::<f64>().unwrap();
+        let state = splitted_content[2].to_string();
+        let battery = splitted_content[3].parse::<usize>().unwrap();
+
+        let mut monitor = monitor.lock().unwrap();
+
+        if !monitor.has_registered_drone(&id) {
+            let drone = Drone::new(id.clone(), state, battery, x_coordinate, y_coordinate);
+            monitor.add_drone(drone);
+        } else {
+            monitor.update_drone(&id, state, battery, x_coordinate, y_coordinate);
+        }
+
+        let drone = match monitor.get_drone(&id) {
+            Some(drone) => drone,
+            None => {
+                println!("Drone not found");
+                return;
+            }
+        };
+
+        match monitor_sender.send(MonitorAction::DroneData(drone.clone())) {
+            Ok(_) => println!("Drone data sent to UI"),
+            Err(_) => println!("Error sending drone data to UI"),
+        }
+    }
+}
+
+fn handle_ui_action(
+    stream: &Arc<Mutex<TcpStream>>,
+    monitor: &Arc<Mutex<Monitor>>,
+    action: UIAction,
+) {
+    let mut stream = stream.lock().unwrap();
+    match action {
+        UIAction::RegistrateDrone(drone_registration) => {
+            let topic_name = TopicName::new(vec![DRONE_REGISTER.to_vec()], true);
+            let message = drone_registration.build_drone_message().into_bytes();
+            let dup = false;
+            let qos = QoS::AtLeast;
+            let retain = false;
+            let package_identifier = Some(1);
+
+            let publish = Publish::new(dup, qos, retain, topic_name, package_identifier, message);
+
+            if let Err(e) = stream.write(publish.to_bytes().as_slice()) {
+                println!("Error sending publish packet: {:?}", e);
             }
         }
 
-        match ui_reciver.try_recv() {
-            Ok(UIAction::RegistrateDrone(drone_registration)) => {
-                let drone_id = drone_registration.id;
-                let password = drone_registration.password;
-                let anchor_coords_x = drone_registration.anchor_x;
-                let anchor_coords_y = drone_registration.anchor_y;
+        UIAction::RegistrateIncident(incident_registration) => {
+            println!("Registering incident");
 
-                let topic_name = TopicName::new(vec![CAMERA_DATA.to_vec()], true);
-                let message = format!(
-                    "{};{};{};{}",
-                    drone_id, password, anchor_coords_x, anchor_coords_y
-                );
-                let dup = false;
-                let qos = QoS::AtLeast;
-                let retain = false;
-                let package_identifier = Some(1);
+            let topic_name = TopicName::new(vec![NEW_INCIDENT.to_vec()], true);
+            let message = incident_registration.build_incident_message().into_bytes();
+            let dup = false;
+            let qos = QoS::AtLeast;
+            let retain = false;
+            let package_identifier = Some(1);
 
-                let publish = Publish::new(
-                    dup,
-                    qos,
-                    retain,
-                    topic_name,
-                    package_identifier,
-                    message.as_bytes().to_vec(),
-                );
+            let publish = Publish::new(dup, qos, retain, topic_name, package_identifier, message);
 
-                publish_counter += 1;
-
-                unacknowledged_publish.insert(Some(publish_counter), publish.clone());
-
-                match stream.write(publish.to_bytes().as_slice()) {
-                    Ok(_) => {}
-                    Err(_) => {
-                        println!("Error sending publish packet");
-                    }
-                }
+            if let Err(e) = stream.write(publish.to_bytes().as_slice()) {
+                println!("Error sending publish packet: {:?}", e);
             }
 
-            Ok(UIAction::StartIncident(incident)) => {
-                let topic_name = TopicName::new(vec![NEW_INCIDENT.to_vec()], true);
-                let message = incident;
-                let dup = false;
-                let qos = QoS::AtLeast;
-                let retain = false;
-                let package_identifier = Some(1);
+            let incident = Incident::new(
+                incident_registration.name,
+                incident_registration.description,
+                incident_registration.x.parse::<f64>().unwrap(),
+                incident_registration.y.parse::<f64>().unwrap(),
+                "Open".to_string(),
+            );
 
-                let publish = Publish::new(
-                    dup,
-                    qos,
-                    retain,
-                    topic_name,
-                    package_identifier,
-                    message.as_bytes().to_vec(),
-                );
+            let incident_clone = incident.clone();
 
-                publish_counter += 1;
+            monitor.lock().unwrap().add_incident(incident_clone);
 
-                unacknowledged_publish.insert(Some(publish_counter), publish.clone());
+            // match monitor_sender.send(MonitorAction::IncidentData(incident.clone())) {
+            //     Ok(_) => println!("Incident data sent to UI"),
+            //     Err(_) => println!("Error sending incident data to UI"),
+            // }
+        }
 
-                match stream.write(publish.to_bytes().as_slice()) {
-                    Ok(_) => {}
-                    Err(_) => {
-                        println!("Error sending publish packet");
-                    }
-                }
+        UIAction::ResolveIncident(incident) => {
+            let topic_name = TopicName::new(vec![CLOSE_INCIDENT.to_vec()], true);
+            let message = incident.build_incident_message().into_bytes();
+            let dup = false;
+            let qos = QoS::AtLeast;
+            let retain = false;
+            let package_identifier = Some(1);
+
+            let publish = Publish::new(dup, qos, retain, topic_name, package_identifier, message);
+
+            println!("Resolving incident");
+            println!("{}", incident.build_incident_message());
+
+            if let Err(e) = stream.write(publish.to_bytes().as_slice()) {
+                println!("Error sending publish packet: {:?}", e);
             }
-
-            Ok(UIAction::RegistrateIncident(incident_registration)) => {
-                println!("Registrating incident");
-                let name = incident_registration.name;
-                let description = incident_registration.description;
-                let x = incident_registration.x;
-                let y = incident_registration.y;
-
-                let topic_name = TopicName::new(vec![NEW_INCIDENT.to_vec()], true);
-                let message = format!("{};{};{};{}", name, description, x, y);
-                let dup = false;
-                let qos = QoS::AtLeast;
-                let retain = false;
-                let package_identifier = Some(1);
-
-                let publish = Publish::new(
-                    dup,
-                    qos,
-                    retain,
-                    topic_name,
-                    package_identifier,
-                    message.as_bytes().to_vec(),
-                );
-
-                publish_counter += 1;
-
-                unacknowledged_publish.insert(Some(publish_counter), publish.clone());
-
-                match stream.write(publish.to_bytes().as_slice()) {
-                    Ok(_) => {}
-                    Err(_) => {
-                        println!("Error sending publish packet");
-                    }
-                }
-
-                let x_coordenate_float: f64 = x.parse().unwrap();
-                let y_coordenate_float: f64 = y.parse().unwrap();
-
-                let incident = Incident::new(
-                    name,
-                    description,
-                    x_coordenate_float,
-                    y_coordenate_float,
-                    "pending".to_string(),
-                );
-
-                //monitor.add_incident(incident);
-
-                match monitor_sender.send(MonitorAction::IncidentData(incident.clone())) {
-                    Ok(_) => {}
-                    Err(_) => {
-                        println!("Error sending incident data to UI");
-                    }
-                }
-            }
-
-            Err(_) => {}
         }
     }
 }

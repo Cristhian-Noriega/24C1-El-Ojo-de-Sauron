@@ -1,7 +1,7 @@
 use crate::{drone_status::DroneStatus, incident::Incident};
 
 const ACTIVE_RANGE: f64 = 20.0;
-const MINIMUM_BATTERY_LEVEL: usize = 95;
+const MINIMUM_BATTERY_LEVEL: usize = 20;
 const MAXIMUM_BATTERY_LEVEL: usize = 100;
 const VELOCITY: f64 = 1.0;
 const BATTERY_UNIT: usize = 1;
