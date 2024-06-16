@@ -1,3 +1,5 @@
+#[allow(clippy::too_many_arguments)]
+
 use crate::{drone_status::DroneStatus, incident::Incident};
 
 const MINIMUM_BATTERY_LEVEL: usize = 95;
@@ -33,18 +35,18 @@ impl Drone {
         active_range: f64,
     ) -> Self {
         Drone {
-            id: id,
-            x_coordinate: x_coordinate,
-            y_coordinate: y_coordinate,
+            id,
+            x_coordinate,
+            y_coordinate,
             status: DroneStatus::Free,
             battery: MAXIMUM_BATTERY_LEVEL,
-            x_central: x_central,
-            y_central: y_central,
-            x_anchor: x_anchor,
-            y_anchor: y_anchor,
+            x_central,
+            y_central,
+            x_anchor,
+            y_anchor,
             current_incident: None,
-            velocity: velocity,
-            active_range: active_range,
+            velocity,
+            active_range,
         }
     }
 
