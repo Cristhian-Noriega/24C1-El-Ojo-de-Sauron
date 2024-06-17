@@ -25,3 +25,22 @@ impl QoS {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_qos_to_byte() {
+        assert_eq!(QoS::AtMost.to_byte(), 0x00);
+        assert_eq!(QoS::AtLeast.to_byte(), 0x01);
+        assert_eq!(QoS::Exactly.to_byte(), 0x02);
+    }
+
+    #[test]
+    fn test_qos_from_byte() {
+        assert_eq!(QoS::from_byte(0x00).unwrap(), QoS::AtMost);
+        assert_eq!(QoS::from_byte(0x01).unwrap(), QoS::AtLeast);
+        assert_eq!(QoS::from_byte(0x02).unwrap(), QoS::Exactly);
+    }
+}
