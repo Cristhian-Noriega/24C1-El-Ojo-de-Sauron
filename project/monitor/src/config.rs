@@ -15,11 +15,8 @@ impl Config {
 
         for line in content.lines() {
             let parts: Vec<&str> = line.split('=').map(|s| s.trim()).collect();
-            if parts.len() == 2 {
-                match parts[0] {
-                    "address" => config.address = parts[1].trim_matches('"').to_string(),
-                    _ => {}
-                }
+            if parts.len() == 2 && parts[0] == "address" {
+                config.address = parts[1].trim_matches('"').to_string()
             }
         }
 

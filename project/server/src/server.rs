@@ -52,7 +52,7 @@ impl Server {
         let address = self.config.get_address();
         self.log_file
             .info(&format!("Server running on address: {}\n", address));
-        let listener = TcpListener::bind(&address)?;
+        let listener = TcpListener::bind(address)?;
 
         for stream_result in listener.incoming() {
             match stream_result {
