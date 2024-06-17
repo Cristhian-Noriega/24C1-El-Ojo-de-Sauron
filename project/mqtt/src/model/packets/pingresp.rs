@@ -45,7 +45,7 @@ mod tests {
 
     #[test]
     fn test_pingresp_from_bytes() {
-        let remaining_length = RemainingLength::new(2 as u32);
+        let remaining_length = RemainingLength::new(2_u32);
         let fixed_header = FixedHeader::new(0xD << 4, remaining_length);
         let pingresp = Pingresp::from_bytes(fixed_header).unwrap();
         assert_eq!(pingresp, Pingresp::new());

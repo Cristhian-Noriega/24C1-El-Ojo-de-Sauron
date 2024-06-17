@@ -157,9 +157,9 @@ mod tests {
         let fixed_header = FixedHeader::from_bytes(&mut stream).unwrap();
         let publish = Publish::from_bytes(fixed_header, &mut stream).unwrap();
 
-        assert_eq!(publish.dup(), false);
+        assert!(!publish.dup());
         assert_eq!(publish.qos(), &QoS::AtMost);
-        assert_eq!(publish.retain(), false);
+        assert!(!publish.retain());
         assert_eq!(publish.topic().to_string(), "a/b");
         assert_eq!(publish.package_identifier(), None);
         assert_eq!(publish.message(), &vec![b'c']);

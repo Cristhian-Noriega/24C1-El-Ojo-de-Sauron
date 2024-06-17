@@ -45,7 +45,7 @@ mod tests {
 
     #[test]
     fn test_disconnect_from_bytes() {
-        let remaining_length = RemainingLength::new(2 as u32);
+        let remaining_length = RemainingLength::new(2_u32);
         let fixed_header = FixedHeader::new(0xE << 4, remaining_length);
         let disconnect = Disconnect::from_bytes(fixed_header).unwrap();
         assert_eq!(disconnect, Disconnect::new());
