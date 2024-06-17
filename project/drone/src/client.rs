@@ -18,8 +18,9 @@ use mqtt::model::{
 use crate::{
     drone::Drone,
     drone_status::{DroneStatus, TravelLocation},
-    incident::Incident,
 };
+
+use common::incident::Incident;
 
 const NEW_INCIDENT: &[u8] = b"new-incident";
 const ATTENDING_INCIDENT: &[u8] = b"attending-incident";
@@ -27,7 +28,7 @@ const CLOSE_INCIDENT: &[u8] = b"close-incident";
 const DRONE_DATA: &[u8] = b"drone-data";
 
 const READ_MESSAGE_INTERVAL: u64 = 1;
-const UPDATE_DATA_INTERVAL: u64 = 10;
+const UPDATE_DATA_INTERVAL: u64 = 1;
 const CHECK_BATTERY_INTERVAL: u64 = 5;
 
 const TRAVEL_INTERVAL: u64 = 1;
@@ -446,7 +447,7 @@ fn handle_close_incident(
         }
     };
 
-    if current_incident.uuid() != closing_incident_uuid {
+    if current_incident.uuid != closing_incident_uuid {
         println!("Close incident received does not match current incident of drone.");
         return;
     }
@@ -454,7 +455,7 @@ fn handle_close_incident(
     drone.set_incident(None);
     println!("Current incident closed");
 
-    let close_topic = format!("close-incident/{}", current_incident.uuid());
+    let close_topic = format!("close-incident/{}", current_incident.uuid);
     let topic_filter = TopicFilter::new(
         vec![TopicLevel::Literal(close_topic.as_bytes().to_vec())],
         false,

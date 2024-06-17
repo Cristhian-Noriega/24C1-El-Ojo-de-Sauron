@@ -3,7 +3,6 @@ use std::env::args;
 mod client;
 mod drone;
 mod drone_status;
-mod incident;
 
 const CLIENT_ARGS: usize = 3;
 

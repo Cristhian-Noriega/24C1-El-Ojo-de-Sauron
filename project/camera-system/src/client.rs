@@ -3,6 +3,7 @@ use std::{
     net::TcpStream,
 };
 
+use common::incident::Incident;
 use mqtt::model::{
     components::{
         encoded_string::EncodedString, qos::QoS, topic_filter::TopicFilter,
@@ -14,7 +15,6 @@ use mqtt::model::{
 
 use crate::camera::Camera;
 use crate::camera_system::CameraSystem;
-use crate::incident::Incident;
 
 const CAMERA_QUANTITY: usize = 3;
 

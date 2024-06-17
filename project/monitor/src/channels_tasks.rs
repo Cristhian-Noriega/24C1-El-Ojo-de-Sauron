@@ -1,4 +1,6 @@
-use crate::{camera::Camera, drone::Drone, incident::Incident};
+use common::incident::Incident;
+
+use crate::{camera::Camera, drone::Drone};
 
 // A REFACTORIZAR EN VARIOS ARCHIVOS
 pub enum UIAction {
@@ -30,15 +32,6 @@ pub struct IncidentRegistration {
     pub description: String,
     pub x: String,
     pub y: String,
-}
-
-impl IncidentRegistration {
-    pub fn build_incident_message(&self) -> String {
-        format!(
-            "{};{};{};{}",
-            self.name, self.description, self.x, self.y
-        )
-    }
 }
 
 pub enum MonitorAction {

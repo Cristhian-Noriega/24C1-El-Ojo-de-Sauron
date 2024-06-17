@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 mqtt = { path = "../mqtt"} 
+common = { path = "../common"}
