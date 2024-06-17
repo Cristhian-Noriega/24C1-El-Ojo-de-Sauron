@@ -204,10 +204,6 @@ fn start_monitor(
                         }
                     }
 
-                    // puclish ack
-                    let dup = false;
-                    let qos = QoS::AtLeast;
-                    let retain = false;
                     let package_identifier = Some(publish.package_identifier());
 
                     let puback = Puback::new(package_identifier.unwrap());
