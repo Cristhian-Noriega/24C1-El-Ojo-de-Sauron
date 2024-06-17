@@ -5,7 +5,7 @@ use std::{
     sync::mpsc::{channel, Receiver, Sender},
 };
 
-use common::incident::{self, Incident, IncidentStatus};
+use common::incident::{Incident, IncidentStatus};
 use mqtt::model::{
     components::{
         encoded_string::EncodedString, qos::QoS, topic_filter::TopicFilter,
@@ -156,7 +156,7 @@ fn start_monitor(
 
                     let id = String::from_utf8_lossy(id.to_vec().as_slice()).to_string();
                     let content = publish.message();
-                    let content_str = std::str::from_utf8(&content).unwrap();
+                    let content_str = std::str::from_utf8(content).unwrap();
                     let splitted_content: Vec<&str> = content_str.split(SEPARATOR).collect();
 
                     let x_coordinate = splitted_content[0].parse::<f64>().unwrap();
@@ -176,12 +176,12 @@ fn start_monitor(
                     }
                 } else if topic_levels.len() == 1 && topic_levels[0] == CAMERA_DATA {
                     println!("Camera data received");
-                    println!("{}", std::str::from_utf8(&publish.message()).unwrap());
+                    println!("{}", std::str::from_utf8(publish.message()).unwrap());
                     let content = publish.message();
 
                     // split by |
 
-                    let content_str = std::str::from_utf8(&content).unwrap();
+                    let content_str = std::str::from_utf8(content).unwrap();
                     let splitted_content: Vec<&str> = content_str.split(ENUMARATOR).collect();
 
                     // this are camera data
@@ -204,9 +204,9 @@ fn start_monitor(
                         }
                     }
 
-                    let package_identifier = Some(publish.package_identifier());
+                    let package_identifier = publish.package_identifier();
 
-                    let puback = Puback::new(package_identifier.unwrap());
+                    let puback = Puback::new(package_identifier);
 
                     match stream.write(puback.to_bytes().as_slice()) {
                         Ok(_) => {}
@@ -214,6 +214,11 @@ fn start_monitor(
                             println!("Error sending puback packet");
                         }
                     }
+
+                
+                
+                } else if topic_levels.len() == 2 && topic_levels[0] == CLOSE_INCIDENT {
+                    
                 } else {
                     println!("Unknown topic");
                 }
@@ -290,7 +295,12 @@ fn start_monitor(
                     IncidentStatus::Pending,
                 );
 
-                monitor.new_incident(incident.clone());
+                match monitor.new_incident(incident.clone()) {
+                    Ok(_) => {}
+                    Err(_) => {
+                        println!("Error adding incident to monitor");
+                    }
+                }
 
                 match monitor_sender.send(MonitorAction::IncidentData(incident.clone())) {
                     Ok(_) => {}
@@ -312,7 +322,7 @@ fn start_monitor(
                     Publish::new(dup, qos, retain, topic_name, package_identifier, message);
 
                 println!("Resolving incident");
-                println!("{}", incident.to_string());
+                println!("{}", incident);
 
                 publish_counter += 1;
                 unacknowledged_publish.insert(Some(publish_counter), publish.clone());

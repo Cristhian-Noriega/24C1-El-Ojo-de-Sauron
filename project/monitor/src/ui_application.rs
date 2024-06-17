@@ -31,7 +31,7 @@ pub struct UIApplication {
     new_incident_registration: IncidentRegistration,
     new_drone_registration: DroneRegistration,
 
-    connection_status: bool,
+    //connection_status: bool,
     current_layout: Layout,
     tiles: Tiles,
     map_memory: MapMemory,
@@ -145,7 +145,7 @@ impl UIApplication {
                 anchor_y: String::new(),
             },
 
-            connection_status: false,
+            //connection_status: false,
             current_layout: Layout::IncidentMap,
             tiles: Tiles::new(OpenStreetMap, egui_ctx),
             map_memory: MapMemory::default(),
@@ -247,7 +247,7 @@ fn display_new_incident(
     });
 }
 
-fn display_incident_list(ui: &mut egui::Ui, incidents: &Vec<Incident>, sender: &Sender<UIAction>) {
+fn display_incident_list(ui: &mut egui::Ui, incidents: &[Incident], sender: &Sender<UIAction>) {
     TableBuilder::new(ui)
         .striped(true)
         .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
@@ -356,7 +356,7 @@ fn display_new_drone(
     ui.add_space(20.0);
 }
 
-fn display_drone_list(ui: &mut egui::Ui, drones: &Vec<Drone>) {
+fn display_drone_list(ui: &mut egui::Ui, drones: &[Drone]) {
     egui::Frame::group(ui.style()).show(ui, |ui| {
         ui.label("Active Drones:");
         ui.add_space(10.0);
@@ -401,7 +401,7 @@ fn display_drone_list(ui: &mut egui::Ui, drones: &Vec<Drone>) {
     });
 }
 
-fn display_camera_list(ui: &mut egui::Ui, cameras: &Vec<Camera>) {
+fn display_camera_list(ui: &mut egui::Ui, cameras: &[Camera]) {
     egui::Frame::group(ui.style()).show(ui, |ui| {
         ui.label("Camera List");
         ui.add_space(10.0);

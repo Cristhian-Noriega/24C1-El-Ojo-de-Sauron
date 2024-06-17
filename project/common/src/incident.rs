@@ -1,3 +1,5 @@
+use std::fmt;
+
 pub const SEPARATOR: char = ';';
 const ELEMENTS_COUNT: usize = 6;
 
@@ -17,13 +19,17 @@ impl IncidentStatus {
             _ => panic!("Invalid incident status"),
         }
     }
+}
 
-    pub fn to_string(&self) -> String {
-        match self {
-            IncidentStatus::Pending => "0".to_string(),
-            IncidentStatus::InProgress => "1".to_string(),
-            IncidentStatus::Resolved => "2".to_string(),
-        }
+impl fmt::Display for IncidentStatus {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let status = match self {
+            IncidentStatus::Pending => "0",
+            IncidentStatus::InProgress => "1",
+            IncidentStatus::Resolved => "2",
+        };
+
+        write!(f, "{}", status)
     }
 }
 
@@ -79,16 +85,19 @@ impl Incident {
             status: state,
         })
     }
+}
 
-    pub fn to_string(&self) -> String {
-        format!(
+impl fmt::Display for Incident {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
             "{};{};{};{};{};{}",
             self.uuid,
             self.name,
             self.description,
             self.x_coordinate,
             self.y_coordinate,
-            self.status.to_string()
+            self.status
         )
     }
 }
