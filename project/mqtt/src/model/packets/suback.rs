@@ -78,3 +78,58 @@ impl Suback {
         &self.suback_return_codes
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_suback_to_bytes() {
+        let suback = Suback::new(
+            42,
+            vec![
+                SubackReturnCode::SuccessMaximumQoS0,
+                SubackReturnCode::SuccessMaximumQoS1,
+                SubackReturnCode::SuccessMaximumQoS2,
+            ],
+        );
+
+        let expected_bytes: Vec<u8> = vec![
+            144 as u8,
+            5 as u8,
+            0 as u8,
+            42 as u8,
+            0x00 as u8,
+            0x01 as u8,
+            0x02 as u8
+        ];
+
+        let bytes = suback.to_bytes();
+
+        assert_eq!(bytes, expected_bytes);
+    }
+
+    #[test]
+    fn test_suback_from_bytes() {
+        let bytes: Vec<u8> = vec![
+            0 as u8,
+            42 as u8,
+            0x00 as u8,
+            0x01 as u8,
+            0x02 as u8
+        ];
+
+        let mut stream = &bytes[..];
+
+        let fixed_header = FixedHeader::new(0b1001_0000, RemainingLength::new(5));
+        let suback = Suback::from_bytes(fixed_header, &mut stream).unwrap();
+
+        let return_codes = suback.suback_return_codes();
+        assert_eq!(suback.packet_identifier(), 42);
+        assert_eq!(return_codes.len(), 3);
+        assert_eq!(return_codes[0], SubackReturnCode::SuccessMaximumQoS0);
+        assert_eq!(return_codes[1], SubackReturnCode::SuccessMaximumQoS1);
+        assert_eq!(return_codes[2], SubackReturnCode::SuccessMaximumQoS2);
+    }
+
+}
