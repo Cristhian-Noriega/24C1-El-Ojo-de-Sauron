@@ -7,6 +7,7 @@ const ELEMENTS_COUNT: usize = 6;
 pub enum IncidentStatus {
     Pending,
     InProgress,
+    Resolvable,
     Resolved,
 }
 
@@ -15,7 +16,8 @@ impl IncidentStatus {
         match string.as_str() {
             "0" => IncidentStatus::Pending,
             "1" => IncidentStatus::InProgress,
-            "2" => IncidentStatus::Resolved,
+            "2" => IncidentStatus::Resolvable,
+            "3" => IncidentStatus::Resolved,
             _ => panic!("Invalid incident status"),
         }
     }
@@ -26,7 +28,8 @@ impl fmt::Display for IncidentStatus {
         let status = match self {
             IncidentStatus::Pending => "0",
             IncidentStatus::InProgress => "1",
-            IncidentStatus::Resolved => "2",
+            IncidentStatus::Resolvable => "2",
+            IncidentStatus::Resolved => "3",
         };
 
         write!(f, "{}", status)

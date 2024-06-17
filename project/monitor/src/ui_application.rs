@@ -3,7 +3,7 @@ use crate::{
     channels_tasks::{DroneRegistration, IncidentRegistration, MonitorAction, UIAction},
     drone::Drone,
 };
-use common::incident::Incident;
+use common::incident::{Incident, IncidentStatus};
 use eframe::egui::{Color32, FontId, Stroke};
 use egui::Context;
 use egui_extras::{Column, TableBuilder};
@@ -294,10 +294,22 @@ fn display_incident_list(ui: &mut egui::Ui, incidents: &[Incident], sender: &Sen
                         ui.label(incident.status.clone().to_string());
                     });
                     row.col(|ui| {
-                        if ui.button("Resolve").clicked() {
-                            sender
-                                .send(UIAction::ResolveIncident(incident.clone()))
-                                .unwrap();
+                        // if incident status == Solvable -> show resolve button
+                        // // otherwise show it disabled
+                        // if ui.button("Resolve").clicked() {
+                        //     sender
+                        //         .send(UIAction::ResolveIncident(incident.clone()))
+                        //         .unwrap();
+                        // }
+
+                        if incident.status == IncidentStatus::Resolvable {
+                            if ui.button("Resolve").clicked() {
+                                sender
+                                    .send(UIAction::ResolveIncident(incident.clone()))
+                                    .unwrap();
+                            }
+                        } else {
+                            ui.label("Resolve");
                         }
                     });
                 });
