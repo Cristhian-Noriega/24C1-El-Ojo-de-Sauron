@@ -1,4 +1,5 @@
 use error::Error;
+use std::path::Path;
 use std::env;
 
 mod client;
@@ -14,19 +15,13 @@ pub fn main() -> Result<(), Error> {
     let argv = env::args().collect::<Vec<String>>();
     if argv.len() != SERVER_ARGS {
         let app_name = &argv[0];
-        println!("Usage:\n{:?} <config_file>", app_name);
+        println!("Usage:\n{:?} <toml-file>", app_name);
         return Err(Error::new("Cantidad de argumentos inválido".to_string()));
     }
-    println!("\nServer starting with config file: {:?}", argv[1]);
 
-    let config = match config::Config::new(&argv[1]) {
-        Some(config) => config,
-        None => {
-            return Err(Error::new(
-                "Error al leer el archivo de configuración".to_string(),
-            ))
-        }
-    };
+    let path = Path::new(&argv[1]);
+
+    let config = config::Config::from_file(path)?;
 
     let server = server::Server::new(config);
     if let Err(err) = server.server_run() {

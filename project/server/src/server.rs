@@ -49,10 +49,10 @@ impl Server {
     }
 
     pub fn server_run(&self) -> std::io::Result<()> {
-        let address = format!("{}:{}", self.config.get_address(), self.config.get_port());
+        let address = self.config.get_address();
         self.log_file
             .info(&format!("Server running on address: {}\n", address));
-        let listener = TcpListener::bind(&address)?;
+        let listener = TcpListener::bind(address)?;
 
         for stream_result in listener.incoming() {
             match stream_result {

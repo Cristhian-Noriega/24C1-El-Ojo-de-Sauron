@@ -1,0 +1,625 @@
+{
+    "address": "127.0.0.1:8080",
+    "cameras": [
+        {
+            "x_coordinate": -58.3815,
+            "y_coordinate": -34.6035
+        },
+        {
+            "x_coordinate": -58.3815,
+            "y_coordinate": -34.6045
+        },
+        {
+            "x_coordinate": -58.3815,
+            "y_coordinate": -34.6055
+        },
+        {
+            "x_coordinate": -58.3815,
+            "y_coordinate": -34.6065
+        },
+        {
+            "x_coordinate": -58.3815,
+            "y_coordinate": -34.6075
+        },
+        {
+            "x_coordinate": -58.3815,
+            "y_coordinate": -34.6085
+        },
+        {
+            "x_coordinate": -58.3815,
+            "y_coordinate": -34.6095
+        },
+        {
+            "x_coordinate": -58.3815,
+            "y_coordinate": -34.6105
+        },
+        {
+            "x_coordinate": -58.3815,
+            "y_coordinate": -34.6115
+        },
+        {
+            "x_coordinate": -58.3815,
+            "y_coordinate": -34.6125
+        },
+        {
+            "x_coordinate": -58.3805,
+            "y_coordinate": -34.6035
+        },
+        {
+            "x_coordinate": -58.3805,
+            "y_coordinate": -34.6045
+        },
+        {
+            "x_coordinate": -58.3805,
+            "y_coordinate": -34.6055
+        },
+        {
+            "x_coordinate": -58.3805,
+            "y_coordinate": -34.6065
+        },
+        {
+            "x_coordinate": -58.3805,
+            "y_coordinate": -34.6075
+        },
+        {
+            "x_coordinate": -58.3805,
+            "y_coordinate": -34.6085
+        },
+        {
+            "x_coordinate": -58.3805,
+            "y_coordinate": -34.6095
+        },
+        {
+            "x_coordinate": -58.3805,
+            "y_coordinate": -34.6105
+        },
+        {
+            "x_coordinate": -58.3805,
+            "y_coordinate": -34.6115
+        },
+        {
+            "x_coordinate": -58.3805,
+            "y_coordinate": -34.6125
+        },
+        {
+            "x_coordinate": -58.3795,
+            "y_coordinate": -34.6035
+        },
+        {
+            "x_coordinate": -58.3795,
+            "y_coordinate": -34.6045
+        },
+        {
+            "x_coordinate": -58.3795,
+            "y_coordinate": -34.6055
+        },
+        {
+            "x_coordinate": -58.3795,
+            "y_coordinate": -34.6065
+        },
+        {
+            "x_coordinate": -58.3795,
+            "y_coordinate": -34.6075
+        },
+        {
+            "x_coordinate": -58.3795,
+            "y_coordinate": -34.6085
+        },
+        {
+            "x_coordinate": -58.3795,
+            "y_coordinate": -34.6095
+        },
+        {
+            "x_coordinate": -58.3795,
+            "y_coordinate": -34.6105
+        },
+        {
+            "x_coordinate": -58.3795,
+            "y_coordinate": -34.6115
+        },
+        {
+            "x_coordinate": -58.3795,
+            "y_coordinate": -34.6125
+        },
+        {
+            "x_coordinate": -58.3785,
+            "y_coordinate": -34.6035
+        },
+        {
+            "x_coordinate": -58.3785,
+            "y_coordinate": -34.6045
+        },
+        {
+            "x_coordinate": -58.3785,
+            "y_coordinate": -34.6055
+        },
+        {
+            "x_coordinate": -58.3785,
+            "y_coordinate": -34.6065
+        },
+        {
+            "x_coordinate": -58.3785,
+            "y_coordinate": -34.6075
+        },
+        {
+            "x_coordinate": -58.3785,
+            "y_coordinate": -34.6085
+        },
+        {
+            "x_coordinate": -58.3785,
+            "y_coordinate": -34.6095
+        },
+        {
+            "x_coordinate": -58.3785,
+            "y_coordinate": -34.6105
+        },
+        {
+            "x_coordinate": -58.3785,
+            "y_coordinate": -34.6115
+        },
+        {
+            "x_coordinate": -58.3785,
+            "y_coordinate": -34.6125
+        },
+        {
+            "x_coordinate": -58.3775,
+            "y_coordinate": -34.6035
+        },
+        {
+            "x_coordinate": -58.3775,
+            "y_coordinate": -34.6045
+        },
+        {
+            "x_coordinate": -58.3775,
+            "y_coordinate": -34.6055
+        },
+        {
+            "x_coordinate": -58.3775,
+            "y_coordinate": -34.6065
+        },
+        {
+            "x_coordinate": -58.3775,
+            "y_coordinate": -34.6075
+        },
+        {
+            "x_coordinate": -58.3775,
+            "y_coordinate": -34.6085
+        },
+        {
+            "x_coordinate": -58.3775,
+            "y_coordinate": -34.6095
+        },
+        {
+            "x_coordinate": -58.3775,
+            "y_coordinate": -34.6105
+        },
+        {
+            "x_coordinate": -58.3775,
+            "y_coordinate": -34.6115
+        },
+        {
+            "x_coordinate": -58.3775,
+            "y_coordinate": -34.6125
+        },
+        {
+            "x_coordinate": -58.3765,
+            "y_coordinate": -34.6035
+        },
+        {
+            "x_coordinate": -58.3765,
+            "y_coordinate": -34.6045
+        },
+        {
+            "x_coordinate": -58.3765,
+            "y_coordinate": -34.6055
+        },
+        {
+            "x_coordinate": -58.3765,
+            "y_coordinate": -34.6065
+        },
+        {
+            "x_coordinate": -58.3765,
+            "y_coordinate": -34.6075
+        },
+        {
+            "x_coordinate": -58.3765,
+            "y_coordinate": -34.6085
+        },
+        {
+            "x_coordinate": -58.3765,
+            "y_coordinate": -34.6095
+        },
+        {
+            "x_coordinate": -58.3765,
+            "y_coordinate": -34.6105
+        },
+        {
+            "x_coordinate": -58.3765,
+            "y_coordinate": -34.6115
+        },
+        {
+            "x_coordinate": -58.3765,
+            "y_coordinate": -34.6125
+        },
+        {
+            "x_coordinate": -58.3755,
+            "y_coordinate": -34.6035
+        },
+        {
+            "x_coordinate": -58.3755,
+            "y_coordinate": -34.6045
+        },
+        {
+            "x_coordinate": -58.3755,
+            "y_coordinate": -34.6055
+        },
+        {
+            "x_coordinate": -58.3755,
+            "y_coordinate": -34.6065
+        },
+        {
+            "x_coordinate": -58.3755,
+            "y_coordinate": -34.6075
+        },
+        {
+            "x_coordinate": -58.3755,
+            "y_coordinate": -34.6085
+        },
+        {
+            "x_coordinate": -58.3755,
+            "y_coordinate": -34.6095
+        },
+        {
+            "x_coordinate": -58.3755,
+            "y_coordinate": -34.6105
+        },
+        {
+            "x_coordinate": -58.3755,
+            "y_coordinate": -34.6115
+        },
+        {
+            "x_coordinate": -58.3755,
+            "y_coordinate": -34.6125
+        },
+        {
+            "x_coordinate": -58.3745,
+            "y_coordinate": -34.6035
+        },
+        {
+            "x_coordinate": -58.3745,
+            "y_coordinate": -34.6045
+        },
+        {
+            "x_coordinate": -58.3745,
+            "y_coordinate": -34.6055
+        },
+        {
+            "x_coordinate": -58.3745,
+            "y_coordinate": -34.6065
+        },
+        {
+            "x_coordinate": -58.3745,
+            "y_coordinate": -34.6075
+        },
+        {
+            "x_coordinate": -58.3745,
+            "y_coordinate": -34.6085
+        },
+        {
+            "x_coordinate": -58.3745,
+            "y_coordinate": -34.6095
+        },
+        {
+            "x_coordinate": -58.3745,
+            "y_coordinate": -34.6105
+        },
+        {
+            "x_coordinate": -58.3745,
+            "y_coordinate": -34.6115
+        },
+        {
+            "x_coordinate": -58.3745,
+            "y_coordinate": -34.6125
+        },
+        {
+            "x_coordinate": -58.3735,
+            "y_coordinate": -34.6035
+        },
+        {
+            "x_coordinate": -58.3735,
+            "y_coordinate": -34.6045
+        },
+        {
+            "x_coordinate": -58.3735,
+            "y_coordinate": -34.6055
+        },
+        {
+            "x_coordinate": -58.3735,
+            "y_coordinate": -34.6065
+        },
+        {
+            "x_coordinate": -58.3735,
+            "y_coordinate": -34.6075
+        },
+        {
+            "x_coordinate": -58.3735,
+            "y_coordinate": -34.6085
+        },
+        {
+            "x_coordinate": -58.3735,
+            "y_coordinate": -34.6095
+        },
+        {
+            "x_coordinate": -58.3735,
+            "y_coordinate": -34.6105
+        },
+        {
+            "x_coordinate": -58.3735,
+            "y_coordinate": -34.6115
+        },
+        {
+            "x_coordinate": -58.3735,
+            "y_coordinate": -34.6125
+        },
+        {
+            "x_coordinate": -58.3725,
+            "y_coordinate": -34.6035
+        },
+        {
+            "x_coordinate": -58.3725,
+            "y_coordinate": -34.6045
+        },
+        {
+            "x_coordinate": -58.3725,
+            "y_coordinate": -34.6055
+        },
+        {
+            "x_coordinate": -58.3725,
+            "y_coordinate": -34.6065
+        },
+        {
+            "x_coordinate": -58.3725,
+            "y_coordinate": -34.6075
+        },
+        {
+            "x_coordinate": -58.3725,
+            "y_coordinate": -34.6085
+        },
+        {
+            "x_coordinate": -58.3725,
+            "y_coordinate": -34.6095
+        },
+        {
+            "x_coordinate": -58.3725,
+            "y_coordinate": -34.6105
+        },
+        {
+            "x_coordinate": -58.3725,
+            "y_coordinate": -34.6115
+        },
+        {
+            "x_coordinate": -58.3725,
+            "y_coordinate": -34.6125
+        },
+        {
+            "x_coordinate": -58.3715,
+            "y_coordinate": -34.6035
+        },
+        {
+            "x_coordinate": -58.3715,
+            "y_coordinate": -34.6045
+        },
+        {
+            "x_coordinate": -58.3715,
+            "y_coordinate": -34.6055
+        },
+        {
+            "x_coordinate": -58.3715,
+            "y_coordinate": -34.6065
+        },
+        {
+            "x_coordinate": -58.3715,
+            "y_coordinate": -34.6075
+        },
+        {
+            "x_coordinate": -58.3715,
+            "y_coordinate": -34.6085
+        },
+        {
+            "x_coordinate": -58.3715,
+            "y_coordinate": -34.6095
+        },
+        {
+            "x_coordinate": -58.3715,
+            "y_coordinate": -34.6105
+        },
+        {
+            "x_coordinate": -58.3715,
+            "y_coordinate": -34.6115
+        },
+        {
+            "x_coordinate": -58.3715,
+            "y_coordinate": -34.6125
+        },
+        {
+            "x_coordinate": -58.3705,
+            "y_coordinate": -34.6035
+        },
+        {
+            "x_coordinate": -58.3705,
+            "y_coordinate": -34.6045
+        },
+        {
+            "x_coordinate": -58.3705,
+            "y_coordinate": -34.6055
+        },
+        {
+            "x_coordinate": -58.3705,
+            "y_coordinate": -34.6065
+        },
+        {
+            "x_coordinate": -58.3705,
+            "y_coordinate": -34.6075
+        },
+        {
+            "x_coordinate": -58.3705,
+            "y_coordinate": -34.6085
+        },
+        {
+            "x_coordinate": -58.3705,
+            "y_coordinate": -34.6095
+        },
+        {
+            "x_coordinate": -58.3705,
+            "y_coordinate": -34.6105
+        },
+        {
+            "x_coordinate": -58.3705,
+            "y_coordinate": -34.6115
+        },
+        {
+            "x_coordinate": -58.3705,
+            "y_coordinate": -34.6125
+        },
+        {
+            "x_coordinate": -58.3695,
+            "y_coordinate": -34.6035
+        },
+        {
+            "x_coordinate": -58.3695,
+            "y_coordinate": -34.6045
+        },
+        {
+            "x_coordinate": -58.3695,
+            "y_coordinate": -34.6055
+        },
+        {
+            "x_coordinate": -58.3695,
+            "y_coordinate": -34.6065
+        },
+        {
+            "x_coordinate": -58.3695,
+            "y_coordinate": -34.6075
+        },
+        {
+            "x_coordinate": -58.3695,
+            "y_coordinate": -34.6085
+        },
+        {
+            "x_coordinate": -58.3695,
+            "y_coordinate": -34.6095
+        },
+        {
+            "x_coordinate": -58.3695,
+            "y_coordinate": -34.6105
+        },
+        {
+            "x_coordinate": -58.3695,
+            "y_coordinate": -34.6115
+        },
+        {
+            "x_coordinate": -58.3695,
+            "y_coordinate": -34.6125
+        },
+        {
+            "x_coordinate": -58.3685,
+            "y_coordinate": -34.6035
+        },
+        {
+            "x_coordinate": -58.3685,
+            "y_coordinate": -34.6045
+        },
+        {
+            "x_coordinate": -58.3685,
+            "y_coordinate": -34.6055
+        },
+        {
+            "x_coordinate": -58.3685,
+            "y_coordinate": -34.6065
+        },
+        {
+            "x_coordinate": -58.3685,
+            "y_coordinate": -34.6075
+        },
+        {
+            "x_coordinate": -58.3685,
+            "y_coordinate": -34.6085
+        },
+        {
+            "x_coordinate": -58.3685,
+            "y_coordinate": -34.6095
+        },
+        {
+            "x_coordinate": -58.3685,
+            "y_coordinate": -34.6105
+        },
+        {
+            "x_coordinate": -58.3685,
+            "y_coordinate": -34.6115
+        },
+        {
+            "x_coordinate": -58.3685,
+            "y_coordinate": -34.6125
+        },
+        {
+            "x_coordinate": -58.3675,
+            "y_coordinate": -34.6035
+        },
+        {
+            "x_coordinate": -58.3675,
+            "y_coordinate": -34.6045
+        },
+        {
+            "x_coordinate": -58.3675,
+            "y_coordinate": -34.6055
+        },
+        {
+            "x_coordinate": -58.3675,
+            "y_coordinate": -34.6065
+        },
+        {
+            "x_coordinate": -58.3675,
+            "y_coordinate": -34.6075
+        },
+        {
+            "x_coordinate": -58.3675,
+            "y_coordinate": -34.6085
+        },
+        {
+            "x_coordinate": -58.3675,
+            "y_coordinate": -34.6095
+        },
+        {
+            "x_coordinate": -58.3675,
+            "y_coordinate": -34.6105
+        },
+        {
+            "x_coordinate": -58.3675,
+            "y_coordinate": -34.6115
+        },
+        {
+            "x_coordinate": -58.3675,
+            "y_coordinate": -34.6125
+        },
+        {
+            "x_coordinate": -58.3665,
+            "y_coordinate": -34.6035
+        },
+        {
+            "x_coordinate": -58.3665,
+            "y_coordinate": -34.6045
+        },
+        {
+            "x_coordinate": -58.3665,
+            "y_coordinate": -34.6055
+        },
+        {
+            "x_coordinate": -58.3665,
+            "y_coordinate": -34.6065
+        },
+        {
+            "x_coordinate": -58.3665,
+            "y_coordinate": -34.6075
+        }
+    ]
+}

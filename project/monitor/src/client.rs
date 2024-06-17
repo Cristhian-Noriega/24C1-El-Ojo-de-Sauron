@@ -6,17 +6,17 @@ use mqtt::model::{
     components::topic_name::TopicName, packet::Packet, packets::connect::Connect,
     packets::publish::Publish, packets::subscribe::Subscribe,
 };
+use std::env;
 use std::io::ErrorKind;
 use std::io::Read;
 use std::io::Write;
 use std::net::TcpStream;
+use std::path::Path;
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
-use std::{env::args, thread};
+use std::thread;
 
-use crate::{drone::Drone, incident::Incident};
-
-static CLIENT_ARGS: usize = 3;
+use crate::{config::Config, drone::Drone, incident::Incident};
 
 pub struct Client {
     pub connection_status: Arc<Mutex<String>>,
@@ -28,15 +28,27 @@ pub struct Client {
     pub drone_list: Arc<Mutex<Vec<Drone>>>,
 }
 
+static CLIENT_ARGS: usize = 2;
+
 impl Client {
     pub fn new(sender: Sender<String>) -> Self {
-        let argv = args().collect::<Vec<String>>();
+        let argv = env::args().collect::<Vec<String>>();
         if argv.len() != CLIENT_ARGS {
             let app_name = &argv[0];
-            println!("{:?} <host> <puerto>", app_name);
+            println!("Usage:\n{:?} <toml file>", app_name);
         }
 
-        let address = argv[1].clone() + ":" + &argv[2];
+        let path = Path::new(&argv[1]);
+
+        let config = match Config::from_file(path) {
+            Ok(config) => config,
+            Err(e) => {
+                println!("Error reading the configuration file: {:?}", e);
+                std::process::exit(1);
+            }
+        };
+
+        let address = config.get_address().to_owned();
 
         Self {
             connection_status: Arc::new(Mutex::new("disconnected".to_owned())),
@@ -185,16 +197,20 @@ impl Client {
         Ok(())
     }
 
-    pub fn new_drone(&self,
-        id: &str, 
-        password: &str, 
-        x_coordenate: &str, 
-        y_coordenate: &str
+    pub fn new_drone(
+        &self,
+        id: &str,
+        password: &str,
+        x_coordenate: &str,
+        y_coordenate: &str,
     ) -> std::io::Result<()> {
         let new_drone_topic = "new-drone";
         let x_coordenate_float: f64 = x_coordenate.parse().unwrap();
         let y_coordenate_float: f64 = y_coordenate.parse().unwrap();
-        let message = format!("{},{},{},{}", id, password, x_coordenate_float, y_coordenate_float);
+        let message = format!(
+            "{},{},{},{}",
+            id, password, x_coordenate_float, y_coordenate_float
+        );
 
         self.publish(new_drone_topic, &message)?;
 
@@ -247,7 +263,7 @@ impl Client {
 
     pub fn subscribe(&self, topics: Vec<&str>) -> std::io::Result<()> {
         let mut topics_filters = vec![];
-    
+
         for topic in topics {
             let mut levels = vec![];
             for level in topic.split('/') {
@@ -255,16 +271,16 @@ impl Client {
                     levels.push(topic_level);
                 }
             }
-    
+
             let topic_filter = TopicFilter::new(levels, false);
             let qos = QoS::AtLeast;
-    
+
             topics_filters.push((topic_filter, qos));
         }
-    
+
         let packet_id = 1;
         let subscribe_packet = Subscribe::new(packet_id, topics_filters);
-    
+
         println!("Packet ID: {:?}", subscribe_packet.packet_identifier());
         let _ = self
             .to_server_stream
@@ -274,7 +290,7 @@ impl Client {
             .unwrap()
             .write(subscribe_packet.to_bytes().as_slice());
         println!("Sent Subscribe packet");
-    
+
         match Packet::from_bytes(self.to_server_stream.lock().unwrap().as_mut().unwrap()) {
             Ok(Packet::Suback(_)) => Ok(()),
             _ => Err(std::io::Error::new(
@@ -283,7 +299,7 @@ impl Client {
             )),
         }
     }
-    
+
     fn make_initial_subscribes(&self) -> std::io::Result<()> {
         let topics = vec![
             "camera-data",
@@ -291,7 +307,7 @@ impl Client {
             "attending-incident/+",
             "close-incident/+",
         ];
-    
+
         self.subscribe(topics)
     }
 }
