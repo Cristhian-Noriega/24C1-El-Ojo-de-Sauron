@@ -95,13 +95,13 @@ mod tests {
         );
 
         let expected_bytes: Vec<u8> = vec![
-            144 as u8,
-            5 as u8,
-            0 as u8,
-            42 as u8,
-            0x00 as u8,
-            0x01 as u8,
-            0x02 as u8
+            144_u8,
+            5_u8,
+            0_u8,
+            42_u8,
+            0x00_u8,
+            0x01_u8,
+            0x02_u8
         ];
 
         let bytes = suback.to_bytes();
@@ -112,11 +112,11 @@ mod tests {
     #[test]
     fn test_suback_from_bytes() {
         let bytes: Vec<u8> = vec![
-            0 as u8,
-            42 as u8,
-            0x00 as u8,
-            0x01 as u8,
-            0x02 as u8
+            0_u8,
+            42_u8,
+            0x00_u8,
+            0x01_u8,
+            0x02_u8
         ];
 
         let mut stream = &bytes[..];

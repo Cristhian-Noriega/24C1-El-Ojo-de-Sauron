@@ -70,7 +70,7 @@ mod tests {
     fn test_unsuback_from_bytes() {
         let bytes: Vec<u8> = vec![0x00, 0x2A];
 
-        let fixed_header = FixedHeader::new(176 as u8, RemainingLength::new(2));
+        let fixed_header = FixedHeader::new(176_u8, RemainingLength::new(2));
         let unsuback = Unsuback::from_bytes(fixed_header, &mut bytes.as_slice()).unwrap();
 
         assert_eq!(unsuback.packet_identifier(), 42);

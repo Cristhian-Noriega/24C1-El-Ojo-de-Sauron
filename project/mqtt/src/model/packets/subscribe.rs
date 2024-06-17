@@ -142,9 +142,9 @@ mod tests {
         let subscribe = Subscribe::new(packet_identifier, topics);
 
         let expected_bytes = vec![
-            128 as u8, 0x0b, // Fixed Header
+            128_u8, 0x0b, // Fixed Header
             0x00, 0x01, // Packet Identifier
-            0x00, 6 as u8, b't', b'o', b'p', b'i', b'c', b'1', 0x00, // Topic Filter
+            0x00, 6_u8, b't', b'o', b'p', b'i', b'c', b'1', 0x00, // Topic Filter
         ];
 
         assert_eq!(subscribe.to_bytes(), expected_bytes);

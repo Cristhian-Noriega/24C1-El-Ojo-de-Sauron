@@ -151,7 +151,7 @@ mod tests {
     #[test]
     fn test_from_bytes() {
         let mut stream = std::io::Cursor::new(vec![
-            0b0011_0000, 6 as u8, 0x00, 0x03, b'a', b'/', b'b', b'c'
+            0b0011_0000, 6_u8, 0x00, 0x03, b'a', b'/', b'b', b'c'
         ]);
 
         let fixed_header = FixedHeader::from_bytes(&mut stream).unwrap();
@@ -181,6 +181,6 @@ mod tests {
 
         let bytes = publish.to_bytes();
 
-        assert_eq!(bytes, vec![0b0011_0000, 6 as u8, 0x00, 0x03, b'a', b'/', b'b', b'c']);
+        assert_eq!(bytes, vec![0b0011_0000, 6_u8, 0x00, 0x03, b'a', b'/', b'b', b'c']);
     }
 }
