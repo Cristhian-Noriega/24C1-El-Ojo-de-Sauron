@@ -16,7 +16,10 @@ use mqtt::model::{
 };
 
 use crate::{
-    config::Config, drone::Drone, drone_status::{DroneStatus, TravelLocation}, incident::Incident
+    config::Config,
+    drone::Drone,
+    drone_status::{DroneStatus, TravelLocation},
+    incident::Incident,
 };
 
 const NEW_INCIDENT: &[u8] = b"new-incident";
@@ -32,12 +35,22 @@ const BATTERY_DISCHARGE_INTERVAL: u64 = 5;
 const BATTERY_RECHARGE_INTERVAL: u64 = 1;
 
 pub fn client_run(config: Config) -> std::io::Result<()> {
-    let address = config.get_address().to_owned() + ":" + config.get_port().to_string().as_str();
+    let address = config.get_address().to_owned();
 
     let server_stream = connect_to_server(&address)?;
     let server_stream = Arc::new(Mutex::new(server_stream));
 
-    let drone = Arc::new(Mutex::new(Drone::new(config.get_id(), config.get_x_position(), config.get_y_position(), config.get_x_central_position(), config.get_y_central_position(), config.get_x_anchor_position(), config.get_y_anchor_position(), config.get_velocity(), config.get_active_range())));
+    let drone = Arc::new(Mutex::new(Drone::new(
+        config.get_id(),
+        config.get_x_position(),
+        config.get_y_position(),
+        config.get_x_central_position(),
+        config.get_y_central_position(),
+        config.get_x_anchor_position(),
+        config.get_y_anchor_position(),
+        config.get_velocity(),
+        config.get_active_range(),
+    )));
 
     let new_incident = TopicFilter::new(vec![TopicLevel::Literal(NEW_INCIDENT.to_vec())], false);
 
@@ -170,7 +183,6 @@ fn handle_new_incident(
     drone: Arc<Mutex<Drone>>,
     server_stream: Arc<Mutex<TcpStream>>,
 ) {
-
     let topic_filter = TopicFilter::new(
         vec![
             TopicLevel::Literal(ATTENDING_INCIDENT.to_vec()),
@@ -219,7 +231,7 @@ fn handle_new_incident(
         return;
     }
 
-    match drone_locked.status(){
+    match drone_locked.status() {
         DroneStatus::Free => (),
         DroneStatus::Travelling(TravelLocation::Anchor) => (),
         _ => {
@@ -381,8 +393,8 @@ fn handle_attending_incident(
                 return;
             }
         };
-        
-        match unsubscribe(topic_filter, &mut locked_stream){
+
+        match unsubscribe(topic_filter, &mut locked_stream) {
             Ok(_) => println!("Unsubscribed from the attending incident topic"),
             Err(e) => eprintln!("Error: {:?}", e),
         };
@@ -408,7 +420,7 @@ fn handle_attending_incident(
                 return;
             }
         };
-        
+
         match unsubscribe(topic_filter, &mut locked_stream) {
             Ok(_) => println!("Unsubscribed from the close incident topic"),
             Err(e) => eprintln!("Error: {:?}", e),
@@ -693,7 +705,7 @@ fn recharge_battery(drone: Arc<Mutex<Drone>>) {
             continue;
         }
 
-        // RECHARGE BATTERY 
+        // RECHARGE BATTERY
         println!("RECHARGE BATTERY POR FAVOR");
 
         let x = locked_drone.x_central_coordinate();
@@ -758,6 +770,5 @@ fn recharge_battery(drone: Arc<Mutex<Drone>>) {
 
         locked_drone.set_status(DroneStatus::Free);
         drop(locked_drone);
-
     }
 }

@@ -1,9 +1,5 @@
-use std::{
-    path::Path,
-    fs::File,
-    io::Read,
-};
 use serde::{Deserialize, Serialize};
+use std::{fs::File, io::Read, path::Path};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Position {
@@ -13,7 +9,6 @@ pub struct Position {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Config {
-    port: u16,
     address: String,
     cameras: Vec<Position>,
 }
@@ -25,13 +20,9 @@ impl Config {
 
         file.read_to_string(&mut contents)?;
 
-        let config: Config = serde_json::from_str(&contents)?;
+        let config = serde_json::from_str(&contents)?;
 
         Ok(config)
-    }
-
-    pub fn get_port(&self) -> u16 {
-        self.port
     }
 
     pub fn get_address(&self) -> &str {

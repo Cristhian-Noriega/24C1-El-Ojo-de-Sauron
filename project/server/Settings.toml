@@ -1,4 +1,3 @@
-port=8080
-address="127.0.0.1"
+address="127.0.0.1:8080"
 log_file="log.txt"
 segs_to_disconnect=30

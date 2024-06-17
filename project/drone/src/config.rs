@@ -1,13 +1,8 @@
-use std::{
-    path::Path,
-    fs::File,
-    io::Read,
-};
 use serde::{Deserialize, Serialize};
+use std::{fs::File, io::Read, path::Path};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Config {
-    port: u16,
     address: String,
     id: u8,
     x_position: f64,
@@ -30,10 +25,6 @@ impl Config {
         let config: Config = serde_json::from_str(&contents)?;
 
         Ok(config)
-    }
-
-    pub fn get_port(&self) -> u16 {
-        self.port
     }
 
     pub fn get_address(&self) -> &str {
@@ -75,5 +66,4 @@ impl Config {
     pub fn get_active_range(&self) -> f64 {
         self.active_range
     }
-
 }

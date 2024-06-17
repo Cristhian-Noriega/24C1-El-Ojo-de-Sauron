@@ -1,7 +1,6 @@
 {
-    "port": 8080,
-    "address": "127.0.0.1" ,
-    "cameras":[
+    "address": "127.0.0.1:8080",
+    "cameras": [
         {
             "x_coordinate": -58.3815,
             "y_coordinate": -34.6035
