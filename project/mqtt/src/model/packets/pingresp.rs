@@ -1,7 +1,7 @@
 use super::{PINGRESP_PACKET_TYPE, RESERVED_FIXED_HEADER_FLAGS};
 use crate::{Error, FixedHeader, RemainingLength};
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq)]
 pub struct Pingresp;
 
 impl Pingresp {
@@ -29,5 +29,25 @@ impl Pingresp {
         packet_bytes.extend(remaining_length_bytes);
 
         packet_bytes
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_pingresp_to_bytes() {
+        let pingresp = Pingresp::new();
+        let expected_bytes: Vec<u8> = vec![0b1101_0000, 0x00];
+        assert_eq!(pingresp.to_bytes(), expected_bytes);
+    }
+
+    #[test]
+    fn test_pingresp_from_bytes() {
+        let remaining_length = RemainingLength::new(2_u32);
+        let fixed_header = FixedHeader::new(0xD << 4, remaining_length);
+        let pingresp = Pingresp::from_bytes(fixed_header).unwrap();
+        assert_eq!(pingresp, Pingresp::new());
     }
 }

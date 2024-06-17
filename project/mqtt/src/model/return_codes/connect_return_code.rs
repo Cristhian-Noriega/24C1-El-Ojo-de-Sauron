@@ -34,3 +34,46 @@ impl ConnectReturnCode {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_connect_return_code_to_byte() {
+        assert_eq!(ConnectReturnCode::ConnectionAccepted.to_byte(), 0x00);
+        assert_eq!(ConnectReturnCode::UnacceptableProtocolVersion.to_byte(), 0x01);
+        assert_eq!(ConnectReturnCode::IdentifierRejected.to_byte(), 0x02);
+        assert_eq!(ConnectReturnCode::ServerUnavailable.to_byte(), 0x03);
+        assert_eq!(ConnectReturnCode::BadUsernameOrPassword.to_byte(), 0x04);
+        assert_eq!(ConnectReturnCode::NotAuthorized.to_byte(), 0x05);
+    }
+
+    #[test]
+    fn test_connect_return_code_from_byte() {
+        assert_eq!(
+            ConnectReturnCode::from_byte(0x00).unwrap(),
+            ConnectReturnCode::ConnectionAccepted
+        );
+        assert_eq!(
+            ConnectReturnCode::from_byte(0x01).unwrap(),
+            ConnectReturnCode::UnacceptableProtocolVersion
+        );
+        assert_eq!(
+            ConnectReturnCode::from_byte(0x02).unwrap(),
+            ConnectReturnCode::IdentifierRejected
+        );
+        assert_eq!(
+            ConnectReturnCode::from_byte(0x03).unwrap(),
+            ConnectReturnCode::ServerUnavailable
+        );
+        assert_eq!(
+            ConnectReturnCode::from_byte(0x04).unwrap(),
+            ConnectReturnCode::BadUsernameOrPassword
+        );
+        assert_eq!(
+            ConnectReturnCode::from_byte(0x05).unwrap(),
+            ConnectReturnCode::NotAuthorized
+        );
+    }
+}
