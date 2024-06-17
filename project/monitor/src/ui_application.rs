@@ -499,7 +499,7 @@ fn update_places(incidents: &Vec<Incident>, drones: &Vec<Drone>, cameras: &Vec<C
             "Free" => Color32::from_rgb(0, 255, 0), // Green
             "Attending Incident" => Color32::from_rgb(255, 0, 0), // Red
             "Travelling" => Color32::from_rgb(255, 255, 0), // Yellow
-            _ => Color32::from_rgb(255, 255, 255), // White
+            _ => Color32::from_rgb(0, 0, 255), // Blue
         };
         let place = Place {
             position: Position::from_lon_lat(drone.x_coordinate, drone.y_coordinate),

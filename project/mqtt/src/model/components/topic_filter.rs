@@ -3,7 +3,7 @@ use std::fmt::{self, Display, Formatter};
 use super::{FORWARD_SLASH, SERVER_RESERVED};
 use crate::{EncodedString, Error, Read, TopicLevel, TopicName};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TopicFilter {
     levels: Vec<TopicLevel>,
     server_reserved: bool,

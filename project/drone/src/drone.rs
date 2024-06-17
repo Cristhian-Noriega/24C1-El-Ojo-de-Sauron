@@ -1,7 +1,7 @@
 use crate::{drone_status::DroneStatus, incident::Incident};
 
 const ACTIVE_RANGE: f64 = 20.0;
-const MINIMUM_BATTERY_LEVEL: usize = 20;
+const MINIMUM_BATTERY_LEVEL: usize = 90;
 const MAXIMUM_BATTERY_LEVEL: usize = 100;
 const VELOCITY: f64 = 1.0;
 const BATTERY_UNIT: usize = 1;
@@ -24,14 +24,14 @@ impl Drone {
     pub fn new() -> Self {
         Drone {
             id: 0,
-            x_coordinate: 0.0,
-            y_coordinate: 0.0,
+            x_coordinate: -58.3717,
+            y_coordinate: -34.6017,
             status: DroneStatus::Free,
             battery: MAXIMUM_BATTERY_LEVEL,
-            x_central: 10.0,
-            y_central: 10.0,
-            x_anchor: 0.0,
-            y_anchor: 0.0,
+            x_central: -58.3600,
+            y_central: -34.6100,
+            x_anchor: -58.3717,
+            y_anchor: -34.6017,
             current_incident: None,
         }
     }
