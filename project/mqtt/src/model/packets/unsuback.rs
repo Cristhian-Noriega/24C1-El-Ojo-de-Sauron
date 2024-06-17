@@ -52,3 +52,27 @@ impl Unsuback {
         self.packet_identifier
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_unsuback_to_bytes() {
+        let unsuback = Unsuback::new(42);
+
+        let expected_bytes: Vec<u8> = vec![0b1011_0000, 0x02, 0x00, 0x2A];
+
+        assert_eq!(unsuback.to_bytes(), expected_bytes);
+    }
+
+    #[test]
+    fn test_unsuback_from_bytes() {
+        let bytes: Vec<u8> = vec![0x00, 0x2A];
+
+        let fixed_header = FixedHeader::new(176 as u8, RemainingLength::new(2));
+        let unsuback = Unsuback::from_bytes(fixed_header, &mut bytes.as_slice()).unwrap();
+
+        assert_eq!(unsuback.packet_identifier(), 42);
+    }
+}
