@@ -1,6 +1,5 @@
 use common::incident::Incident;
 
-
 #[derive(Debug, PartialEq, Clone)]
 pub struct Drone {
     pub id: String,
@@ -27,13 +26,5 @@ impl Drone {
             y_coordinate,
             incident: None,
         }
-    }
-
-    pub fn is_free(&self) -> bool {
-        self.state == "Free"
-    }
-
-    pub fn set_incident(&mut self, incident: Option<Incident>) {
-        self.incident = incident;
     }
 }

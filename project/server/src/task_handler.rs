@@ -70,7 +70,6 @@ pub struct TaskHandler {
     // debería guardar que monitor está suscrito a (drone-data/+)
     // cuando drone data publica en (drone-data/1) recorro todos los subscribes y me fijo si alguno matchea
     // si matchea, le mando el msg
-
     topics: RwLock<Vec<(TopicFilter, ClientId)>>,
     log_file: Arc<Logger>,
 }

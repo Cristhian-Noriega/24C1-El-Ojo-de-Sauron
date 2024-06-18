@@ -60,7 +60,9 @@ impl Client {
     }
 
     pub fn is_subscribed(&self, topic: &TopicName) -> bool {
-        self.subscriptions.iter().any(|t| t.match_topic_name(topic.clone()))
+        self.subscriptions
+            .iter()
+            .any(|t| t.match_topic_name(topic.clone()))
     }
 
     pub fn send_message(&self, message: Message, logfile: &Arc<crate::logfile::Logger>) {

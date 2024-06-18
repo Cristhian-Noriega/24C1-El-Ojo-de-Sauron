@@ -17,10 +17,7 @@ pub struct DroneRegistration {
 
 impl DroneRegistration {
     pub fn build_drone_message(&self) -> String {
-        format!(
-            "{};{}",
-            self.id, self.password
-        )
+        format!("{};{}", self.id, self.password)
     }
 }
 
@@ -35,7 +32,7 @@ pub struct IncidentRegistration {
 pub enum MonitorAction {
     // Connect,
     // Disconnect,
-    DroneData(Drone),
-    CameraData(Camera),
-    IncidentData(Incident),
+    Drone(Drone),
+    Camera(Camera),
+    Incident(Incident),
 }

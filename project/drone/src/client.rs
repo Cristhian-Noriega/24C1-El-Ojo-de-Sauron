@@ -16,7 +16,6 @@ use mqtt::model::{
 };
 
 use crate::{
-    client,
     drone::Drone,
     drone_status::{DroneStatus, TravelLocation},
 };
@@ -254,8 +253,6 @@ fn handle_new_incident(
 
     thread.join().unwrap();
 
-    //publish_drone_arrived_incident(drone.clone(), &mut server_stream.lock().unwrap());
-
     let mut drone_locked = match drone.lock() {
         Ok(drone) => drone,
         Err(_) => {
@@ -291,7 +288,6 @@ fn handle_new_incident(
     println!("Drone arrived to the incident location");
     drone_locked.set_status(DroneStatus::AttendingIncident);
     drone_locked.increment_attending_counter();
-    //println!("EL ATTENDING INCIDENT COUNT ES!!!!{}",drone_locked.attending_counter().to_string());
 
     drop(drone_locked);
 
@@ -351,10 +347,9 @@ fn handle_attending_incident(
     drone: Arc<Mutex<Drone>>,
     server_stream: Arc<Mutex<TcpStream>>,
 ) {
+    println!("ME LLEGO  UN ATTENDININCIDENT ??????");
 
-    println!("ME LLEGO ACASO UNA ATTENDININCIDENT ??????");
-    
-    let mut drone_locked = match drone.lock() {
+    let drone_locked = match drone.lock() {
         Ok(drone) => drone,
         Err(_) => {
             println!("Mutex was poisoned");
@@ -367,21 +362,50 @@ fn handle_attending_incident(
         return;
     }
 
-    println!("A VER CUANTOS DRON COUNT? : {}", drone_locked.attending_counter());
+    println!(
+        "A VER CUANTOS DRON COUNT? : {}",
+        drone_locked.attending_counter()
+    );
 
-    // if drone_locked.status() == DroneStatus::AttendingIncident {
-    //     let topic_filter = TopicFilter::new(
-    //         vec![
-    //             TopicLevel::Literal(CLOSE_INCIDENT.to_vec()),
-    //             TopicLevel::Literal(uuid.clone().into_bytes()),
-    //         ],
-    //         false,
-    //     );
-    //     // como estoy en el lugar del incidente, me interesa saber cuando se cierra el incidente por el monitor
-    //     // me subscribo a close incidente/uuid
-    //     subscribe(topic_filter, &mut server_stream.lock().unwrap()).unwrap();
-    //     println!("Subscribing to the close incident topic");
+    if drone_locked.status() == DroneStatus::AttendingIncident {
+        println!("DRONE YA ESTA EN EL INCIDENTE DESDE ATTENDING INCIDENTE PAQUETE");
+        let topic_filter = TopicFilter::new(
+            vec![
+                TopicLevel::Literal(ATTENDING_INCIDENT.to_vec()),
+                TopicLevel::Literal(uuid.clone().into_bytes()),
+            ],
+            false,
+        );
 
+        let mut locked_stream = match server_stream.lock() {
+            Ok(stream) => stream,
+            Err(_) => {
+                println!("Mutex was poisoned");
+                return;
+            }
+        };
+
+        match unsubscribe(topic_filter, &mut locked_stream) {
+            Ok(_) => println!("Unsubscribed from the attending incident topic"),
+            Err(e) => eprintln!("Error: {:?}", e),
+        };
+
+        drop(locked_stream);
+    }
+    if drone_locked.attending_counter() == 1 {
+        //drone_locked.increment_attending_counter();
+        println!("TWO DRONES ATTENDING THE INCIDENT");
+        //let drone_cloned = drone.clone();
+        let server_stream_clone = server_stream.clone();
+        let uuid_clone = uuid.clone();
+
+        let thread = thread::spawn(move || {
+            simulate_incident_resolution(uuid_clone, server_stream_clone);
+        });
+
+        thread.join().unwrap();
+
+        // println!("DESPUES DE RESOLVER EL INCIDENTE EN EL THREAD");
         // let topic_filter = TopicFilter::new(
         //     vec![
         //         TopicLevel::Literal(ATTENDING_INCIDENT.to_vec()),
@@ -401,61 +425,16 @@ fn handle_attending_incident(
         // match unsubscribe(topic_filter, &mut locked_stream) {
         //     Ok(_) => println!("Unsubscribed from the attending incident topic"),
         //     Err(e) => eprintln!("Error: {:?}", e),
-        // };
+        // }
 
-        //drop(locked_stream);
-
-
-    if drone_locked.attending_counter() == 0 {
-        drone_locked.increment_attending_counter();
-        println!("ONE DRONE ATTENDING THE INCIDENT");
-
-    } else if drone_locked.attending_counter() == 1 {
-        //drone_locked.increment_attending_counter();
-        println!("TWO DRONES ATTENDING THE INCIDENT");
-        let drone_cloned = drone.clone();
-        let server_stream_clone = server_stream.clone();
-        let uuid_clone = uuid.clone();
-
-        let thread = thread::spawn(move || {
-            simulate_incident_resolution(uuid_clone, drone_cloned, server_stream_clone);
-        });
-
-        thread.join().unwrap();
-
-        println!("DESPUES DE RESOLVER EL INCIDENTE EN EL THREAD");
-        let topic_filter = TopicFilter::new(
-            vec![
-                TopicLevel::Literal(ATTENDING_INCIDENT.to_vec()),
-                TopicLevel::Literal(uuid.into_bytes()),
-            ],
-            false,
-        );
-
-        let mut locked_stream = match server_stream.lock() {
-            Ok(stream) => stream,
-            Err(_) => {
-                println!("Mutex was poisoned");
-                return;
-            }
-        };
-
-        match unsubscribe(topic_filter, &mut locked_stream) {
-            Ok(_) => println!("Unsubscribed from the attending incident topic"),
-            Err(e) => eprintln!("Error: {:?}", e),
-        }
-
-        drop(locked_stream);
+        // drop(locked_stream);
     }
     drop(drone_locked);
 }
 
-fn simulate_incident_resolution(
-    uuid: String,
-    drone: Arc<Mutex<Drone>>,
-    server_stream: Arc<Mutex<TcpStream>>,
-) {
-    thread::sleep(Duration::from_secs(20));
+fn simulate_incident_resolution(uuid: String, server_stream: Arc<Mutex<TcpStream>>) {
+    let duration_incident = Duration::from_secs(10);
+    thread::sleep(duration_incident);
 
     let topic_name = TopicName::new(
         vec![
@@ -525,12 +504,7 @@ fn handle_close_incident(
     let cloned_drone = drone.clone();
 
     let thread = thread::spawn(move || {
-        travel(
-            cloned_drone,
-            x,
-            y,
-            TravelLocation::Anchor,
-        );
+        travel(cloned_drone, x, y, TravelLocation::Anchor);
     });
 
     thread.join().unwrap();
@@ -838,4 +812,3 @@ fn recharge_battery(drone: Arc<Mutex<Drone>>) {
         drop(locked_drone);
     }
 }
-

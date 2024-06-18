@@ -2,7 +2,7 @@ use std::{
     collections::HashMap,
     io::{ErrorKind, Write},
     net::TcpStream,
-    sync::{mpsc::{channel, Receiver, Sender}, Arc, Mutex},
+    sync::mpsc::{channel, Receiver, Sender},
 };
 
 use common::incident::{Incident, IncidentStatus};
@@ -16,7 +16,11 @@ use mqtt::model::{
 };
 
 use crate::{
-    camera::Camera, channels_tasks::{DroneRegistration, IncidentRegistration, MonitorAction, UIAction}, drone::Drone, monitor::Monitor, ui_application::UIApplication
+    camera::Camera,
+    channels_tasks::{DroneRegistration, IncidentRegistration, MonitorAction, UIAction},
+    drone::Drone,
+    monitor::Monitor,
+    ui_application::UIApplication,
 };
 
 pub fn client_run(address: String) -> Result<(), String> {
@@ -24,7 +28,6 @@ pub fn client_run(address: String) -> Result<(), String> {
     let (monitor_sender, monitor_receiver) = channel();
     let (ui_sender, ui_receiver) = channel();
 
-    
     // Connect to the server
     let mut stream = match connect_to_server(address) {
         Ok(stream) => stream,
@@ -45,7 +48,6 @@ pub fn client_run(address: String) -> Result<(), String> {
     let monitor_thread = std::thread::spawn(move || {
         start_monitor(stream, monitor_sender, ui_receiver);
     });
-
 
     // start the ui in the main thread
     match start_ui(ui_sender, monitor_receiver) {
@@ -159,7 +161,7 @@ fn start_monitor(
                         camera_data(publish.clone(), monitor_sender.clone());
                     }
                     ATTENDING_INCIDENT => {
-                        attend_incident( publish.clone(), &mut monitor, monitor_sender.clone());
+                        attend_incident(publish.clone(), &mut monitor, monitor_sender.clone());
                     }
                     READY_INCIDENT => {
                         println!("LE LLEGO UN READY INCIDENT AL MONITOR");
@@ -236,7 +238,7 @@ fn drone_data(publish: Publish, monitor_sender: Sender<MonitorAction>) {
 
     let drone = Drone::new(id.clone(), state, battery, x_coordinate, y_coordinate);
 
-    match monitor_sender.send(MonitorAction::DroneData(drone.clone())) {
+    match monitor_sender.send(MonitorAction::Drone(drone.clone())) {
         Ok(_) => {
             // println!("Drone data sent to UI");
         }
@@ -262,7 +264,7 @@ fn camera_data(publish: Publish, monitor_sender: Sender<MonitorAction>) {
 
         let camera = Camera::new(id, x_coordinate, y_coordinate, state);
 
-        match monitor_sender.send(MonitorAction::CameraData(camera)) {
+        match monitor_sender.send(MonitorAction::Camera(camera)) {
             Ok(_) => {
                 println!("Camera data sent to UI");
             }
@@ -274,14 +276,13 @@ fn camera_data(publish: Publish, monitor_sender: Sender<MonitorAction>) {
 }
 
 fn attend_incident(publish: Publish, monitor: &mut Monitor, monitor_sender: Sender<MonitorAction>) {
-    
     let topic_name = publish.topic();
     let topic_levels = topic_name.levels();
     let incident_id = topic_levels[1].as_slice();
     let incident_id = String::from_utf8_lossy(incident_id.to_vec().as_slice()).to_string();
 
     if let Some(incident) = monitor.attend_incident(incident_id.clone()) {
-        match monitor_sender.send(MonitorAction::IncidentData(incident)) {
+        match monitor_sender.send(MonitorAction::Incident(incident)) {
             Ok(_) => {}
             Err(_) => {
                 println!("Error sending incident data to UI");
@@ -301,7 +302,7 @@ fn ready_incident(publish: Publish, monitor: &mut Monitor, monitor_sender: Sende
 
     if let Some(incident) = monitor.get_incident(incident_id.as_str()) {
         println!("ENTRO AL IF DE SI OBTUVE EL INCIDENTE CO EL GET? ");
-        match monitor_sender.send(MonitorAction::IncidentData(incident.clone())) {
+        match monitor_sender.send(MonitorAction::Incident(incident.clone())) {
             Ok(_) => {}
             Err(_) => {
                 println!("Error sending incident data to UI");
@@ -359,7 +360,7 @@ fn register_incident(
 
     monitor.new_incident(incident.clone());
 
-    match monitor_sender.send(MonitorAction::IncidentData(incident.clone())) {
+    match monitor_sender.send(MonitorAction::Incident(incident.clone())) {
         Ok(_) => Some(publish),
         Err(_) => None,
     }
@@ -431,25 +432,3 @@ fn subscribe_to_topics(stream: &mut TcpStream) -> std::io::Result<()> {
         )),
     }
 }
-
-
-
-// fn drone_arrived_incident(publish: Publish, incident_manager_sender: Sender<(String, String)>) {
-//     let topic_name = publish.topic();
-//     let topic_levels = topic_name.levels();
-//     let incident_id = topic_levels[1].as_slice();
-//     let incident_id = String::from_utf8_lossy(incident_id.to_vec().as_slice()).to_string();
-
-//     let drone_id = topic_levels[2].as_slice();
-//     let drone_id = String::from_utf8_lossy(drone_id.to_vec().as_slice()).to_string();
-
-//     match incident_manager_sender.send((incident_id.clone(), drone_id.clone())) {
-//         Ok(_) => {
-//             println!("Drone arrived incident sent to incident manager");
-//         }
-//         Err(_) => {
-//             println!("Error sending drone arrived incident to incident manager");
-//         }
-//     }
-
-// }

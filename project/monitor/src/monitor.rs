@@ -1,13 +1,12 @@
-use std::{collections::HashMap, os::unix::thread, sync::{Arc, Mutex}, thread::{sleep, Thread}, time::{Duration,Instant}};
+use std::collections::HashMap;
 
 use common::incident::{Incident, IncidentStatus};
 
-use crate::drone::Drone;
 
 pub struct Monitor {
     incidents: HashMap<String, Incident>,
-    open_incidents: HashMap<String, usize>, 
-    active_incidents: HashMap<String, usize>, 
+    open_incidents: HashMap<String, usize>,
+    active_incidents: HashMap<String, usize>,
 }
 
 impl Monitor {
@@ -42,30 +41,28 @@ impl Monitor {
         None
     }
 
-    pub fn is_incident_active(&self, incident_uuid: &str) -> bool {
-        self.active_incidents.contains_key(incident_uuid)
-    }
+    // pub fn is_incident_active(&self, incident_uuid: &str) -> bool {
+    //     self.active_incidents.contains_key(incident_uuid)
+    // }
 
+    // pub fn ready_incident(&mut self, incident_uuid: String) -> Option<Incident> {
+    //     if let Some(incident) = self.incidents.get_mut(&incident_uuid) {
+    //         if let Some(active_count) = self.active_incidents.get_mut(&incident_uuid) {
+    //             *active_count -= 1;
+    //             if *active_count == 0 {
+    //                 self.active_incidents.remove(&incident_uuid);
+    //                 incident.status = IncidentStatus::Resolvable;
+    //             }
+    //             return Some(incident.clone());
+    //         }
+    //     }
 
-    pub fn ready_incident(&mut self, incident_uuid: String) -> Option<Incident> {
-        if let Some(incident) = self.incidents.get_mut(&incident_uuid) {
-            if let Some(active_count) = self.active_incidents.get_mut(&incident_uuid) {
-                *active_count -= 1;
-                if *active_count == 0 {
-                    self.active_incidents.remove(&incident_uuid);
-                    incident.status = IncidentStatus::Resolvable;
-                }
-                return Some(incident.clone());
-            }
-        }
-
-        None
-    }
+    //     None
+    // }
 
     pub fn get_incident(&self, incident_uuid: &str) -> Option<&Incident> {
         self.incidents.get(incident_uuid)
     }
-
 
     pub fn set_resolvable_incident(&mut self, incident_uuid: String) {
         if let Some(incident) = self.incidents.get_mut(&incident_uuid) {

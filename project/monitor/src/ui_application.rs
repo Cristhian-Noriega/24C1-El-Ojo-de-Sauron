@@ -498,13 +498,13 @@ impl eframe::App for UIApplication {
                 // Ok(MonitorAction::Connect) => {
                 //     self.conection_status = true;
                 // }
-                Ok(MonitorAction::DroneData(drone)) => {
+                Ok(MonitorAction::Drone(drone)) => {
                     update_drones(&mut self.drones, drone);
                 }
-                Ok(MonitorAction::IncidentData(incident)) => {
+                Ok(MonitorAction::Incident(incident)) => {
                     update_incidents(&mut self.incidents, incident);
                 }
-                Ok(MonitorAction::CameraData(camera)) => {
+                Ok(MonitorAction::Camera(camera)) => {
                     update_cameras(&mut self.cameras, camera);
                 }
                 Err(_) => break,

@@ -1,5 +1,7 @@
 use std::fmt;
 
+use crate::error::Error;
+
 pub const SEPARATOR: char = ';';
 const ELEMENTS_COUNT: usize = 6;
 
@@ -74,11 +76,11 @@ impl Incident {
         }
     }
 
-    pub fn from_string(string: String) -> Result<Self, ()> {
+    pub fn from_string(string: String) -> Result<Self, Error> {
         let splited_string: Vec<&str> = string.split(SEPARATOR).collect();
 
         if splited_string.len() != ELEMENTS_COUNT {
-            return Err(());
+            return Err(Error::new("Invalid incident string".to_string()));
         }
 
         let id = splited_string[0].to_string();
