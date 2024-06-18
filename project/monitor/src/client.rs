@@ -2,7 +2,7 @@ use std::{
     collections::HashMap,
     io::{ErrorKind, Write},
     net::TcpStream,
-    sync::mpsc::{channel, Receiver, Sender},
+    sync::{mpsc::{channel, Receiver, Sender}, Arc, Mutex},
 };
 
 use common::incident::{Incident, IncidentStatus};
@@ -16,18 +16,17 @@ use mqtt::model::{
 };
 
 use crate::{
-    camera::Camera,
-    channels_tasks::{DroneRegistration, IncidentRegistration, MonitorAction, UIAction},
-    drone::Drone,
-    monitor::Monitor,
-    ui_application::UIApplication,
+    camera::Camera, channels_tasks::{DroneRegistration, IncidentRegistration, MonitorAction, UIAction}, drone::Drone, incident_manager, monitor::Monitor, ui_application::UIApplication
 };
 
 pub fn client_run(address: String) -> Result<(), String> {
     // Create the channels to communicate between the monitor and the UI
     let (monitor_sender, monitor_receiver) = channel();
     let (ui_sender, ui_receiver) = channel();
+    let (incident_manager_sender, incident_manager_receiver) = channel();
+    let incident_manager = incident_manager::IncidentManager::new(incident_manager_receiver);
 
+    
     // Connect to the server
     let mut stream = match connect_to_server(address) {
         Ok(stream) => stream,
@@ -46,7 +45,11 @@ pub fn client_run(address: String) -> Result<(), String> {
 
     // monitor start in a thread to avoid blocking the main thread
     let monitor_thread = std::thread::spawn(move || {
-        start_monitor(stream, monitor_sender, ui_receiver);
+        start_monitor(stream, monitor_sender, ui_receiver, incident_manager_sender);
+    });
+
+    let incident_manager_thread = std::thread::spawn(move || {
+        incident_manager.start();
     });
 
     // start the ui in the main thread
@@ -59,6 +62,7 @@ pub fn client_run(address: String) -> Result<(), String> {
 
     // wait for the monitor thread to finish
     monitor_thread.join().unwrap();
+    incident_manager_thread.join().unwrap();
 
     Ok(())
 }
@@ -118,6 +122,7 @@ const NEW_INCIDENT: &[u8] = b"new-incident";
 const ATTENDING_INCIDENT: &[u8] = b"attending-incident";
 const READY_INCIDENT: &[u8] = b"ready-incident";
 const CLOSE_INCIDENT: &[u8] = b"close-incident";
+const DRONE_ARRIVED_INCIDENT: &[u8] = b"drone-arrived-incident";
 
 const SEPARATOR: char = ';';
 const ENUMARATOR: char = '|';
@@ -126,6 +131,7 @@ fn start_monitor(
     stream: TcpStream,
     monitor_sender: Sender<MonitorAction>,
     ui_reciver: Receiver<UIAction>,
+    incident_manager_sender: Sender<(String, String)>,
 ) {
     let mut monitor = Monitor::new();
     let mut unacknowledged_publish = HashMap::new();
@@ -165,6 +171,9 @@ fn start_monitor(
                     }
                     READY_INCIDENT => {
                         ready_incident(publish.clone(), &mut monitor, monitor_sender.clone());
+                    }
+                    DRONE_ARRIVED_INCIDENT => {
+                        drone_arrived_incident(publish.clone(), incident_manager_sender.clone());
                     }
                     _ => {
                         println!("Unknown topic");
@@ -239,7 +248,7 @@ fn drone_data(publish: Publish, monitor_sender: Sender<MonitorAction>) {
 
     match monitor_sender.send(MonitorAction::DroneData(drone.clone())) {
         Ok(_) => {
-            println!("Drone data sent to UI");
+            // println!("Drone data sent to UI");
         }
         Err(_) => {
             println!("Error sending drone data to UI");
@@ -393,6 +402,8 @@ fn subscribe_to_topics(stream: &mut TcpStream) -> std::io::Result<()> {
         "attending-incident/+",
         "close-incident/+",
         "drone-data/+",
+        //"ready-incident/+",
+        "drone-arrived-incident/+/+"
     ];
 
     for topic in topics {
@@ -428,4 +439,24 @@ fn subscribe_to_topics(stream: &mut TcpStream) -> std::io::Result<()> {
             "Suback was not received.",
         )),
     }
+}
+
+fn drone_arrived_incident(publish: Publish, incident_manager_sender: Sender<(String, String)>) {
+    let topic_name = publish.topic();
+    let topic_levels = topic_name.levels();
+    let incident_id = topic_levels[1].as_slice();
+    let incident_id = String::from_utf8_lossy(incident_id.to_vec().as_slice()).to_string();
+
+    let drone_id = topic_levels[2].as_slice();
+    let drone_id = String::from_utf8_lossy(drone_id.to_vec().as_slice()).to_string();
+
+    match incident_manager_sender.send((incident_id.clone(), drone_id.clone())) {
+        Ok(_) => {
+            println!("Drone arrived incident sent to incident manager");
+        }
+        Err(_) => {
+            println!("Error sending drone arrived incident to incident manager");
+        }
+    }
+
 }

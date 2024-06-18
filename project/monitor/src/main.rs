@@ -6,6 +6,7 @@ mod client;
 mod drone;
 mod monitor;
 mod ui_application;
+mod incident_manager;
 
 const CLIENT_ARGS: usize = 3;
 

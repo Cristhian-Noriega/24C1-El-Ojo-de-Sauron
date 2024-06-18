@@ -21,6 +21,15 @@ impl IncidentStatus {
             _ => panic!("Invalid incident status"),
         }
     }
+
+    pub fn meaning(&self) -> String {
+        match self {
+            IncidentStatus::Pending => "Pending".to_string(),
+            IncidentStatus::InProgress => "In Progress".to_string(),
+            IncidentStatus::Resolvable => "Resolvable".to_string(),
+            IncidentStatus::Resolved => "Resolved".to_string(),
+        }
+    }
 }
 
 impl fmt::Display for IncidentStatus {

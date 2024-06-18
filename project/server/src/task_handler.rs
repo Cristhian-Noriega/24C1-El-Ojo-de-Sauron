@@ -130,21 +130,7 @@ impl TaskHandler {
 
         if let Some(client) = clients.get_mut(&client_id) {
             for (topic_filter, _) in subscribe_packet.topics() {
-                // let mut levels: Vec<Vec<u8>> = vec![];
-                // for level in topic_filter.levels() {
-                //     levels.push(level.to_bytes());
-                // }
-                // let topic_name = TopicName::new(levels, false);
-
                 client.add_subscription(topic_filter.clone());
-
-                // let mut topics = self.topics.write().unwrap();
-                // topics
-                //     .entry(topic_name.clone())
-                //     .or_default()
-                //     .push(client_id.clone());
-
-                // topics.push((topic_filter.clone(), client_id.clone()));
             }
             self.log_file
                 .log_successful_subscription(&client_id, &subscribe_packet);
@@ -160,22 +146,7 @@ impl TaskHandler {
 
         if let Some(client) = clients.get_mut(&client_id) {
             for topic_filter in unsubscribe_packet.topics() {
-                // let mut levels: Vec<Vec<u8>> = vec![];
-                // for level in topic_filter.levels() {
-                //     levels.push(level.to_bytes());
-                // }
-                // let topic_name = TopicName::new(levels, false);
-
-                client.remove_subscription(&topic_filter);
-
-                // let mut topics = self.topics.write().unwrap();
-                // if let Some(subscribers) = topics.get_mut(&topic_name) {
-                //     let client_id_clone = client_id.clone();
-                //     subscribers.retain(|id| id != &client_id_clone);
-                //     if subscribers.is_empty() {
-                //         topics.remove(&topic_name);
-                //     }
-                // }
+                client.remove_subscription(topic_filter);
             }
 
             self.log_file
@@ -190,14 +161,7 @@ impl TaskHandler {
     pub fn publish(&self, publish_packet: &Publish, client_id: Vec<u8>) {
         let topic_name = publish_packet.topic();
 
-        // let binding = self.topics.read().unwrap();
         let mut clients = vec![];
-        // if let Some(topic_clients) = binding.get(topic_name) {
-        //     clients.extend(topic_clients)
-        // } else {
-        //     let message = format!("No clients subscribed to topic: {}", topic_name);
-        //     self.log_file.error(message.as_str());
-        // };
 
         for client in self.clients.read().unwrap().values() {
             if client.is_subscribed(topic_name) {

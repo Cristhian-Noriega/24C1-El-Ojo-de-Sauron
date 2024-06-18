@@ -1,3 +1,5 @@
+use common::incident::Incident;
+
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Drone {
@@ -6,6 +8,7 @@ pub struct Drone {
     pub battery: usize,
     pub x_coordinate: f64,
     pub y_coordinate: f64,
+    pub incident: Option<Incident>,
 }
 
 impl Drone {
@@ -22,6 +25,15 @@ impl Drone {
             battery,
             x_coordinate,
             y_coordinate,
+            incident: None,
         }
+    }
+
+    pub fn is_free(&self) -> bool {
+        self.state == "Free"
+    }
+
+    pub fn set_incident(&mut self, incident: Option<Incident>) {
+        self.incident = incident;
     }
 }
