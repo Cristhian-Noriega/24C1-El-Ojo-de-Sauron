@@ -4,7 +4,10 @@
 use std::{
     collections::HashMap,
     net::{TcpListener, TcpStream},
-    sync::{mpsc, Arc, RwLock},
+    sync::{
+        mpsc::{self, Sender},
+        Arc, Mutex, RwLock,
+    },
     thread,
 };
 
@@ -24,27 +27,42 @@ use super::{
     task_handler::{Task, TaskHandler},
 };
 
+const ADMIN_USERNAME: &[u8] = b"admin";
+const ADMIN_PASSWORD: &[u8] = b"admin";
+
 pub struct Server {
     config: Config,
     // Channel for client actions
-    client_actions_sender: mpsc::Sender<Task>,
+    client_actions_sender: Sender<Task>,
     // Map to store client senders for communication
-    client_senders: RwLock<HashMap<Vec<u8>, mpsc::Sender<Publish>>>,
+    client_senders: RwLock<HashMap<Vec<u8>, Sender<Publish>>>,
     log_file: Arc<Logger>,
+    registered_clients: Arc<Mutex<HashMap<(Vec<u8>, Vec<u8>), bool>>>,
 }
 
 impl Server {
     pub fn new(config: Config) -> Self {
         let (client_actions_sender, client_actions_receiver) = mpsc::channel();
 
+        let mut registered_clients = HashMap::new();
+        registered_clients.insert((ADMIN_USERNAME.to_vec(), ADMIN_PASSWORD.to_vec()), false);
+
+        let registered_clients = Arc::new(Mutex::new(registered_clients));
+
         let log_file = Arc::new(Logger::new(config.get_log_file()));
-        let task_handler = TaskHandler::new(client_actions_receiver, log_file.clone());
+        let task_handler = TaskHandler::new(
+            client_actions_receiver,
+            log_file.clone(),
+            registered_clients.clone(),
+        );
         task_handler.initialize_task_handler_thread();
+
         Server {
             config,
             client_actions_sender,
             client_senders: RwLock::new(HashMap::new()),
             log_file,
+            registered_clients,
         }
     }
 
@@ -102,7 +120,43 @@ impl Server {
         );
         self.log_file.info(&message);
         let client_id = connect_packet.client_id().content();
+        let (usermame, password) = match connect_packet.login() {
+            Some(login) => {
+                let username = login.username().content();
+                match login.password() {
+                    Some(password) => {
+                        let password = password.content();
+                        (username, password)
+                    }
+                    None => {
+                        self.log_file.error("No password provided");
+                        return;
+                    }
+                }
+            }
+            None => {
+                self.log_file.error("No login information provided");
+                return;
+            }
+        };
 
+        let registered_clients = self.registered_clients.lock().unwrap();
+
+        match registered_clients.get(&(usermame.to_vec(), password.to_vec())) {
+            Some(true) => {
+                self.log_file.error("Client already connected");
+                return;
+            }
+            Some(false) => {
+                // self.log_file.info("Client not connected");
+            }
+            None => {
+                self.log_file.error("Client not registered");
+                return;
+            }
+        }
+
+        // para que le sirve el password? yo creo que nada
         let new_client = Client::new(
             client_id.clone(),
             "PASSWORD".to_string(),

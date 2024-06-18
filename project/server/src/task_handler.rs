@@ -3,7 +3,7 @@
 use std::{
     collections::{HashMap, HashSet},
     io::Write,
-    sync::{mpsc, Arc, RwLock},
+    sync::{mpsc, Arc, Mutex, RwLock},
     time::Duration,
 };
 
@@ -54,6 +54,11 @@ type Subscribers = HashMap<Vec<u8>, SubscriptionData>; // key : client_id , valu
                                                        // type Subtopic = HashMap<Vec<u8>, Topic>; // key: level, value: Topic
 type Subscriptions = HashMap<TopicName, SubscriptionData>; // key: topic_name, value: SubscriptionData
 type ClientId = Vec<u8>;
+type Logins = HashMap<(Vec<u8>, Vec<u8>), bool>; // key: (username, password), value: is_connected
+
+const ADMIN: &[u8] = b"admin";
+const DRONE_REGISTRED: &[u8] = b"$drone-register";
+const SEPARATOR: u8 = b';';
 
 #[derive(Debug)]
 pub struct TaskHandler {
@@ -63,10 +68,15 @@ pub struct TaskHandler {
     retained_messages: RwLock<HashMap<Vec<u8>, Publish>>,
     topics: RwLock<HashMap<TopicName, Vec<ClientId>>>,
     log_file: Arc<Logger>,
+    registered_clients: Arc<Mutex<Logins>>,
 }
 
 impl TaskHandler {
-    pub fn new(receiver_channel: mpsc::Receiver<Task>, log_file: Arc<Logger>) -> Self {
+    pub fn new(
+        receiver_channel: mpsc::Receiver<Task>,
+        log_file: Arc<Logger>,
+        registered_clients: Arc<Mutex<Logins>>,
+    ) -> Self {
         TaskHandler {
             client_actions_receiver_channel: receiver_channel,
             clients: RwLock::new(HashMap::new()),
@@ -74,6 +84,7 @@ impl TaskHandler {
             retained_messages: RwLock::new(HashMap::new()),
             topics: RwLock::new(HashMap::new()),
             log_file,
+            registered_clients,
         }
     }
 
@@ -178,6 +189,11 @@ impl TaskHandler {
     pub fn publish(&self, publish_packet: &Publish, client_id: Vec<u8>) {
         let topic_name = publish_packet.topic();
 
+        if topic_name.server_reserved() {
+            self.handle_server_reserved_topic(publish_packet, client_id);
+            return;
+        }
+
         let binding = self.topics.read().unwrap();
         let mut clients = vec![];
         if let Some(topic_clients) = binding.get(topic_name) {
@@ -203,6 +219,39 @@ impl TaskHandler {
         if &QoS::AtMost != publish_packet.qos() {
             if let Some(client) = clients.get_mut(&client_id) {
                 self.puback(publish_packet.package_identifier(), client);
+            }
+        }
+    }
+
+    pub fn handle_server_reserved_topic(&self, publish_packet: &Publish, client_id: Vec<u8>) {
+        let topic_name = publish_packet.topic();
+        let levels = topic_name.levels();
+
+        if client_id != ADMIN {
+            self.log_file.error("Client is not admin");
+            return;
+        }
+
+        if levels.len() == 1 && levels[0] == DRONE_REGISTRED {
+            let message = publish_packet.message();
+            //  split username and password by SEPARATOR
+            let split = message.split(|&c| c == SEPARATOR).collect::<Vec<&[u8]>>();
+
+            if split.len() != 2 {
+                self.log_file
+                    .error("Invalid message for drone registration");
+                return;
+            }
+
+            let username = split[0];
+            let password = split[1];
+
+            let mut registered_clients = self.registered_clients.lock().unwrap();
+            if registered_clients.contains_key(&(username.to_vec(), password.to_vec())) {
+                self.log_file.error("Client already registered");
+            } else {
+                registered_clients.insert((username.to_vec(), password.to_vec()), false);
+                self.log_file.info("Client registered");
             }
         }
     }
