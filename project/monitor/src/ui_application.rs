@@ -5,6 +5,8 @@ use crate::{
 };
 use common::incident::{Incident, IncidentStatus};
 use eframe::egui::{Color32, FontId, Stroke};
+
+use eframe::egui;
 use egui::Context;
 use egui_extras::{Column, TableBuilder};
 use std::sync::mpsc::{Receiver, Sender};

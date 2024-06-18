@@ -310,7 +310,7 @@ impl TaskHandler {
 
     // Send a ping response to a client
     pub fn respond_ping(&self, client_id: Vec<u8>) {
-        let clients = self.clients.write().unwrap();
+        let clients = self.clients.read().unwrap();
 
         let client = clients.get(&client_id).unwrap();
         let pingresp_packet = Pingresp::new();

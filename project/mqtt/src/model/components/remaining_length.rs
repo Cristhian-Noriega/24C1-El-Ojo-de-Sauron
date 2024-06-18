@@ -3,7 +3,7 @@ use crate::{Error, Read};
 const MAX_MULTIPLIER: u32 = u32::pow(128, 3);
 const MAX_LENGTH: u32 = u32::pow(128, 4); // 268.435.455 bytes
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct RemainingLength {
     value: u32,
 }
@@ -73,5 +73,42 @@ impl RemainingLength {
             }
         }
         length
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Cursor;
+
+    #[test]
+    fn test_remaining_length_to_bytes() {
+        let remaining_length = RemainingLength::new(268_435_455);
+        let bytes = remaining_length.to_bytes();
+        assert_eq!(bytes, vec![0xFF, 0xFF, 0xFF, 0x7F]);
+    }
+
+    #[test]
+    fn test_from_bytes_valid() {
+        let data: Vec<u8> = vec![0x96, 0x01];
+        let mut cursor = Cursor::new(data);
+        let result = RemainingLength::from_bytes(&mut cursor).unwrap();
+        assert_eq!(result, RemainingLength { value: 150 });
+    }
+
+    #[test]
+    fn test_from_bytes_malformed_length() {
+        let data: Vec<u8> = vec![0xFF, 0xFF, 0xFF, 0xFF, 0x07];
+        let mut cursor = Cursor::new(data);
+        let result = RemainingLength::from_bytes(&mut cursor);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_from_bytes_incomplete_stream() {
+        let data: Vec<u8> = vec![0x96];
+        let mut cursor = Cursor::new(data);
+        let result = RemainingLength::from_bytes(&mut cursor);
+        assert!(result.is_err());
     }
 }

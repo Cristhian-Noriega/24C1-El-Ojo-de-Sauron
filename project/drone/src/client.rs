@@ -16,6 +16,7 @@ use mqtt::model::{
 };
 
 use crate::{
+    config::Config,
     drone::Drone,
     drone_status::{DroneStatus, TravelLocation},
 };
@@ -36,11 +37,29 @@ const TRAVEL_INTERVAL: u64 = 1;
 const BATTERY_DISCHARGE_INTERVAL: u64 = 5;
 const BATTERY_RECHARGE_INTERVAL: u64 = 1;
 
-pub fn client_run(address: &str, client_id: &str) -> std::io::Result<()> {
-    let server_stream = connect_to_server(address, client_id)?;
+    //let server_stream = connect_to_server(address, client_id)?;
+   // let server_stream = Arc::new(Mutex::new(server_stream));
+
+   // let drone = Arc::new(Mutex::new(Drone::new(client_id.to_string())));
+
+pub fn client_run(config: Config) -> std::io::Result<()> {
+    let address = config.get_address().to_owned();
+
+    let server_stream = connect_to_server(&address, config.get_id())?;
     let server_stream = Arc::new(Mutex::new(server_stream));
 
-    let drone = Arc::new(Mutex::new(Drone::new(client_id.to_string())));
+    let drone = Arc::new(Mutex::new(Drone::new(
+        config.get_id(),
+        config.get_x_position(),
+        config.get_y_position(),
+        config.get_x_central_position(),
+        config.get_y_central_position(),
+        config.get_x_anchor_position(),
+        config.get_y_anchor_position(),
+        config.get_velocity(),
+        config.get_active_range(),
+    )));
+
 
     let new_incident = TopicFilter::new(vec![TopicLevel::Literal(NEW_INCIDENT.to_vec())], false);
 
@@ -404,7 +423,7 @@ fn handle_attending_incident(
         });
 
         thread.join().unwrap();
-
+        
         // println!("DESPUES DE RESOLVER EL INCIDENTE EN EL THREAD");
         // let topic_filter = TopicFilter::new(
         //     vec![
@@ -532,7 +551,7 @@ fn update_drone_status(server_stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<Dr
         };
 
         let mut levels = vec![DRONE_DATA.to_vec()];
-        levels.push(drone.id().into_bytes());
+        levels.push(drone.id().to_string().into_bytes());
 
         let topic_name = TopicName::new(levels, false);
         let message = drone.data().into_bytes();
@@ -557,11 +576,11 @@ fn update_drone_status(server_stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<Dr
     }
 }
 
-fn connect_to_server(address: &str, client_id: &str) -> std::io::Result<TcpStream> {
+fn connect_to_server(address: &str, id: u8) -> std::io::Result<TcpStream> {
     println!("\nConnecting to address: {:?}", address);
     let mut to_server_stream = TcpStream::connect(address)?;
 
-    let client_id_bytes: Vec<u8> = client_id.as_bytes().to_vec();
+    let client_id_bytes: Vec<u8> = id.to_string().into_bytes();
     //let client_id_bytes: Vec<u8> = b"drone".to_vec();
     let client_id = EncodedString::new(client_id_bytes);
     let will = None;

@@ -41,3 +41,30 @@ impl FixedHeader {
         &self.remaining_length
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_fixed_header_to_bytes() {
+        let first_byte = 0b0001_0000;
+        let remaining_length = RemainingLength::new(10);
+        let fixed_header = FixedHeader::new(first_byte, remaining_length);
+
+        let bytes = fixed_header.to_bytes();
+
+        assert_eq!(bytes, vec![0b0001_0000, 10]);
+    }
+
+    #[test]
+    fn test_fixed_header_from_bytes() {
+        let bytes = vec![0b0001_0000, 10];
+        let mut stream = std::io::Cursor::new(bytes);
+
+        let fixed_header = FixedHeader::from_bytes(&mut stream).unwrap();
+
+        assert_eq!(fixed_header.first_byte(), 0b0001_0000);
+        assert_eq!(fixed_header.remaining_length().value(), 10);
+    }
+}
