@@ -116,7 +116,6 @@ const NEW_INCIDENT: &[u8] = b"new-incident";
 const ATTENDING_INCIDENT: &[u8] = b"attending-incident";
 const READY_INCIDENT: &[u8] = b"ready-incident";
 const CLOSE_INCIDENT: &[u8] = b"close-incident";
-//const DRONE_ARRIVED_INCIDENT: &[u8] = b"drone-arrived-incident";
 
 const SEPARATOR: char = ';';
 const ENUMARATOR: char = '|';
@@ -163,6 +162,7 @@ fn start_monitor(
                         attend_incident( publish.clone(), &mut monitor, monitor_sender.clone());
                     }
                     READY_INCIDENT => {
+                        println!("LE LLEGO UN READY INCIDENT AL MONITOR");
                         ready_incident(publish.clone(), &mut monitor, monitor_sender.clone());
                     }
                     _ => {
@@ -274,10 +274,6 @@ fn camera_data(publish: Publish, monitor_sender: Sender<MonitorAction>) {
 }
 
 fn attend_incident(publish: Publish, monitor: &mut Monitor, monitor_sender: Sender<MonitorAction>) {
-    // when i receive an attending incident from a drone,
-    // means a drone arrived to the incident
-    //i have to check that two drones are attending the incident
-    //to change the status of the incident to in progress and simulate the resolution time
     
     let topic_name = publish.topic();
     let topic_levels = topic_name.levels();
@@ -294,41 +290,6 @@ fn attend_incident(publish: Publish, monitor: &mut Monitor, monitor_sender: Send
     } else {
         println!("Unknown incident");
     }
-    // let ready_incidents = monitor.ready_incident(incident_id.clone());
-    // match ready_incidents {
-    //     Some(incident) => {
-    //         println!("INCIDENT COUNTER IN MONITOR: {}", ready_incidents);
-    //     }
-    //     None => {
-    //         println!("Incident not found");
-    //     }
-    // }
-    // //println!("Incident counter in monitor: {}", monitor.ready_incident(incident_id));
-    // // if the incident is active, which means that two drones are attending the incident
-    // // i have to send to both drones the message to start the resolution time
-    // let incident_id = incident_id.as_str();
-    // if monitor.is_incident_active(incident_id) {
-    //     //send publish to topic ready incident and subscribe to the topic ready incident
-
-    //     let topic_name = TopicName::new(vec![READY_INCIDENT.to_vec(), incident_id.as_bytes().to_vec()], false);
-    //     let message = b"";
-    //     let dup = false;
-    //     let qos = QoS::AtLeast;
-    //     let retain = false;
-    //     let package_identifier = Some(0);
-
-    //     let publish = Publish::new(dup, qos, retain, topic_name, package_identifier, message.to_vec());
-    //     match stream.lock().unwrap().write(publish.to_bytes().as_slice()) {
-    //         Ok(_) => {}
-    //         Err(_) => {
-    //             println!("Error sending publish packet");
-    //         }
-    //     }
-        
-
-    //     // let resolution_time = std::time::Duration::from_secs(10);
-    //     // monitor.simulate_resolution(incident_id.to_string(), resolution_time);
-    // }
 }
 
 fn ready_incident(publish: Publish, monitor: &mut Monitor, monitor_sender: Sender<MonitorAction>) {
@@ -336,9 +297,11 @@ fn ready_incident(publish: Publish, monitor: &mut Monitor, monitor_sender: Sende
     let topic_levels = topic_name.levels();
     let incident_id = topic_levels[1].as_slice();
     let incident_id = String::from_utf8_lossy(incident_id.to_vec().as_slice()).to_string();
+    monitor.set_resolvable_incident(incident_id.clone());
 
-    if let Some(incident) = monitor.ready_incident(incident_id.clone()) {
-        match monitor_sender.send(MonitorAction::IncidentData(incident)) {
+    if let Some(incident) = monitor.get_incident(incident_id.as_str()) {
+        println!("ENTRO AL IF DE SI OBTUVE EL INCIDENTE CO EL GET? ");
+        match monitor_sender.send(MonitorAction::IncidentData(incident.clone())) {
             Ok(_) => {}
             Err(_) => {
                 println!("Error sending incident data to UI");
@@ -430,7 +393,6 @@ fn subscribe_to_topics(stream: &mut TcpStream) -> std::io::Result<()> {
         "camera-data",
         "camera-update",
         "attending-incident/+",
-        "close-incident/+",
         "drone-data/+",
         "ready-incident/+",
     ];

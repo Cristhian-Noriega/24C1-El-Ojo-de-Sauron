@@ -10,7 +10,7 @@ const BATTERY_UNIT: usize = 1;
 
 #[derive(Debug, Clone)]
 pub struct Drone {
-    id: u8,
+    id: String,
     x_coordinate: f64,
     y_coordinate: f64,
     status: DroneStatus,
@@ -23,9 +23,9 @@ pub struct Drone {
 }
 
 impl Drone {
-    pub fn new() -> Self {
+    pub fn new(drone_id: String) -> Self {
         Drone {
-            id: 0,
+            id: drone_id,
             x_coordinate: -58.3717,
             y_coordinate: -34.6017,
             status: DroneStatus::Free,
@@ -45,8 +45,8 @@ impl Drone {
         )
     }
 
-    pub fn id(&self) -> u8 {
-        self.id
+    pub fn id(&self) -> String {
+        self.id.clone()
     }
 
     pub fn is_below_minimun(&self) -> bool {

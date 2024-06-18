@@ -67,25 +67,10 @@ impl Monitor {
     }
 
 
-    //cuenta regresiva para la resolucion de un incidente
-    fn simulate_resolution(&self, incident_uuid: String, resolution_time: Duration) {
-        let incidents = self.incidents.clone();
-        let active_incidents = self.active_incidents.clone();
-        //arc mutex
-        let locked_incidents = Arc::new(Mutex::new(incidents));
-        let locked_active_incidents: Arc<Mutex<HashMap<String, usize>>> = Arc::new(Mutex::new(active_incidents));
-        
-        std::thread::spawn(move || {
-            let start = Instant::now();
-            while start.elapsed() < resolution_time {
-                std::thread::sleep(Duration::from_secs(60)); 
-            }
-            let mut incidents = locked_incidents.lock().unwrap();
-            if let Some(incident) = incidents.get_mut(&incident_uuid) {
-                incident.status = IncidentStatus::Resolvable;
-            }
-            locked_active_incidents.lock().unwrap().remove(&incident_uuid);
-            println!("Incident {} resolved", incident_uuid);
-        });
+    pub fn set_resolvable_incident(&mut self, incident_uuid: String) {
+        if let Some(incident) = self.incidents.get_mut(&incident_uuid) {
+            incident.status = IncidentStatus::Resolvable;
+            self.active_incidents.insert(incident_uuid.clone(), 1);
+        }
     }
 }
