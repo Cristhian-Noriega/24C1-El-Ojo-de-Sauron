@@ -33,7 +33,7 @@ const READ_MESSAGE_INTERVAL: u64 = 1;
 const UPDATE_DATA_INTERVAL: u64 = 1;
 const CHECK_BATTERY_INTERVAL: u64 = 5;
 
-const TRAVEL_INTERVAL: u64 = 500;
+const TRAVEL_INTERVAL: u64 = 1;
 const BATTERY_DISCHARGE_INTERVAL: u64 = 5;
 const BATTERY_RECHARGE_INTERVAL: u64 = 1;
 
@@ -165,8 +165,6 @@ fn handle_publish(
 
     if topic_levels[0] == ATTENDING_INCIDENT {
         handle_attending_incident(incident_uuid, drone, server_stream);
-    } else if topic_levels[0] == READY_INCIDENT {
-        //handle_ready_incident(incident_uuid, drone, server_stream);
     } else if topic_levels[0] == CLOSE_INCIDENT {
         handle_close_incident(incident_uuid, drone, server_stream)
     }
@@ -508,6 +506,10 @@ fn handle_close_incident(
 
     locked_drone.set_incident(None);
     println!("Current incident closed");
+    let x = locked_drone.x_anchor_coordinate();
+    let y = locked_drone.y_anchor_coordinate();
+
+    drop(locked_drone);
 
     let close_topic = format!("close-incident/{}", current_incident.uuid);
     let topic_filter = TopicFilter::new(
@@ -518,12 +520,31 @@ fn handle_close_incident(
     let mut stream = server_stream.lock().unwrap();
     unsubscribe(topic_filter, &mut stream).unwrap();
 
-    let x = locked_drone.x_anchor_coordinate();
-    let y = locked_drone.y_anchor_coordinate();
+    drop(stream);
 
+    let cloned_drone = drone.clone();
+
+    let thread = thread::spawn(move || {
+        travel(
+            cloned_drone,
+            x,
+            y,
+            TravelLocation::Anchor,
+        );
+    });
+
+    thread.join().unwrap();
+
+    let mut locked_drone = match drone.lock() {
+        Ok(drone) => drone,
+        Err(_) => {
+            println!("Mutex was poisoned");
+            return;
+        }
+    };
+
+    locked_drone.set_status(DroneStatus::Free);
     drop(locked_drone);
-
-    travel(drone, x, y, TravelLocation::Anchor);
 }
 
 fn update_drone_status(server_stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<Drone>>) {
@@ -709,7 +730,7 @@ fn travel(drone: Arc<Mutex<Drone>>, x: f64, y: f64, travel_location: TravelLocat
 
         locked_drone.travel_to(x, y);
         drop(locked_drone);
-        thread::sleep(Duration::from_millis(TRAVEL_INTERVAL));
+        thread::sleep(Duration::from_secs(TRAVEL_INTERVAL));
     }
 }
 
