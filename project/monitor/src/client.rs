@@ -204,7 +204,7 @@ fn start_monitor(
 
                     let puback = Puback::new(package_identifier);
 
-                    match stream.write(puback.to_bytes().as_slice()) {
+                    match stream.write_all(puback.to_bytes().as_slice()) {
                         Ok(_) => {}
                         Err(_) => {
                             println!("Error sending puback packet");
