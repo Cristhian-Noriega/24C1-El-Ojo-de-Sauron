@@ -16,7 +16,9 @@ use mqtt::model::{
 };
 
 use crate::{
-    client, drone::Drone, drone_status::{DroneStatus, TravelLocation}
+    client,
+    drone::Drone,
+    drone_status::{DroneStatus, TravelLocation},
 };
 
 use common::incident::Incident;

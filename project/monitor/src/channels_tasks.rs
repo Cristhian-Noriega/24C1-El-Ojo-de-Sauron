@@ -17,7 +17,10 @@ pub struct DroneRegistration {
 
 impl DroneRegistration {
     pub fn build_drone_message(&self) -> String {
-        format!("{};{}", self.id, self.password)
+        format!(
+            "{};{}",
+            self.id, self.password
+        )
     }
 }
 
