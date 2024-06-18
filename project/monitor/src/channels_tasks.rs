@@ -13,16 +13,11 @@ pub enum UIAction {
 pub struct DroneRegistration {
     pub id: String,
     pub password: String,
-    pub anchor_x: String,
-    pub anchor_y: String,
 }
 
 impl DroneRegistration {
     pub fn build_drone_message(&self) -> String {
-        format!(
-            "{};{};{};{}",
-            self.id, self.password, self.anchor_x, self.anchor_y
-        )
+        format!("{};{}", self.id, self.password)
     }
 }
 

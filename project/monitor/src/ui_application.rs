@@ -141,8 +141,6 @@ impl UIApplication {
             new_drone_registration: DroneRegistration {
                 id: String::new(),
                 password: String::new(),
-                anchor_x: String::new(),
-                anchor_y: String::new(),
             },
 
             //connection_status: false,
