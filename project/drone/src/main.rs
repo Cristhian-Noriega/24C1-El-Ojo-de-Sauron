@@ -4,7 +4,7 @@ mod client;
 mod drone;
 mod drone_status;
 
-const CLIENT_ARGS: usize = 3;
+const CLIENT_ARGS: usize = 4;
 
 fn main() {
     let argv = args().collect::<Vec<String>>();
@@ -17,8 +17,9 @@ fn main() {
     }
 
     let address = argv[1].clone() + ":" + &argv[2];
+    let client_id = argv[3].clone();
 
-    if let Err(e) = client::client_run(&address) {
+    if let Err(e) = client::client_run(&address, &client_id) {
         println!("Error: {:?}", e);
     }
 }

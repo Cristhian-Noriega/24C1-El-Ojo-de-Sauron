@@ -16,8 +16,7 @@ use mqtt::model::{
 };
 
 use crate::{
-    drone::Drone,
-    drone_status::{DroneStatus, TravelLocation},
+    client, drone::Drone, drone_status::{DroneStatus, TravelLocation}
 };
 
 use common::incident::Incident;
@@ -27,7 +26,6 @@ const ATTENDING_INCIDENT: &[u8] = b"attending-incident";
 const CLOSE_INCIDENT: &[u8] = b"close-incident";
 const DRONE_DATA: &[u8] = b"drone-data";
 const READY_INCIDENT: &[u8] = b"ready-incident";
-const DRONE_ARRIVED_INCIDENT: &[u8] = b"drone-arrived-incident";
 
 const READ_MESSAGE_INTERVAL: u64 = 1;
 const UPDATE_DATA_INTERVAL: u64 = 1;
@@ -37,8 +35,8 @@ const TRAVEL_INTERVAL: u64 = 1;
 const BATTERY_DISCHARGE_INTERVAL: u64 = 5;
 const BATTERY_RECHARGE_INTERVAL: u64 = 1;
 
-pub fn client_run(address: &str) -> std::io::Result<()> {
-    let server_stream = connect_to_server(address)?;
+pub fn client_run(address: &str, client_id: &str) -> std::io::Result<()> {
+    let server_stream = connect_to_server(address, client_id)?;
     let server_stream = Arc::new(Mutex::new(server_stream));
 
     let drone = Arc::new(Mutex::new(Drone::new()));
@@ -165,6 +163,8 @@ fn handle_publish(
 
     if topic_levels[0] == ATTENDING_INCIDENT {
         handle_attending_incident(incident_uuid, drone, server_stream);
+    } else if topic_levels[0] == READY_INCIDENT {
+        //handle_ready_incident(incident_uuid, drone, server_stream);
     } else if topic_levels[0] == CLOSE_INCIDENT {
         handle_close_incident(incident_uuid, drone, server_stream)
     }
@@ -254,7 +254,7 @@ fn handle_new_incident(
 
     thread.join().unwrap();
 
-    publish_drone_arrived_incident(drone.clone(), &mut server_stream.lock().unwrap());
+    //publish_drone_arrived_incident(drone.clone(), &mut server_stream.lock().unwrap());
 
     let mut drone_locked = match drone.lock() {
         Ok(drone) => drone,
@@ -290,6 +290,8 @@ fn handle_new_incident(
 
     println!("Drone arrived to the incident location");
     drone_locked.set_status(DroneStatus::AttendingIncident);
+    // drone_locked.increment_attending_counter();
+    // println!("EL ATTENDING INCIDENT COUNT ES!!!!{}",drone_locked.attending_counter().to_string());
 
     drop(drone_locked);
 
@@ -301,18 +303,18 @@ fn handle_new_incident(
         }
     };
 
-    let topic_filter = TopicFilter::new(
-        vec![
-            TopicLevel::Literal(ATTENDING_INCIDENT.to_vec()),
-            TopicLevel::Literal(incident.uuid.clone().into_bytes()),
-        ],
-        false,
-    );
+    // let topic_filter = TopicFilter::new(
+    //     vec![
+    //         TopicLevel::Literal(ATTENDING_INCIDENT.to_vec()),
+    //         TopicLevel::Literal(incident.uuid.clone().into_bytes()),
+    //     ],
+    //     false,
+    // );
 
-    match unsubscribe(topic_filter, &mut locked_stream) {
-        Ok(_) => println!("Unsubscribed from the incident topic"),
-        Err(e) => eprintln!("Error: {:?}", e),
-    }
+    // match unsubscribe(topic_filter, &mut locked_stream) {
+    //     Ok(_) => println!("Unsubscribed from the incident topic"),
+    //     Err(e) => eprintln!("Error: {:?}", e),
+    // }
 
     let topic_name = TopicName::new(
         vec![
@@ -362,7 +364,6 @@ fn handle_attending_incident(
         return;
     }
 
-    
     if drone_locked.status() == DroneStatus::AttendingIncident {
         let topic_filter = TopicFilter::new(
             vec![
@@ -371,6 +372,8 @@ fn handle_attending_incident(
             ],
             false,
         );
+        // como estoy en el lugar del incidente, me interesa saber cuando se cierra el incidente por el monitor
+        // me subscribo a close incidente/uuid
         subscribe(topic_filter, &mut server_stream.lock().unwrap()).unwrap();
         println!("Subscribing to the close incident topic");
 
@@ -402,10 +405,20 @@ fn handle_attending_incident(
         drone_locked.increment_attending_counter();
         println!("drone is attending the incident");
 
-        
-
-
+    // el caso que contando este drone, llegaron 2 drones a la misma locacion
     } else if drone_locked.attending_counter() == 1 {
+        //drone_locked.increment_attending_counter();
+        println!("TWO DRONES ATTENDING THE INCIDENT");
+        let drone_cloned = drone.clone();
+        let server_stream_clone = server_stream.clone();
+        let uuid_clone = uuid.clone();
+
+        let thread = thread::spawn(move || {
+            simulate_incident_resolution(uuid_clone, drone_cloned, server_stream_clone);
+        });
+
+        thread.join().unwrap();
+
         let topic_filter = TopicFilter::new(
             vec![
                 TopicLevel::Literal(CLOSE_INCIDENT.to_vec()),
@@ -428,14 +441,36 @@ fn handle_attending_incident(
         }
 
         drop(locked_stream);
-
-        //vuelvo a la anchor location
-        let x_anchor_point = drone_locked.x_anchor_coordinate();
-        let y_anchor_point = drone_locked.y_anchor_coordinate();
-
-        drone_locked.travel_to(x_anchor_point, y_anchor_point);
     }
     drop(drone_locked);
+}
+
+fn simulate_incident_resolution(
+    uuid: String,
+    drone: Arc<Mutex<Drone>>,
+    server_stream: Arc<Mutex<TcpStream>>,
+) {
+    thread::sleep(Duration::from_secs(30));
+
+    let topic_name = TopicName::new(
+        vec![
+            TopicLevel::Literal(READY_INCIDENT.to_vec()).to_bytes(),
+            TopicLevel::Literal(uuid.into_bytes()).to_bytes(),
+        ],
+        false,
+    );
+    let message = b"".to_vec();
+    let mut locked_stream = match server_stream.lock() {
+        Ok(stream) => stream,
+        Err(_) => {
+            println!("Mutex was poisoned");
+            return;
+        }
+    };
+    match publish(topic_name, message, &mut locked_stream, QoS::AtLeast) {
+        Ok(_) => println!("Incident has been resolved"),
+        Err(e) => eprintln!("Error: {:?}", e),
+    }
 }
 
 fn handle_close_incident(
@@ -519,11 +554,12 @@ fn update_drone_status(server_stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<Dr
     }
 }
 
-fn connect_to_server(address: &str) -> std::io::Result<TcpStream> {
+fn connect_to_server(address: &str, client_id: &str) -> std::io::Result<TcpStream> {
     println!("\nConnecting to address: {:?}", address);
     let mut to_server_stream = TcpStream::connect(address)?;
 
-    let client_id_bytes: Vec<u8> = b"drone".to_vec();
+    let client_id_bytes: Vec<u8> = client_id.as_bytes().to_vec();
+    //let client_id_bytes: Vec<u8> = b"drone".to_vec();
     let client_id = EncodedString::new(client_id_bytes);
     let will = None;
     let login = None; // TODO: Add login
@@ -658,7 +694,7 @@ fn travel(drone: Arc<Mutex<Drone>>, x: f64, y: f64, travel_location: TravelLocat
         let status = locked_drone.status();
         println!("Distance to destination: {}", distance);
 
-        if distance == 0.0 || status != DroneStatus::Travelling(travel_location) { 
+        if distance == 0.0 || status != DroneStatus::Travelling(travel_location) {
             drop(locked_drone);
             break;
         }
@@ -774,29 +810,28 @@ fn recharge_battery(drone: Arc<Mutex<Drone>>) {
     }
 }
 
+// pub fn publish_drone_arrived_incident(drone: Arc<Mutex<Drone>>, server_stream: &mut MutexGuard<TcpStream>) {
+//     let locked_drone = match drone.lock() {
+//         Ok(drone) => drone,
+//         Err(_) => {
+//             println!("Mutex was poisoned");
+//             return;
+//         }
+//     };
 
-pub fn publish_drone_arrived_incident(drone: Arc<Mutex<Drone>>, server_stream: &mut MutexGuard<TcpStream>) {
-    let locked_drone = match drone.lock() {
-        Ok(drone) => drone,
-        Err(_) => {
-            println!("Mutex was poisoned");
-            return;
-        }
-    };
-    
-    let mut levels = vec![DRONE_ARRIVED_INCIDENT.to_vec()];
-    levels.push(locked_drone.id().to_string().into_bytes());
-    levels.push(locked_drone.incident().unwrap().uuid.into_bytes());
+//     let mut levels = vec![DRONE_ARRIVED_INCIDENT.to_vec()];
+//     levels.push(locked_drone.id().to_string().into_bytes());
+//     levels.push(locked_drone.incident().unwrap().uuid.into_bytes());
 
-    drop(locked_drone);
+//     drop(locked_drone);
 
-    let topic_name = TopicName::new(levels, false);
+//     let topic_name = TopicName::new(levels, false);
 
-    let message = b"".to_vec();
-    let qos = QoS::AtMost;
+//     let message = b"".to_vec();
+//     let qos = QoS::AtMost;
 
-    match publish(topic_name, message, server_stream, qos) {
-        Ok(_) => println!("Published drone arrived message"),
-        Err(e) => eprintln!("Error: {:?}", e),
-    }
-}
+//     match publish(topic_name, message, server_stream, qos) {
+//         Ok(_) => println!("Published drone arrived message"),
+//         Err(e) => eprintln!("Error: {:?}", e),
+//     }
+// }

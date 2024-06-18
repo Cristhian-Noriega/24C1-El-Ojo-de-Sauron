@@ -16,15 +16,13 @@ use mqtt::model::{
 };
 
 use crate::{
-    camera::Camera, channels_tasks::{DroneRegistration, IncidentRegistration, MonitorAction, UIAction}, drone::Drone, incident_manager, monitor::Monitor, ui_application::UIApplication
+    camera::Camera, channels_tasks::{DroneRegistration, IncidentRegistration, MonitorAction, UIAction}, drone::Drone, monitor::Monitor, ui_application::UIApplication
 };
 
 pub fn client_run(address: String) -> Result<(), String> {
     // Create the channels to communicate between the monitor and the UI
     let (monitor_sender, monitor_receiver) = channel();
     let (ui_sender, ui_receiver) = channel();
-    let (incident_manager_sender, incident_manager_receiver) = channel();
-    let incident_manager = incident_manager::IncidentManager::new(incident_manager_receiver);
 
     
     // Connect to the server
@@ -45,12 +43,9 @@ pub fn client_run(address: String) -> Result<(), String> {
 
     // monitor start in a thread to avoid blocking the main thread
     let monitor_thread = std::thread::spawn(move || {
-        start_monitor(stream, monitor_sender, ui_receiver, incident_manager_sender);
+        start_monitor(stream, monitor_sender, ui_receiver);
     });
 
-    let incident_manager_thread = std::thread::spawn(move || {
-        incident_manager.start();
-    });
 
     // start the ui in the main thread
     match start_ui(ui_sender, monitor_receiver) {
@@ -62,7 +57,6 @@ pub fn client_run(address: String) -> Result<(), String> {
 
     // wait for the monitor thread to finish
     monitor_thread.join().unwrap();
-    incident_manager_thread.join().unwrap();
 
     Ok(())
 }
@@ -122,7 +116,7 @@ const NEW_INCIDENT: &[u8] = b"new-incident";
 const ATTENDING_INCIDENT: &[u8] = b"attending-incident";
 const READY_INCIDENT: &[u8] = b"ready-incident";
 const CLOSE_INCIDENT: &[u8] = b"close-incident";
-const DRONE_ARRIVED_INCIDENT: &[u8] = b"drone-arrived-incident";
+//const DRONE_ARRIVED_INCIDENT: &[u8] = b"drone-arrived-incident";
 
 const SEPARATOR: char = ';';
 const ENUMARATOR: char = '|';
@@ -131,7 +125,6 @@ fn start_monitor(
     stream: TcpStream,
     monitor_sender: Sender<MonitorAction>,
     ui_reciver: Receiver<UIAction>,
-    incident_manager_sender: Sender<(String, String)>,
 ) {
     let mut monitor = Monitor::new();
     let mut unacknowledged_publish = HashMap::new();
@@ -167,13 +160,10 @@ fn start_monitor(
                         camera_data(publish.clone(), monitor_sender.clone());
                     }
                     ATTENDING_INCIDENT => {
-                        attend_incident(publish.clone(), &mut monitor, monitor_sender.clone());
+                        attend_incident( publish.clone(), &mut monitor, monitor_sender.clone());
                     }
                     READY_INCIDENT => {
                         ready_incident(publish.clone(), &mut monitor, monitor_sender.clone());
-                    }
-                    DRONE_ARRIVED_INCIDENT => {
-                        drone_arrived_incident(publish.clone(), incident_manager_sender.clone());
                     }
                     _ => {
                         println!("Unknown topic");
@@ -284,6 +274,11 @@ fn camera_data(publish: Publish, monitor_sender: Sender<MonitorAction>) {
 }
 
 fn attend_incident(publish: Publish, monitor: &mut Monitor, monitor_sender: Sender<MonitorAction>) {
+    // when i receive an attending incident from a drone,
+    // means a drone arrived to the incident
+    //i have to check that two drones are attending the incident
+    //to change the status of the incident to in progress and simulate the resolution time
+    
     let topic_name = publish.topic();
     let topic_levels = topic_name.levels();
     let incident_id = topic_levels[1].as_slice();
@@ -299,6 +294,41 @@ fn attend_incident(publish: Publish, monitor: &mut Monitor, monitor_sender: Send
     } else {
         println!("Unknown incident");
     }
+    // let ready_incidents = monitor.ready_incident(incident_id.clone());
+    // match ready_incidents {
+    //     Some(incident) => {
+    //         println!("INCIDENT COUNTER IN MONITOR: {}", ready_incidents);
+    //     }
+    //     None => {
+    //         println!("Incident not found");
+    //     }
+    // }
+    // //println!("Incident counter in monitor: {}", monitor.ready_incident(incident_id));
+    // // if the incident is active, which means that two drones are attending the incident
+    // // i have to send to both drones the message to start the resolution time
+    // let incident_id = incident_id.as_str();
+    // if monitor.is_incident_active(incident_id) {
+    //     //send publish to topic ready incident and subscribe to the topic ready incident
+
+    //     let topic_name = TopicName::new(vec![READY_INCIDENT.to_vec(), incident_id.as_bytes().to_vec()], false);
+    //     let message = b"";
+    //     let dup = false;
+    //     let qos = QoS::AtLeast;
+    //     let retain = false;
+    //     let package_identifier = Some(0);
+
+    //     let publish = Publish::new(dup, qos, retain, topic_name, package_identifier, message.to_vec());
+    //     match stream.lock().unwrap().write(publish.to_bytes().as_slice()) {
+    //         Ok(_) => {}
+    //         Err(_) => {
+    //             println!("Error sending publish packet");
+    //         }
+    //     }
+        
+
+    //     // let resolution_time = std::time::Duration::from_secs(10);
+    //     // monitor.simulate_resolution(incident_id.to_string(), resolution_time);
+    // }
 }
 
 fn ready_incident(publish: Publish, monitor: &mut Monitor, monitor_sender: Sender<MonitorAction>) {
@@ -402,8 +432,7 @@ fn subscribe_to_topics(stream: &mut TcpStream) -> std::io::Result<()> {
         "attending-incident/+",
         "close-incident/+",
         "drone-data/+",
-        //"ready-incident/+",
-        "drone-arrived-incident/+/+"
+        "ready-incident/+",
     ];
 
     for topic in topics {
@@ -441,22 +470,24 @@ fn subscribe_to_topics(stream: &mut TcpStream) -> std::io::Result<()> {
     }
 }
 
-fn drone_arrived_incident(publish: Publish, incident_manager_sender: Sender<(String, String)>) {
-    let topic_name = publish.topic();
-    let topic_levels = topic_name.levels();
-    let incident_id = topic_levels[1].as_slice();
-    let incident_id = String::from_utf8_lossy(incident_id.to_vec().as_slice()).to_string();
 
-    let drone_id = topic_levels[2].as_slice();
-    let drone_id = String::from_utf8_lossy(drone_id.to_vec().as_slice()).to_string();
 
-    match incident_manager_sender.send((incident_id.clone(), drone_id.clone())) {
-        Ok(_) => {
-            println!("Drone arrived incident sent to incident manager");
-        }
-        Err(_) => {
-            println!("Error sending drone arrived incident to incident manager");
-        }
-    }
+// fn drone_arrived_incident(publish: Publish, incident_manager_sender: Sender<(String, String)>) {
+//     let topic_name = publish.topic();
+//     let topic_levels = topic_name.levels();
+//     let incident_id = topic_levels[1].as_slice();
+//     let incident_id = String::from_utf8_lossy(incident_id.to_vec().as_slice()).to_string();
 
-}
+//     let drone_id = topic_levels[2].as_slice();
+//     let drone_id = String::from_utf8_lossy(drone_id.to_vec().as_slice()).to_string();
+
+//     match incident_manager_sender.send((incident_id.clone(), drone_id.clone())) {
+//         Ok(_) => {
+//             println!("Drone arrived incident sent to incident manager");
+//         }
+//         Err(_) => {
+//             println!("Error sending drone arrived incident to incident manager");
+//         }
+//     }
+
+// }
