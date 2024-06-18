@@ -18,7 +18,7 @@ use crate::camera_system::CameraSystem;
 
 const CAMERA_QUANTITY: usize = 3;
 
-use crate::incident::Incident;
+
 use crate::{camera::Camera, config::Config};
 
 

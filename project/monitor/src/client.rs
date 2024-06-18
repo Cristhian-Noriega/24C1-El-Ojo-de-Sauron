@@ -23,13 +23,9 @@ use crate::{
     ui_application::UIApplication,
 };
 
-use std::env;
-use std::path::Path;
-use std::sync::mpsc::Sender;
-use std::sync::{Arc, Mutex};
-use std::thread;
 
-use crate::{config::Config, drone::Drone, incident::Incident};
+
+use crate::config::Config;
 
 
 pub fn client_run(address: String) -> Result<(), String> {

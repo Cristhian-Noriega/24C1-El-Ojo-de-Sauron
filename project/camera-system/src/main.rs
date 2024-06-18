@@ -7,7 +7,6 @@ mod camera_status;
 mod camera_system;
 mod client;
 
-use crate::incident::Incident;
 mod config;
 
 
