@@ -140,7 +140,7 @@ impl Server {
             }
         };
 
-        let registered_clients = self.registered_clients.lock().unwrap();
+        let mut registered_clients = self.registered_clients.lock().unwrap();
 
         match registered_clients.get(&(usermame.to_vec(), password.to_vec())) {
             Some(true) => {
@@ -148,7 +148,7 @@ impl Server {
                 return;
             }
             Some(false) => {
-                // self.log_file.info("Client not connected");
+                registered_clients.insert((usermame.to_vec(), password.to_vec()), true);
             }
             None => {
                 self.log_file.error("Client not registered");
