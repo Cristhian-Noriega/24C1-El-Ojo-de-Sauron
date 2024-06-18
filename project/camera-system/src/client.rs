@@ -16,8 +16,6 @@ use mqtt::model::{
 use crate::camera_system::CameraSystem;
 
 
-const CAMERA_QUANTITY: usize = 3;
-
 
 use crate::{camera::Camera, config::Config};
 

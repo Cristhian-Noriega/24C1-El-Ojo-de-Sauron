@@ -24,10 +24,6 @@ use crate::{
 };
 
 
-
-use crate::config::Config;
-
-
 pub fn client_run(address: String) -> Result<(), String> {
     // Create the channels to communicate between the monitor and the UI
     let (monitor_sender, monitor_receiver) = channel();
@@ -94,7 +90,7 @@ fn connect_to_server(address: String) -> std::io::Result<TcpStream> {
     }
 }
 
-static CLIENT_ARGS: usize = 2;
+// static CLIENT_ARGS: usize = 2;
 
 // impl Client {
 //     pub fn new(sender: Sender<String>) -> Self {

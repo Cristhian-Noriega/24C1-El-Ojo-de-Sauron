@@ -4,13 +4,8 @@ use crate::drone_status::DroneStatus;
 
 use common::incident::Incident;
 
-const ACTIVE_RANGE: f64 = 20.0;
 const MINIMUM_BATTERY_LEVEL: usize = 20;
 const MAXIMUM_BATTERY_LEVEL: usize = 100;
-const VELOCITY: f64 = 0.001;
-
-
-
 
 const BATTERY_UNIT: usize = 1;
 
@@ -68,7 +63,7 @@ impl Drone {
     }
 
     pub fn id(&self) -> u8 {
-        self.id.clone()
+        self.id
     }
 
     pub fn is_below_minimun(&self) -> bool {
