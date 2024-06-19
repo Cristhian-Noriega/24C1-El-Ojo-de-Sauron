@@ -1,10 +1,12 @@
 {
     "address": "127.0.0.1:8080",
     "id": 1,
+    "username": "drone1",
+    "password": "sauron",
     "x_central_position": -58.3703,
     "y_central_position": -34.6082,
     "x_anchor_position": -58.3713,
     "y_anchor_position": -34.6107,
     "velocity": 0.0005,
     "active_range": 20
-    }
+}

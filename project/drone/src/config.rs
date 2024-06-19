@@ -5,8 +5,8 @@ use std::{fs::File, io::Read, path::Path};
 pub struct Config {
     address: String,
     id: u8,
-    x_position: f64,
-    y_position: f64,
+    username: String,
+    password: String,
     x_central_position: f64,
     y_central_position: f64,
     x_anchor_position: f64,
@@ -33,6 +33,14 @@ impl Config {
 
     pub fn get_id(&self) -> u8 {
         self.id
+    }
+
+    pub fn get_username(&self) -> &str {
+        &self.username
+    }
+
+    pub fn get_password(&self) -> &str {
+        &self.password
     }
 
     pub fn get_x_central_position(&self) -> f64 {

@@ -3,6 +3,7 @@
 
 use std::{
     collections::HashMap,
+    io::Write,
     net::{TcpListener, TcpStream},
     sync::{
         mpsc::{self, Sender},
@@ -18,6 +19,9 @@ pub use mqtt::model::{
         unsubscribe::Unsubscribe,
     },
 };
+use mqtt::model::{
+    packets::connack::Connack, return_codes::connect_return_code::ConnectReturnCode,
+};
 
 use crate::client::Client;
 
@@ -28,7 +32,6 @@ use super::{
 };
 
 const ADMIN_USERNAME: &[u8] = b"admin";
-const ADMIN_PASSWORD: &[u8] = b"admin";
 
 pub struct Server {
     config: Config,
@@ -45,7 +48,20 @@ impl Server {
         let (client_actions_sender, client_actions_receiver) = mpsc::channel();
 
         let mut registered_clients = HashMap::new();
-        registered_clients.insert((ADMIN_USERNAME.to_vec(), ADMIN_PASSWORD.to_vec()), false);
+        registered_clients.insert(
+            (
+                ADMIN_USERNAME.to_vec(),
+                config.get_admin_password().as_bytes().to_vec(),
+            ),
+            false,
+        );
+        registered_clients.insert(
+            (
+                config.get_camera_system_username().as_bytes().to_vec(),
+                config.get_camera_system_password().as_bytes().to_vec(),
+            ),
+            false,
+        );
 
         let registered_clients = Arc::new(Mutex::new(registered_clients));
 
@@ -131,21 +147,31 @@ impl Server {
                     }
                     None => {
                         self.log_file.error("No password provided");
+                        failure_connection(stream, ConnectReturnCode::IdentifierRejected);
                         return;
                     }
                 }
             }
             None => {
                 self.log_file.error("No login information provided");
+                failure_connection(stream, ConnectReturnCode::IdentifierRejected);
                 return;
             }
         };
 
-        let mut registered_clients = self.registered_clients.lock().unwrap();
+        let mut registered_clients = match self.registered_clients.lock() {
+            Ok(registered_clients) => registered_clients,
+            Err(err) => {
+                self.log_file
+                    .error(&format!("Error locking registered clients: {:?}", err));
+                return;
+            }
+        };
 
         match registered_clients.get(&(usermame.to_vec(), password.to_vec())) {
             Some(true) => {
                 self.log_file.error("Client already connected");
+                failure_connection(stream, ConnectReturnCode::IdentifierRejected);
                 return;
             }
             Some(false) => {
@@ -153,11 +179,12 @@ impl Server {
             }
             None => {
                 self.log_file.error("Client not registered");
+                failure_connection(stream, ConnectReturnCode::IdentifierRejected);
                 return;
             }
         }
 
-        // para que le sirve el password? yo creo que nada
+        // TODO para que le sirve el password? yo creo que nada
         let new_client = Client::new(
             client_id.clone(),
             "PASSWORD".to_string(),
@@ -207,6 +234,18 @@ impl Server {
             }
             log_file.info("Closing connection");
         });
+    }
+}
+
+fn failure_connection(mut stream: TcpStream, return_code: ConnectReturnCode) {
+    let connack = Connack::new(false, return_code);
+    let connack_bytes = connack.to_bytes();
+
+    match stream.write_all(&connack_bytes) {
+        Ok(_) => {}
+        Err(err) => {
+            println!("Error sending Connack packet: {:?}", err);
+        }
     }
 }
 

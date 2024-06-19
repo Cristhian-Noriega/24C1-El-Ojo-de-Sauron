@@ -176,7 +176,6 @@ impl TaskHandler {
             return;
         }
 
-        let binding = self.topics.read().unwrap();
         let mut clients = vec![];
 
         for client in self.clients.read().unwrap().values() {

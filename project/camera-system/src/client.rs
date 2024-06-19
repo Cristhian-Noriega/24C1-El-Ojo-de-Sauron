@@ -6,19 +6,17 @@ use std::{
 use common::incident::Incident;
 use mqtt::model::{
     components::{
-        encoded_string::EncodedString, qos::QoS, topic_filter::TopicFilter,
+        encoded_string::EncodedString, login::Login, qos::QoS, topic_filter::TopicFilter,
         topic_level::TopicLevel, topic_name::TopicName,
     },
     packet::Packet,
     packets::{connect::Connect, publish::Publish, subscribe::Subscribe},
+    return_codes::connect_return_code::ConnectReturnCode,
 };
 
 use crate::camera_system::CameraSystem;
 
-
-
 use crate::{camera::Camera, config::Config};
-
 
 const NEW_INCIDENT: &[u8] = b"new-incident";
 const CLOSE_INCIDENT: &[u8] = b"close-incident";
@@ -26,7 +24,10 @@ const CAMERA_DATA: &[u8] = b"camera-data";
 
 pub fn client_run(config: Config) -> std::io::Result<()> {
     let address = config.get_address().to_owned();
-    let mut server_stream = connect_to_server(&address)?;
+    let username = config.get_username().to_owned();
+    let password = config.get_password().to_owned();
+
+    let mut server_stream = connect_to_server(&address, &username, &password)?;
 
     let mut camera_system = CameraSystem::new();
 
@@ -150,27 +151,30 @@ fn publish(
     }
 }
 
-fn connect_to_server(address: &str) -> std::io::Result<TcpStream> {
+fn connect_to_server(address: &str, username: &str, password: &str) -> std::io::Result<TcpStream> {
     println!("\nConnecting to address: {:?}", address);
     let mut to_server_stream = TcpStream::connect(address)?;
 
     let client_id_bytes: Vec<u8> = b"camera system".to_vec();
     let client_id = EncodedString::new(client_id_bytes);
     let will = None;
-    let login = None;
+
+    let username = EncodedString::new(username.as_bytes().to_vec());
+    let password = Some(EncodedString::new(password.as_bytes().to_vec()));
+    let login = Some(Login::new(username, password));
+
     let connect = Connect::new(false, 0, client_id, will, login);
 
     let _ = to_server_stream.write(connect.to_bytes().as_slice());
 
     match Packet::from_bytes(&mut to_server_stream) {
-        Ok(Packet::Connack(connack)) => {
-            println!(
-                "Received Connack packet with return code: {:?} and sessionPresent: {:?}\n",
-                connack.connect_return_code(),
-                connack.session_present()
-            );
-            Ok(to_server_stream)
-        }
+        Ok(Packet::Connack(connack)) => match connack.connect_return_code() {
+            ConnectReturnCode::ConnectionAccepted => Ok(to_server_stream),
+            _ => Err(std::io::Error::new(
+                ErrorKind::Other,
+                format!("Connection refused: {:?}", connack.connect_return_code()),
+            )),
+        },
         _ => Err(std::io::Error::new(ErrorKind::Other, "No connack recibed")),
     }
 }

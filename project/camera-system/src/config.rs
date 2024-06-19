@@ -10,6 +10,8 @@ pub struct Position {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Config {
     address: String,
+    username: String,
+    password: String,
     cameras: Vec<Position>,
 }
 
@@ -27,6 +29,14 @@ impl Config {
 
     pub fn get_address(&self) -> &str {
         &self.address
+    }
+
+    pub fn get_username(&self) -> &str {
+        &self.username
+    }
+
+    pub fn get_password(&self) -> &str {
+        &self.password
     }
 
     pub fn get_cameras(&self) -> Vec<Position> {
