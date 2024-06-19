@@ -60,3 +60,68 @@ impl Display for EncodedString {
         write!(f, "{}", content)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_encoded_string_new() {
+        let content = vec![0x00, 0x01, 0x02, 0x03];
+        let encoded_string = EncodedString::new(content.clone());
+
+        assert_eq!(encoded_string.length, content.len() as u16);
+        assert_eq!(encoded_string.content, content);
+    }
+
+    #[test]
+    fn test_encoded_string_from_bytes() {
+        let content = vec![0x00, 0x01, 0x02, 0x03];
+        let mut bytes = vec![];
+        bytes.extend(&(content.len() as u16).to_be_bytes());
+        bytes.extend(&content);
+
+        let mut stream = &bytes[..];
+        let encoded_string = EncodedString::from_bytes(&mut stream).unwrap();
+
+        assert_eq!(encoded_string.length, content.len() as u16);
+        assert_eq!(encoded_string.content, content);
+    }
+
+    #[test]
+    fn test_encoded_string_from_string() {
+        let string = String::from("test");
+        let encoded_string = EncodedString::from_string(&string);
+
+        assert_eq!(encoded_string.length, string.len() as u16);
+        assert_eq!(encoded_string.content, string.as_bytes());
+    }
+
+    #[test]
+    fn test_encoded_string_to_bytes() {
+        let content = vec![0x00, 0x01, 0x02, 0x03];
+        let encoded_string = EncodedString::new(content.clone());
+
+        let mut bytes = vec![];
+        bytes.extend(&(content.len() as u16).to_be_bytes());
+        bytes.extend(&content);
+
+        assert_eq!(encoded_string.to_bytes(), bytes);
+    }
+
+    #[test]
+    fn test_encoded_string_length() {
+        let content = vec![0x00, 0x01, 0x02, 0x03];
+        let encoded_string = EncodedString::new(content.clone());
+
+        assert_eq!(encoded_string.length(), LENGTH_SIZE + content.len());
+    }
+
+    #[test]
+    fn test_encoded_string_content() {
+        let content = vec![0x00, 0x01, 0x02, 0x03];
+        let encoded_string = EncodedString::new(content.clone());
+
+        assert_eq!(encoded_string.content(), &content);
+    }
+}

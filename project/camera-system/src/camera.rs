@@ -1,4 +1,6 @@
-use crate::{camera_status::CameraStatus, incident::Incident};
+use common::incident::Incident;
+
+use crate::camera_status::CameraStatus;
 
 const ACTIVE_RANGE: f64 = 10.0;
 

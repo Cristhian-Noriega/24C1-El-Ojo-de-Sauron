@@ -68,6 +68,7 @@ impl Server {
 
     pub fn server_run(&self) -> std::io::Result<()> {
         let address = self.config.get_address();
+
         self.log_file
             .info(&format!("Server running on address: {}\n", address));
         let listener = TcpListener::bind(address)?;

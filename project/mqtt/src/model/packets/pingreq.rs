@@ -1,7 +1,7 @@
 use super::{PINGREQ_PACKET_TYPE, RESERVED_FIXED_HEADER_FLAGS};
 use crate::{Error, FixedHeader, RemainingLength};
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq)]
 pub struct Pingreq;
 
 impl Pingreq {
@@ -29,5 +29,25 @@ impl Pingreq {
         packet_bytes.extend(remaining_length_bytes);
 
         packet_bytes
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_pingreq_to_bytes() {
+        let pingreq = Pingreq::new();
+        let expected_bytes: Vec<u8> = vec![0b1100_0000, 0x00];
+        assert_eq!(pingreq.to_bytes(), expected_bytes);
+    }
+
+    #[test]
+    fn test_pingreq_from_bytes() {
+        let remaining_length = RemainingLength::new(2_u32);
+        let fixed_header = FixedHeader::new(0xC << 4, remaining_length);
+        let pingreq = Pingreq::from_bytes(fixed_header).unwrap();
+        assert_eq!(pingreq, Pingreq::new());
     }
 }

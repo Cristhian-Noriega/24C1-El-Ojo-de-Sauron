@@ -10,7 +10,7 @@ use std::{
 use crate::{client::Client, logfile::Logger};
 
 use mqtt::model::{
-    components::{qos::QoS, topic_name::TopicName},
+    components::{qos::QoS, topic_filter::TopicFilter, topic_name::TopicName},
     packets::{
         connack::Connack, pingresp::Pingresp, puback::Puback, publish::Publish, suback::Suback,
         subscribe::Subscribe, unsuback::Unsuback, unsubscribe::Unsubscribe,
@@ -66,7 +66,16 @@ pub struct TaskHandler {
     clients: RwLock<HashMap<Vec<u8>, Client>>,
     active_connections: RwLock<HashSet<Vec<u8>>>,
     retained_messages: RwLock<HashMap<Vec<u8>, Publish>>,
-    topics: RwLock<HashMap<TopicName, Vec<ClientId>>>,
+    // topics: RwLock<HashMap<TopicName, Vec<ClientId>>>,
+
+    // monitor se subscribe a (drone-data/+) <- es un topic filter
+
+    // drone data publica en (drone-data/1) <- esto es un topic name
+
+    // debería guardar que monitor está suscrito a (drone-data/+)
+    // cuando drone data publica en (drone-data/1) recorro todos los subscribes y me fijo si alguno matchea
+    // si matchea, le mando el msg
+    topics: RwLock<Vec<(TopicFilter, ClientId)>>,
     log_file: Arc<Logger>,
     registered_clients: Arc<Mutex<Logins>>,
 }
@@ -82,7 +91,7 @@ impl TaskHandler {
             clients: RwLock::new(HashMap::new()),
             active_connections: RwLock::new(HashSet::new()),
             retained_messages: RwLock::new(HashMap::new()),
-            topics: RwLock::new(HashMap::new()),
+            topics: RwLock::new(Vec::new()),
             log_file,
             registered_clients,
         }
@@ -131,19 +140,7 @@ impl TaskHandler {
 
         if let Some(client) = clients.get_mut(&client_id) {
             for (topic_filter, _) in subscribe_packet.topics() {
-                let mut levels: Vec<Vec<u8>> = vec![];
-                for level in topic_filter.levels() {
-                    levels.push(level.to_bytes());
-                }
-                let topic_name = TopicName::new(levels, false);
-
-                client.add_subscription(topic_name.clone());
-
-                let mut topics = self.topics.write().unwrap();
-                topics
-                    .entry(topic_name.clone())
-                    .or_default()
-                    .push(client_id.clone());
+                client.add_subscription(topic_filter.clone());
             }
             self.log_file
                 .log_successful_subscription(&client_id, &subscribe_packet);
@@ -159,22 +156,7 @@ impl TaskHandler {
 
         if let Some(client) = clients.get_mut(&client_id) {
             for topic_filter in unsubscribe_packet.topics() {
-                let mut levels: Vec<Vec<u8>> = vec![];
-                for level in topic_filter.levels() {
-                    levels.push(level.to_bytes());
-                }
-                let topic_name = TopicName::new(levels, false);
-
-                client.remove_subscription(&topic_name);
-
-                let mut topics = self.topics.write().unwrap();
-                if let Some(subscribers) = topics.get_mut(&topic_name) {
-                    let client_id_clone = client_id.clone();
-                    subscribers.retain(|id| id != &client_id_clone);
-                    if subscribers.is_empty() {
-                        topics.remove(&topic_name);
-                    }
-                }
+                client.remove_subscription(topic_filter);
             }
 
             self.log_file
@@ -196,12 +178,18 @@ impl TaskHandler {
 
         let binding = self.topics.read().unwrap();
         let mut clients = vec![];
-        if let Some(topic_clients) = binding.get(topic_name) {
-            clients.extend(topic_clients)
-        } else {
+
+        for client in self.clients.read().unwrap().values() {
+            if client.is_subscribed(topic_name) {
+                clients.push(client.id.clone());
+            }
+        }
+
+        if clients.is_empty() {
             let message = format!("No clients subscribed to topic: {}", topic_name);
             self.log_file.error(message.as_str());
-        };
+            return;
+        }
 
         self.log_file
             .log_successful_publish(&client_id, publish_packet);
@@ -209,7 +197,7 @@ impl TaskHandler {
         let message = Message::new(client_id.clone(), publish_packet.clone());
 
         for client_id in clients {
-            if let Some(client) = self.clients.read().unwrap().get(client_id) {
+            if let Some(client) = self.clients.read().unwrap().get(&client_id) {
                 client.send_message(message.clone(), &self.log_file);
             }
         }

@@ -1,23 +1,38 @@
-use ui_application::UIApplication;
+use std::{env::args, path::Path};
 
+use config::Config;
+
+mod camera;
+mod channels_tasks;
 mod client;
-mod incident;
-mod drone;
-mod ui_application;
 mod config;
+mod drone;
+mod monitor;
+mod ui_application;
 
-fn main() -> Result<(), eframe::Error> {
-    let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default(),
-        ..Default::default()
+const CLIENT_ARGS: usize = 2;
+
+fn main() {
+    let argv = args().collect::<Vec<String>>();
+    if argv.len() != CLIENT_ARGS {
+        println!("Cantidad de argumentos inválidos");
+        let app_name = &argv[0];
+        println!("{:?} <toml-file>", app_name);
+
+        return;
+    }
+
+    let path = Path::new(&argv[1]);
+
+    let config = match Config::from_file(path) {
+        Ok(config) => config,
+        Err(e) => {
+            println!("Error reading the configuration file: {:?}", e);
+            std::process::exit(1);
+        }
     };
 
-    eframe::run_native(
-        "Monitor",
-        options,
-        Box::new(|cc| {
-            egui_extras::install_image_loaders(&cc.egui_ctx);
-            Box::new(UIApplication::new(cc.egui_ctx.clone()))
-        }),
-    )
+    if let Err(e) = client::client_run(config) {
+        println!("Error: {:?}", e);
+    }
 }

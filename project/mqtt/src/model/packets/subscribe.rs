@@ -95,3 +95,58 @@ impl Subscribe {
         self.topics.clone()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::EncodedString;
+    use std::io::Cursor;
+
+    #[allow(dead_code)]
+    fn from_slice(bytes: &[u8]) -> impl Read {
+        let encoded_string = EncodedString::new(bytes.to_vec());
+        Cursor::new(encoded_string.to_bytes())
+    }
+
+    #[test]
+    fn test_subscribe_from_bytes() {
+        let packet_identifier = 1;
+        let bytes = &mut from_slice(b"topic1");
+        let topic_filter = TopicFilter::from_bytes(bytes).unwrap();
+
+        let topics = vec![
+            (topic_filter, QoS::AtMost),
+        ];
+
+        let mut stream = std::io::Cursor::new(vec![
+            0x00, 0x01,
+            0x00, 0x06, b't', b'o', b'p', b'i', b'c', b'1', 0x00,
+        ]);
+
+        let fixed_header = FixedHeader::new(SUBSCRIBE_PACKET_TYPE << 4, RemainingLength::new(11));
+        let subscribe = Subscribe::from_bytes(fixed_header, &mut stream).unwrap();
+
+        assert_eq!(subscribe.packet_identifier(), packet_identifier);
+        assert_eq!(subscribe.topics(), topics);
+    }
+
+    #[test]
+    fn test_subscribe_to_bytes() {
+        let packet_identifier = 1;
+        let bytes = &mut from_slice(b"topic1");
+        let topic_filter = TopicFilter::from_bytes(bytes).unwrap();
+        let topics = vec![
+            (topic_filter, QoS::AtMost),
+        ];
+
+        let subscribe = Subscribe::new(packet_identifier, topics);
+
+        let expected_bytes = vec![
+            128_u8, 0x0b, // Fixed Header
+            0x00, 0x01, // Packet Identifier
+            0x00, 6_u8, b't', b'o', b'p', b'i', b'c', b'1', 0x00, // Topic Filter
+        ];
+
+        assert_eq!(subscribe.to_bytes(), expected_bytes);
+    }
+}

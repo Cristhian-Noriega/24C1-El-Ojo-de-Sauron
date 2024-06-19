@@ -1,9 +1,10 @@
-#![allow(clippy::too_many_arguments)]
+use crate::drone_status::{DroneStatus, TravelLocation};
 
-use crate::{drone_status::DroneStatus, incident::Incident};
+use common::incident::Incident;
 
-const MINIMUM_BATTERY_LEVEL: usize = 95;
+const MINIMUM_BATTERY_LEVEL: usize = 20;
 const MAXIMUM_BATTERY_LEVEL: usize = 100;
+
 const BATTERY_UNIT: usize = 1;
 
 #[derive(Debug, Clone)]
@@ -25,8 +26,6 @@ pub struct Drone {
 impl Drone {
     pub fn new(
         id: u8,
-        x_coordinate: f64,
-        y_coordinate: f64,
         x_central: f64,
         y_central: f64,
         x_anchor: f64,
@@ -36,8 +35,8 @@ impl Drone {
     ) -> Self {
         Drone {
             id,
-            x_coordinate,
-            y_coordinate,
+            x_coordinate: x_anchor,
+            y_coordinate: y_anchor,
             status: DroneStatus::Free,
             battery: MAXIMUM_BATTERY_LEVEL,
             x_central,
@@ -52,8 +51,8 @@ impl Drone {
 
     pub fn data(&self) -> String {
         format!(
-            "{};{};{}",
-            self.x_coordinate, self.y_coordinate, self.status
+            "{};{};{};{}",
+            self.x_coordinate, self.y_coordinate, self.status, self.battery
         )
     }
 
@@ -90,7 +89,7 @@ impl Drone {
     }
 
     pub fn travel_to(&mut self, x: f64, y: f64) {
-        let distance = euclidean_distance(self.x_coordinate, self.y_coordinate, x, y);
+        let distance = self.distance_to(x, y);
 
         if distance > self.velocity {
             let angle = (y - self.y_coordinate).atan2(x - self.x_coordinate);
@@ -107,7 +106,6 @@ impl Drone {
 
     pub fn discharge_battery(&mut self) {
         if self.battery > 0 {
-            println!("Discharging battery: {}", self.battery);
             self.battery -= BATTERY_UNIT;
         }
     }
@@ -128,9 +126,9 @@ impl Drone {
         distance < self.active_range
     }
 
-    pub fn battery(&self) -> usize {
-        self.battery
-    }
+    // pub fn battery(&self) -> usize {
+    //     self.battery
+    // }
 
     pub fn status(&self) -> DroneStatus {
         self.status.clone()
@@ -164,7 +162,13 @@ impl Drone {
     }
 
     pub fn incident(&self) -> Option<Incident> {
-        self.current_incident.as_ref().map(|(incident, _)| incident.clone())
+        self.current_incident
+            .as_ref()
+            .map(|(incident, _)| incident.clone())
+    }
+
+    pub fn check_is_travelling_to_incident(&self) -> bool {
+        self.status != DroneStatus::Travelling(TravelLocation::Incident)
     }
 }
 

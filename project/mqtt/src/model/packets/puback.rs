@@ -5,7 +5,7 @@ use crate::{Error, FixedHeader, Read, RemainingLength};
 
 const PACKAGE_IDENTIFIER_LENGTH: usize = 2;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Puback {
     packet_identifier: Option<u16>,
 }
@@ -73,5 +73,25 @@ impl Display for Puback {
             "Puback packet with packet identifier: {}",
             packet_identifier
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_puback_to_bytes() {
+        let puback = Puback::new(Some(42));
+        let expected_bytes: Vec<u8> = vec![0b0100_0000, 0x02, 0x00, 0x2A];
+        assert_eq!(puback.to_bytes(), expected_bytes);
+    }
+
+    #[test]
+    fn test_puback_from_bytes() {
+        let mut stream = std::io::Cursor::new(vec![0x00, 0x2A]);
+        let fixed_header = FixedHeader::new(0x4 << 4, RemainingLength::new(2));
+        let puback = Puback::from_bytes(fixed_header, &mut stream).unwrap();
+        assert_eq!(puback, Puback::new(Some(42)));
     }
 }

@@ -7,4 +7,5 @@ members = [
     "mqtt", 
     "camera-system", 
     "monitor",
+    "common",
 ]

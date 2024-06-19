@@ -1,42 +1,30 @@
+use common::incident::Incident;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Drone {
     pub id: String,
-    pub password: String,
     pub state: String,
-    pub battery: f64,
+    pub battery: usize,
     pub x_coordinate: f64,
     pub y_coordinate: f64,
+    pub incident: Option<Incident>,
 }
 
 impl Drone {
-    // pub fn new(
-    //     id: String,
-    //     password: String,
-    //     state: String,
-    //     battery: f64,
-    //     x_coordinate: f64,
-    //     y_coordinate: f64,
-    // ) -> Self {
-    //     Self {
-    //         id,
-    //         password,
-    //         state,
-    //         battery,
-    //         x_coordinate,
-    //         y_coordinate,
-    //     }
-    // }
-
-    // pub fn build_new_drone_message(&self) -> String {
-    //     format!(
-    //         "{};{};{};{};{};{}",
-    //         self.id,
-    //         self.password,
-    //         self.state,
-    //         self.battery,
-    //         self.x_coordinate,
-    //         self.y_coordinate,
-    //     )
-    // }
+    pub fn new(
+        id: String,
+        state: String, //pasarlo quizas a enum
+        battery: usize,
+        x_coordinate: f64,
+        y_coordinate: f64,
+    ) -> Self {
+        Self {
+            id,
+            state,
+            battery,
+            x_coordinate,
+            y_coordinate,
+            incident: None,
+        }
+    }
 }

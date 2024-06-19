@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde_derive::{Deserialize, Serialize};
 use std::{fs::File, io::Read, path::Path};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -33,14 +33,6 @@ impl Config {
 
     pub fn get_id(&self) -> u8 {
         self.id
-    }
-
-    pub fn get_x_position(&self) -> f64 {
-        self.x_position
-    }
-
-    pub fn get_y_position(&self) -> f64 {
-        self.y_position
     }
 
     pub fn get_x_central_position(&self) -> f64 {
