@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use crate::{camera::Camera, incident::Incident};
+use crate::camera::Camera;
+
+use ::common::incident::Incident;
 
 const SEPARATOR: &str = "|";
 
@@ -32,7 +34,7 @@ impl CameraSystem {
     }
 
     pub fn new_incident(&mut self, incident: Incident) {
-        let incident_id = incident.uuid().to_string();
+        let incident_id = incident.uuid.to_string();
 
         for camera in self.cameras.iter_mut() {
             if camera.is_near(&incident) {

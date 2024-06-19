@@ -5,7 +5,6 @@ use std::env::args;
 mod client;
 mod drone;
 mod drone_status;
-mod incident;
 mod config;
 
 static CLIENT_ARGS: usize = 2;

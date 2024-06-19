@@ -3,6 +3,7 @@ use std::{
     net::TcpStream,
 };
 
+use common::incident::Incident;
 use mqtt::model::{
     components::{
         encoded_string::EncodedString, qos::QoS, topic_filter::TopicFilter,
@@ -13,8 +14,11 @@ use mqtt::model::{
 };
 
 use crate::camera_system::CameraSystem;
-use crate::incident::Incident;
+
+
+
 use crate::{camera::Camera, config::Config};
+
 
 const NEW_INCIDENT: &[u8] = b"new-incident";
 const CLOSE_INCIDENT: &[u8] = b"close-incident";

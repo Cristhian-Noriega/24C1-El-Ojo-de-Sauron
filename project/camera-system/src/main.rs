@@ -6,8 +6,9 @@ mod camera;
 mod camera_status;
 mod camera_system;
 mod client;
-mod incident;
+
 mod config;
+
 
 const CLIENT_ARGS: usize = 2;
 
