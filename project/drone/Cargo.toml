@@ -9,4 +9,5 @@ edition = "2021"
 mqtt ={ path = "../mqtt" }
 common = { path = "../common" }
 serde = "1.0.203"
+serde_derive = "1.0.203"
 serde_json = "1.0.117"
