@@ -1,6 +1,4 @@
-#![allow(clippy::too_many_arguments)]
-
-use crate::drone_status::DroneStatus;
+use crate::drone_status::{DroneStatus, TravelLocation};
 
 use common::incident::Incident;
 
@@ -28,8 +26,6 @@ pub struct Drone {
 impl Drone {
     pub fn new(
         id: u8,
-        x_coordinate: f64,
-        y_coordinate: f64,
         x_central: f64,
         y_central: f64,
         x_anchor: f64,
@@ -39,15 +35,14 @@ impl Drone {
     ) -> Self {
         Drone {
             id,
-            x_coordinate,
-            y_coordinate,
+            x_coordinate: x_anchor,
+            y_coordinate: y_anchor,
             status: DroneStatus::Free,
             battery: MAXIMUM_BATTERY_LEVEL,
             x_central,
             y_central,
             x_anchor,
             y_anchor,
-
             current_incident: None,
             velocity,
             active_range,
@@ -111,7 +106,6 @@ impl Drone {
 
     pub fn discharge_battery(&mut self) {
         if self.battery > 0 {
-            println!("Discharging battery: {}", self.battery);
             self.battery -= BATTERY_UNIT;
         }
     }
@@ -132,9 +126,9 @@ impl Drone {
         distance < self.active_range
     }
 
-    pub fn battery(&self) -> usize {
-        self.battery
-    }
+    // pub fn battery(&self) -> usize {
+    //     self.battery
+    // }
 
     pub fn status(&self) -> DroneStatus {
         self.status.clone()
@@ -171,6 +165,10 @@ impl Drone {
         self.current_incident
             .as_ref()
             .map(|(incident, _)| incident.clone())
+    }
+
+    pub fn check_is_travelling_to_incident(&self) -> bool {
+        self.status != DroneStatus::Travelling(TravelLocation::Incident)
     }
 }
 

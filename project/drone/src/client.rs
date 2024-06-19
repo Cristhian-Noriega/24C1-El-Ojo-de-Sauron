@@ -37,6 +37,8 @@ const TRAVEL_INTERVAL: u64 = 1;
 const BATTERY_DISCHARGE_INTERVAL: u64 = 5;
 const BATTERY_RECHARGE_INTERVAL: u64 = 1;
 
+const DRONE_ATTENDING_DURATION: u64 = 10;
+
 //let server_stream = connect_to_server(address, client_id)?;
 // let server_stream = Arc::new(Mutex::new(server_stream));
 
@@ -50,8 +52,6 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
 
     let drone = Arc::new(Mutex::new(Drone::new(
         config.get_id(),
-        config.get_x_position(),
-        config.get_y_position(),
         config.get_x_central_position(),
         config.get_y_central_position(),
         config.get_x_anchor_position(),
@@ -107,8 +107,6 @@ fn read_incoming_packets(stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<Drone>>
     loop {
         let mut buffer = [0; 1024];
         let mut locked_stream = stream.lock().unwrap();
-
-        println!("Reading incoming packets");
 
         locked_stream.set_nonblocking(true).unwrap();
         match locked_stream.read(&mut buffer) {
@@ -258,18 +256,24 @@ fn handle_new_incident(
         incident.x_coordinate, incident.y_coordinate
     );
 
+    thread::spawn(move || {
+        travel_to_new_incident(drone, server_stream, incident);
+    });
+}
+
+fn travel_to_new_incident(
+    drone: Arc<Mutex<Drone>>,
+    server_stream: Arc<Mutex<TcpStream>>,
+    incident: Incident,
+) {
     let cloned_drone = drone.clone();
 
-    let thread = thread::spawn(move || {
-        travel(
-            cloned_drone,
-            incident.x_coordinate,
-            incident.y_coordinate,
-            TravelLocation::Incident,
-        );
-    });
-
-    thread.join().unwrap();
+    travel(
+        cloned_drone,
+        incident.x_coordinate,
+        incident.y_coordinate,
+        TravelLocation::Incident,
+    );
 
     let mut drone_locked = match drone.lock() {
         Ok(drone) => drone,
@@ -279,34 +283,15 @@ fn handle_new_incident(
         }
     };
 
-    if drone_locked.status() != DroneStatus::Travelling(TravelLocation::Incident) {
-        println!("Drone is not attending the incident");
-
-        let x = drone_locked.x_anchor_coordinate();
-        let y = drone_locked.y_anchor_coordinate();
-        drone_locked.set_incident(None);
-
-        drop(drone_locked);
-
-        travel(drone.clone(), x, y, TravelLocation::Central);
-
-        drone_locked = match drone.lock() {
-            Ok(drone) => drone,
-            Err(_) => {
-                println!("Mutex was poisoned");
-                return;
-            }
-        };
-
-        drone_locked.set_status(DroneStatus::Free);
+    if drone_locked.check_is_travelling_to_incident() {
+        println!("Drone is no longer travelling to the incident location");
         drop(drone_locked);
         return;
     }
 
     println!("Drone arrived to the incident location");
-    drone_locked.set_status(DroneStatus::AttendingIncident);
-    drone_locked.increment_attending_counter();
 
+    drone_locked.set_status(DroneStatus::AttendingIncident);
     drop(drone_locked);
 
     let mut locked_stream = match server_stream.lock() {
@@ -316,19 +301,6 @@ fn handle_new_incident(
             return;
         }
     };
-
-    // let topic_filter = TopicFilter::new(
-    //     vec![
-    //         TopicLevel::Literal(ATTENDING_INCIDENT.to_vec()),
-    //         TopicLevel::Literal(incident.uuid.clone().into_bytes()),
-    //     ],
-    //     false,
-    // );
-
-    // match unsubscribe(topic_filter, &mut locked_stream) {
-    //     Ok(_) => println!("Unsubscribed from the incident topic"),
-    //     Err(e) => eprintln!("Error: {:?}", e),
-    // }
 
     let topic_filter = TopicFilter::new(
         vec![
@@ -352,7 +324,7 @@ fn handle_new_incident(
     );
     let message = b"".to_vec();
 
-    match publish(topic_name, message, &mut locked_stream, QoS::AtLeast) {
+    match publish(topic_name, message, &mut locked_stream, QoS::AtMost) {
         Ok(_) => println!("Drone is attending the incident"),
         Err(_) => println!("Drone is attending the incident. no le llego el puback"),
     }
@@ -365,8 +337,8 @@ fn handle_attending_incident(
     drone: Arc<Mutex<Drone>>,
     server_stream: Arc<Mutex<TcpStream>>,
 ) {
-    // println!("ME LLEGO  UN ATTENDININCIDENT ??????");
-    let drone_locked = match drone.lock() {
+    println!("ME LLEGO  UN ATTENDININCIDENT ??????");
+    let mut drone_locked = match drone.lock() {
         Ok(drone) => drone,
         Err(_) => {
             println!("Mutex was poisoned");
@@ -379,40 +351,54 @@ fn handle_attending_incident(
         return;
     }
 
+    drone_locked.increment_attending_counter();
+    
     println!(
         "A VER CUANTOS DRON COUNT? : {}",
         drone_locked.attending_counter()
     );
+    
+    if drone_locked.attending_counter() < 2 {
+        drop(drone_locked);
+        return;
+    }
+
+    drop(drone_locked);
+
+    let topic_filter = TopicFilter::new(
+        vec![
+            TopicLevel::Literal(ATTENDING_INCIDENT.to_vec()),
+            TopicLevel::Literal(uuid.clone().into_bytes()),
+        ],
+        false,
+    );
+
+    let mut locked_stream = match server_stream.lock() {
+        Ok(stream) => stream,
+        Err(_) => {
+            println!("Mutex was poisoned");
+            return;
+        }
+    };
+
+    match unsubscribe(topic_filter, &mut locked_stream) {
+        Ok(_) => println!("Unsubscribed from the incident topic"),
+        Err(e) => eprintln!("Error: {:?}", e),
+    }
+
+    drop(locked_stream);
+
+    let mut drone_locked = match drone.lock() {
+        Ok(drone) => drone,
+        Err(_) => {
+            println!("Mutex was poisoned");
+            return;
+        }
+    };
 
     if drone_locked.status() == DroneStatus::AttendingIncident {
-        println!("DRONE YA ESTA EN EL INCIDENTE DESDE ATTENDING INCIDENTE PAQUETE");
-        let topic_filter = TopicFilter::new(
-            vec![
-                TopicLevel::Literal(ATTENDING_INCIDENT.to_vec()),
-                TopicLevel::Literal(uuid.clone().into_bytes()),
-            ],
-            false,
-        );
+        drop(drone_locked);
 
-        let mut locked_stream = match server_stream.lock() {
-            Ok(stream) => stream,
-            Err(_) => {
-                println!("Mutex was poisoned");
-                return;
-            }
-        };
-
-        match unsubscribe(topic_filter, &mut locked_stream) {
-            Ok(_) => println!("Unsubscribed from the attending incident topic"),
-            Err(e) => eprintln!("Error: {:?}", e),
-        };
-
-        drop(locked_stream);
-    }
-    if drone_locked.attending_counter() == 1 {
-        //drone_locked.increment_attending_counter();
-        println!("TWO DRONES ATTENDING THE INCIDENT");
-        //let drone_cloned = drone.clone();
         let server_stream_clone = server_stream.clone();
         let uuid_clone = uuid.clone();
 
@@ -421,37 +407,37 @@ fn handle_attending_incident(
         });
 
         thread.join().unwrap();
-
-        // println!("DESPUES DE RESOLVER EL INCIDENTE EN EL THREAD");
-        // let topic_filter = TopicFilter::new(
-        //     vec![
-        //         TopicLevel::Literal(ATTENDING_INCIDENT.to_vec()),
-        //         TopicLevel::Literal(uuid.into_bytes()),
-        //     ],
-        //     false,
-        // );
-
-        // let mut locked_stream = match server_stream.lock() {
-        //     Ok(stream) => stream,
-        //     Err(_) => {
-        //         println!("Mutex was poisoned");
-        //         return;
-        //     }
-        // };
-
-        // match unsubscribe(topic_filter, &mut locked_stream) {
-        //     Ok(_) => println!("Unsubscribed from the attending incident topic"),
-        //     Err(e) => eprintln!("Error: {:?}", e),
-        // }
-
-        // drop(locked_stream);
+        return;
     }
+
+    let x = drone_locked.x_anchor_coordinate();
+    let y = drone_locked.y_anchor_coordinate();
+    drone_locked.set_incident(None);
+
+    drop(drone_locked);
+
+    travel(drone.clone(), x, y, TravelLocation::Anchor);
+
+    drone_locked = match drone.lock() {
+        Ok(drone) => drone,
+        Err(_) => {
+            println!("Mutex was poisoned");
+            return;
+        }
+    };
+
+    drone_locked.set_status(DroneStatus::Free);
     drop(drone_locked);
 }
 
 fn simulate_incident_resolution(uuid: String, server_stream: Arc<Mutex<TcpStream>>) {
-    let duration_incident = Duration::from_secs(10);
+    let duration_incident = Duration::from_secs(DRONE_ATTENDING_DURATION);
+    
+    println!("Incident will be resolved in {} seconds", DRONE_ATTENDING_DURATION);
+
     thread::sleep(duration_incident);
+
+    println!("Incident resolved");
 
     let topic_name = TopicName::new(
         vec![
@@ -461,6 +447,7 @@ fn simulate_incident_resolution(uuid: String, server_stream: Arc<Mutex<TcpStream
         false,
     );
     let message = b"".to_vec();
+
     let mut locked_stream = match server_stream.lock() {
         Ok(stream) => stream,
         Err(_) => {
@@ -468,10 +455,15 @@ fn simulate_incident_resolution(uuid: String, server_stream: Arc<Mutex<TcpStream
             return;
         }
     };
+
+    println!("Publishing incident resolution");
+
     match publish(topic_name, message, &mut locked_stream, QoS::AtLeast) {
         Ok(_) => println!("Incident has been resolved"),
         Err(e) => eprintln!("Error: {:?}", e),
     }
+
+    drop(locked_stream);
 }
 
 fn handle_close_incident(
@@ -507,14 +499,26 @@ fn handle_close_incident(
 
     drop(locked_drone);
 
-    let close_topic = format!("close-incident/{}", current_incident.uuid);
     let topic_filter = TopicFilter::new(
-        vec![TopicLevel::Literal(close_topic.as_bytes().to_vec())],
+        vec![
+            TopicLevel::Literal(CLOSE_INCIDENT.to_vec()),
+            TopicLevel::Literal(current_incident.uuid.clone().into_bytes()),
+        ],
         false,
     );
 
-    let mut stream = server_stream.lock().unwrap();
-    unsubscribe(topic_filter, &mut stream).unwrap();
+    let mut stream = match server_stream.lock() {
+        Ok(stream) => stream,
+        Err(_) => {
+            println!("Mutex was poisoned");
+            return;
+        }
+    };
+
+    match unsubscribe(topic_filter, &mut stream) {
+        Ok(_) => println!("Unsubscribed from the close incident topic"),
+        Err(e) => eprintln!("Error: {:?}", e),
+    }
 
     drop(stream);
 
@@ -564,7 +568,7 @@ fn update_drone_status(server_stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<Dr
         };
 
         match publish(topic_name, message, &mut stream, QoS::AtMost) {
-            Ok(_) => println!("Drone data updated"),
+            Ok(_) => {},
             Err(e) => eprintln!("Error: {:?}", e),
         }
 
@@ -712,7 +716,6 @@ fn travel(drone: Arc<Mutex<Drone>>, x: f64, y: f64, travel_location: TravelLocat
         };
         let distance = locked_drone.distance_to(x, y);
         let status = locked_drone.status();
-        println!("Distance to destination: {}", distance);
 
         if distance == 0.0 || status != DroneStatus::Travelling(travel_location) {
             drop(locked_drone);
@@ -736,7 +739,6 @@ fn discharge_battery(drone: Arc<Mutex<Drone>>) {
         };
 
         locked_drone.discharge_battery();
-        println!("Drone battery level: {}", locked_drone.battery());
         drop(locked_drone);
 
         thread::sleep(Duration::from_secs(BATTERY_DISCHARGE_INTERVAL));
@@ -745,7 +747,6 @@ fn discharge_battery(drone: Arc<Mutex<Drone>>) {
 
 fn recharge_battery(drone: Arc<Mutex<Drone>>) {
     loop {
-        println!("Checking battery level");
         let locked_drone = match drone.lock() {
             Ok(drone) => drone,
             Err(_) => {
@@ -753,17 +754,15 @@ fn recharge_battery(drone: Arc<Mutex<Drone>>) {
                 return;
             }
         };
-        println!("Obtained lock");
 
         if !locked_drone.is_below_minimun() || locked_drone.status() != DroneStatus::Free {
-            println!("Drone still has battery or is not free");
             drop(locked_drone);
             thread::sleep(Duration::from_secs(CHECK_BATTERY_INTERVAL));
             continue;
         }
 
         // RECHARGE BATTERY
-        println!("RECHARGE BATTERY POR FAVOR");
+        println!("Drone needs to recharge battery");
 
         let x = locked_drone.x_central_coordinate();
         let y = locked_drone.y_central_coordinate();
@@ -779,7 +778,7 @@ fn recharge_battery(drone: Arc<Mutex<Drone>>) {
             }
         };
 
-        println!("Drone rechargin battata");
+        println!("Drone recharge battery");
 
         locked_drone.set_status(DroneStatus::Recharging);
         drop(locked_drone);

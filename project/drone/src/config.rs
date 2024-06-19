@@ -35,14 +35,6 @@ impl Config {
         self.id
     }
 
-    pub fn get_x_position(&self) -> f64 {
-        self.x_position
-    }
-
-    pub fn get_y_position(&self) -> f64 {
-        self.y_position
-    }
-
     pub fn get_x_central_position(&self) -> f64 {
         self.x_central_position
     }
