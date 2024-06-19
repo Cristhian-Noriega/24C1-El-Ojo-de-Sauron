@@ -18,18 +18,21 @@ use mqtt::model::{
 use crate::{
     camera::Camera,
     channels_tasks::{DroneRegistration, IncidentRegistration, MonitorAction, UIAction},
+    config::Config,
     drone::Drone,
     monitor::Monitor,
     ui_application::UIApplication,
 };
 
-
-pub fn client_run(address: String) -> Result<(), String> {
+pub fn client_run(config: Config) -> Result<(), String> {
     // Create the channels to communicate between the monitor and the UI
     let (monitor_sender, monitor_receiver) = channel();
     let (ui_sender, ui_receiver) = channel();
 
     // Connect to the server
+
+    let address = config.get_address();
+
     let mut stream = match connect_to_server(address) {
         Ok(stream) => stream,
         Err(e) => {
@@ -64,8 +67,7 @@ pub fn client_run(address: String) -> Result<(), String> {
     Ok(())
 }
 
-
-fn connect_to_server(address: String) -> std::io::Result<TcpStream> {
+fn connect_to_server(address: &str) -> std::io::Result<TcpStream> {
     println!("\nConnecting to address: {:?}", address);
     let mut to_server_stream = TcpStream::connect(address)?;
 
@@ -90,19 +92,6 @@ fn connect_to_server(address: String) -> std::io::Result<TcpStream> {
     }
 }
 
-// static CLIENT_ARGS: usize = 2;
-
-// impl Client {
-//     pub fn new(sender: Sender<String>) -> Self {
-//         let argv = env::args().collect::<Vec<String>>();
-//         if argv.len() != CLIENT_ARGS {
-//             let app_name = &argv[0];
-//             println!("Usage:\n{:?} <toml file>", app_name);main
-//         }
-//         _ => Err(std::io::Error::new(ErrorKind::Other, "No connack recibed")),
-//     }
-// }
-
 fn start_ui(
     ui_sender: Sender<UIAction>,
     from_monitor_receiver: Receiver<MonitorAction>,
@@ -111,18 +100,6 @@ fn start_ui(
         viewport: egui::ViewportBuilder::default(),
         ..Default::default()
     };
-        // let path = Path::new(&argv[1]);
-
-        // let config = match Config::from_file(path) {
-        //     Ok(config) => config,
-        //     Err(e) => {
-        //         println!("Error reading the configuration file: {:?}", e);
-        //         std::process::exit(1);
-        //     }
-        // };
-
-        // let address = config.get_address().to_owned();
-
 
     eframe::run_native(
         "Monitor",

@@ -26,7 +26,6 @@ pub struct Drone {
 }
 
 impl Drone {
-
     pub fn new(
         id: u8,
         x_coordinate: f64,
@@ -95,7 +94,7 @@ impl Drone {
     }
 
     pub fn travel_to(&mut self, x: f64, y: f64) {
-        let distance = euclidean_distance(self.x_coordinate, self.y_coordinate, x, y);
+        let distance = self.distance_to(x, y);
 
         if distance > self.velocity {
             let angle = (y - self.y_coordinate).atan2(x - self.x_coordinate);

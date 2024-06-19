@@ -37,10 +37,10 @@ const TRAVEL_INTERVAL: u64 = 1;
 const BATTERY_DISCHARGE_INTERVAL: u64 = 5;
 const BATTERY_RECHARGE_INTERVAL: u64 = 1;
 
-    //let server_stream = connect_to_server(address, client_id)?;
-   // let server_stream = Arc::new(Mutex::new(server_stream));
+//let server_stream = connect_to_server(address, client_id)?;
+// let server_stream = Arc::new(Mutex::new(server_stream));
 
-   // let drone = Arc::new(Mutex::new(Drone::new(client_id.to_string())));
+// let drone = Arc::new(Mutex::new(Drone::new(client_id.to_string())));
 
 pub fn client_run(config: Config) -> std::io::Result<()> {
     let address = config.get_address().to_owned();
@@ -59,7 +59,6 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
         config.get_velocity(),
         config.get_active_range(),
     )));
-
 
     let new_incident = TopicFilter::new(vec![TopicLevel::Literal(NEW_INCIDENT.to_vec())], false);
 
@@ -366,8 +365,7 @@ fn handle_attending_incident(
     drone: Arc<Mutex<Drone>>,
     server_stream: Arc<Mutex<TcpStream>>,
 ) {
-    println!("ME LLEGO  UN ATTENDININCIDENT ??????");
-
+    // println!("ME LLEGO  UN ATTENDININCIDENT ??????");
     let drone_locked = match drone.lock() {
         Ok(drone) => drone,
         Err(_) => {
@@ -423,7 +421,7 @@ fn handle_attending_incident(
         });
 
         thread.join().unwrap();
-        
+
         // println!("DESPUES DE RESOLVER EL INCIDENTE EN EL THREAD");
         // let topic_filter = TopicFilter::new(
         //     vec![

@@ -52,86 +52,6 @@ impl UIApplication {
         sender: Sender<UIAction>,
         receiver: Receiver<MonitorAction>,
     ) -> Self {
-        // let drone_1 = Drone {
-        //     id: "1".to_string(),
-        //     x_coordinate: -58.3717,
-        //     y_coordinate: -34.6081,
-        //     state: "Free".to_string(),
-        //     battery: 100,
-        // };
-
-        // let drone_2 = Drone {
-        //     id: "2".to_string(),
-        //     x_coordinate: -58.3021,
-        //     y_coordinate: -34.6081,
-        //     state: "Attending Incident".to_string(),
-        //     battery: 100,
-        // };
-
-        // let drone_3 = Drone {
-        //     id: "3".to_string(),
-        //     x_coordinate: -58.3717,
-        //     y_coordinate: -34.6017,
-        //     state: "Travelling".to_string(),
-        //     battery: 100,
-        // };
-
-        // let drone_4 = Drone {
-        //     id: "4".to_string(),
-        //     x_coordinate: -58.3727,
-        //     y_coordinate: -34.6041,
-        //     state: "Charging".to_string(),
-        //     battery: 100,
-        // };
-
-        // let incident_1 = Incident {
-        //     uuid: "1".to_string(),
-        //     name: "Incident 1".to_string(),
-        //     description: "Incident 1 description".to_string(),
-        //     x_coordinate: -58.3707,
-        //     y_coordinate: -34.6181,
-        //     state: "Active".to_string(),
-        // };
-
-        // let incident_2 = Incident {
-        //     uuid: "2".to_string(),
-        //     name: "Incident 2".to_string(),
-        //     description: "Incident 2 description".to_string(),
-        //     x_coordinate: -58.3317,
-        //     y_coordinate: -34.6181,
-        //     state: "Active".to_string(),
-        // };
-
-        // let incident_3 = Incident {
-        //     uuid: "3".to_string(),
-        //     name: "Incident 3".to_string(),
-        //     description: "Incident 3 description".to_string(),
-        //     x_coordinate: -58.0495,
-        //     y_coordinate: -34.6000,
-        //     state: "Active".to_string(),
-        // };
-
-        // let camera_1 = Camera {
-        //     id: "1".to_string(),
-        //     x_coordinate: -58.3517,
-        //     y_coordinate: -45.6281,
-        //     state: "Active".to_string(),
-        // };
-
-        // let camera_2 = Camera {
-        //     id: "2".to_string(),
-        //     x_coordinate: -58.3617,
-        //     y_coordinate: -34.6018,
-        //     state: "Active".to_string(),
-        // };
-
-        // let camera_3 = Camera {
-        //     id: "3".to_string(),
-        //     x_coordinate: -58.3457,
-        //     y_coordinate: -34.6091,
-        //     state: "Active".to_string(),
-        // };
-
         Self {
             new_incident_registration: IncidentRegistration {
                 name: String::new(),
@@ -152,9 +72,6 @@ impl UIApplication {
 
             sender,
             receiver,
-            // drones: vec![drone_1, drone_2, drone_3, drone_4],
-            // incidents: vec![incident_1, incident_2, incident_3],
-            // cameras: vec![camera_1, camera_2, camera_3],
             drones: vec![],
             incidents: vec![],
             cameras: vec![],
@@ -204,8 +121,8 @@ fn display_incident_map(
     map_memory: &mut MapMemory,
 ) {
     let position = Position::from_lon_lat(DEFAULT_LONGITUDE, DEFAULT_LONGITUD);
-    //let map = Map::new(Some(tiles), map_memory, position);
-    //ui.add(map);
+    // let map = Map::new(Some(tiles), map_memory, position);
+    // ui.add(map);
 
     //let center_position = Position::from_lon_lat(-58.3717, -34.6081);
 

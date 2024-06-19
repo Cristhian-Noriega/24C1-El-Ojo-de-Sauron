@@ -1,6 +1,6 @@
 use error::Error;
-use std::path::Path;
 use std::env;
+use std::path::Path;
 
 mod client;
 mod config;
