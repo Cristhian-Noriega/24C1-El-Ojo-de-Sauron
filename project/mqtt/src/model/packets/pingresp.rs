@@ -1,6 +1,7 @@
 use super::{PINGRESP_PACKET_TYPE, RESERVED_FIXED_HEADER_FLAGS};
 use crate::{Error, FixedHeader, RemainingLength};
 
+/// Representa un paquete PINGRESP de MQTT. El servidor responde la solicitud de PING del cliente.
 #[derive(Debug, Default, PartialEq)]
 pub struct Pingresp;
 
@@ -9,6 +10,7 @@ impl Pingresp {
         Self
     }
 
+    /// Convierte un stream de bytes en un Pingresp.
     pub fn from_bytes(fixed_header: FixedHeader) -> Result<Self, Error> {
         // Fixed Header
         let fixed_header_flags = fixed_header.first_byte() & 0b0000_1111;
@@ -20,6 +22,7 @@ impl Pingresp {
         Ok(Pingresp::new())
     }
 
+    /// Convierte el Pingresp en un vector de bytes.
     pub fn to_bytes(&self) -> Vec<u8> {
         // Fixed Header
         let mut packet_bytes = vec![PINGRESP_PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS];

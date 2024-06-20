@@ -5,6 +5,7 @@ use crate::Error;
 const MULTI_LEVEL_WILDCARD: u8 = 0x23;
 const SINGLE_LEVEL_WILDCARD: u8 = 0x2B;
 
+/// Parte de un TopicFilter, indica si el topico contiene algún comodín.
 #[derive(Debug, PartialEq, Clone)]
 pub enum TopicLevel {
     Literal(Vec<u8>),
@@ -13,6 +14,7 @@ pub enum TopicLevel {
 }
 
 impl TopicLevel {
+    /// Convierte un vector de bytes en un TopicLevel.
     pub fn from_bytes(bytes: Vec<u8>) -> Result<TopicLevel, Error> {
         if bytes.len() == 1 {
             return match bytes.first() {
@@ -37,6 +39,7 @@ impl TopicLevel {
         Ok(TopicLevel::Literal(bytes))
     }
 
+    /// Convierte un TopicLevel en un vector de bytes.
     pub fn to_bytes(&self) -> Vec<u8> {
         match self {
             TopicLevel::Literal(bytes) => bytes.to_vec(),
@@ -45,6 +48,7 @@ impl TopicLevel {
         }
     }
 
+    /// Devuelve el largo del TopicLevel.
     pub fn length(&self) -> usize {
         match self {
             TopicLevel::Literal(bytes) => bytes.len(),

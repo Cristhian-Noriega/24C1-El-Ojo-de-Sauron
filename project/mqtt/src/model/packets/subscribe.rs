@@ -1,6 +1,7 @@
 use super::{DEFAULT_VARIABLE_HEADER_LENGTH, RESERVED_FIXED_HEADER_FLAGS, SUBSCRIBE_PACKET_TYPE};
 use crate::{Error, FixedHeader, QoS, Read, RemainingLength, TopicFilter};
 
+/// Representa un paquete SUBSCRIBE de MQTT. El cliente lo utiliza para suscribirse a uno o más tópicos.
 #[derive(Debug)]
 pub struct Subscribe {
     packet_identifier: u16,
@@ -15,6 +16,7 @@ impl Subscribe {
         }
     }
 
+    /// Convierte un stream de bytes en un Subscribe.
     pub fn from_bytes(fixed_header: FixedHeader, stream: &mut dyn Read) -> Result<Self, Error> {
         // Fixed Header
         let fixed_header_flags = fixed_header.first_byte() & 0b0000_1111;
@@ -55,6 +57,7 @@ impl Subscribe {
         })
     }
 
+    /// Convierte el Subscribe en un vector de bytes.
     pub fn to_bytes(&self) -> Vec<u8> {
         // Variable Header
         let mut variable_header_bytes = vec![];
@@ -87,10 +90,12 @@ impl Subscribe {
         packet_bytes
     }
 
+    /// Devuelve el identificador del paquete.
     pub fn packet_identifier(&self) -> u16 {
         self.packet_identifier
     }
 
+    /// Devuelve los tópicos a los que se suscribe el cliente.
     pub fn topics(&self) -> Vec<(TopicFilter, QoS)> {
         self.topics.clone()
     }

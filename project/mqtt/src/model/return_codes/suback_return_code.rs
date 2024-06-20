@@ -1,5 +1,6 @@
 use crate::Error;
 
+/// Representa los distintos códigos de retorno de un Suback en MQTT.
 #[derive(PartialEq, Debug)]
 pub enum SubackReturnCode {
     SuccessMaximumQoS0,
@@ -9,6 +10,7 @@ pub enum SubackReturnCode {
 }
 
 impl SubackReturnCode {
+    /// Convierte el código de retorno de un Suback en un byte.
     pub fn to_byte(&self) -> u8 {
         match self {
             SubackReturnCode::SuccessMaximumQoS0 => 0x00,
@@ -18,6 +20,7 @@ impl SubackReturnCode {
         }
     }
 
+    /// Convierte un byte en un código de retorno de un Suback.
     pub fn from_byte(byte: u8) -> Result<Self, Error> {
         match byte {
             0x00 => Ok(SubackReturnCode::SuccessMaximumQoS0),

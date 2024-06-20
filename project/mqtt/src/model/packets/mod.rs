@@ -1,13 +1,24 @@
+/// CONNACK
 pub mod connack;
+/// CONNECT
 pub mod connect;
+/// DISCONNECT
 pub mod disconnect;
+/// PINGREQ
 pub mod pingreq;
+/// PINGRESP
 pub mod pingresp;
+/// PUBACK
 pub mod puback;
+/// PUBLISH
 pub mod publish;
+/// SUBACK
 pub mod suback;
+/// SUBSCRIBE
 pub mod subscribe;
+/// UNSUBACK
 pub mod unsuback;
+/// UNSUBSCRIBE
 pub mod unsubscribe;
 
 pub const CONNECT_PACKET_TYPE: u8 = 0x1;

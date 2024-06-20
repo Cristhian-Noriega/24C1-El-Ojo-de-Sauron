@@ -1,6 +1,7 @@
 use super::{DEFAULT_VARIABLE_HEADER_LENGTH, RESERVED_FIXED_HEADER_FLAGS, UNSUBSCRIBE_PACKET_TYPE};
 use crate::{Error, FixedHeader, Read, RemainingLength, TopicFilter};
 
+/// Representa un paquete UNSUBSCRIBE de MQTT. El cliente lo utiliza para cancelar una suscripción a uno o más tópicos.
 #[derive(Debug)]
 pub struct Unsubscribe {
     // Variable Header
@@ -17,6 +18,7 @@ impl Unsubscribe {
         }
     }
 
+    /// Convierte un stream de bytes en un Unsubscribe.
     pub fn from_bytes(fixed_header: FixedHeader, stream: &mut dyn Read) -> Result<Self, Error> {
         // Fixed Header
         let fixed_header_flags = fixed_header.first_byte() & 0b0000_1111;
@@ -53,6 +55,7 @@ impl Unsubscribe {
         })
     }
 
+    /// Convierte el Unsubscribe en un vector de bytes.
     pub fn to_bytes(&self) -> Vec<u8> {
         // Variable Header
         let mut variable_header_bytes = vec![];
@@ -85,10 +88,12 @@ impl Unsubscribe {
         packet_bytes
     }
 
+    /// Devuelve el identificador del paquete.
     pub fn packet_identifier(&self) -> u16 {
         self.packet_identifier
     }
 
+    /// Devuelve los tópicos a los que se quiere cancelar la suscripción.
     pub fn topics(&self) -> &Vec<TopicFilter> {
         &self.topics
     }

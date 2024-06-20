@@ -1,3 +1,9 @@
+//! Esta librería implementa el protocolo MQTT versión 3.1.1.
+//!
+//! Su principal objetivo es proveer una interfaz para la creación y manipulación de paquetes MQTT.
+//! 
+//! Utilizando from_bytes y to_bytes se pueden convertir los paquetes a y desde bytes, respectivamente.
+
 use {
     errors::error::Error,
     model::{
@@ -18,7 +24,10 @@ use {
     std::io::Read,
 };
 
+/// manejo de errores
 pub mod errors;
+
+/// modelo de mqtt
 pub mod model;
 
 const PROTOCOL_NAME: [u8; 4] = [b'M', b'Q', b'T', b'T'];

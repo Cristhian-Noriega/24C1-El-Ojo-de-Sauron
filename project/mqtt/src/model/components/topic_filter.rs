@@ -3,6 +3,7 @@ use std::fmt::{self, Display, Formatter};
 use super::{FORWARD_SLASH, SERVER_RESERVED};
 use crate::{EncodedString, Error, Read, TopicLevel, TopicName};
 
+/// Una expresión contenida en un SUBSCRIBE, para indicar un interés en uno o más temas. Un filtro de tema puede incluir comodines.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TopicFilter {
     levels: Vec<TopicLevel>,
@@ -17,6 +18,7 @@ impl TopicFilter {
         }
     }
 
+    /// Convierte un stream de bytes en un TopicFilter.
     pub fn from_bytes(stream: &mut dyn Read) -> Result<Self, Error> {
         let encoded_string_topic_filter = EncodedString::from_bytes(stream)?;
         let bytes = encoded_string_topic_filter.content();
@@ -54,6 +56,7 @@ impl TopicFilter {
         })
     }
 
+    /// Convierte el TopicFilter en un vector de bytes.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut topic_bytes = vec![];
 
@@ -68,6 +71,7 @@ impl TopicFilter {
         EncodedString::new(topic_bytes).to_bytes()
     }
 
+    /// Devuelve si el filtro de topic coincide con un nombre de topic.
     pub fn match_topic_name(&self, topic_name: TopicName) -> bool {
         if self.server_reserved != topic_name.server_reserved() {
             return false;
@@ -94,14 +98,17 @@ impl TopicFilter {
         filter_levels.len() == name_levels.len()
     }
 
+    /// Devuelve la longitud del filtro de topic en bytes.
     pub fn length(&self) -> usize {
         self.to_bytes().len()
     }
 
+    /// Devuelve los niveles del filtro de topic.
     pub fn levels(&self) -> &Vec<TopicLevel> {
         &self.levels
     }
 
+    /// Devuelve si el filtro de topic es reservado por el servidor.
     pub fn server_reserved(&self) -> bool {
         self.server_reserved
     }

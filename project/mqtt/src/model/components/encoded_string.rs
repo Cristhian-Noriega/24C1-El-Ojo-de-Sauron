@@ -4,6 +4,7 @@ use crate::{Error, Read};
 
 const LENGTH_SIZE: usize = 2;
 
+/// Representa un string codificado. Contiene el largo del string y el contenido en un vector de bytes.
 #[derive(Debug, PartialEq)]
 pub struct EncodedString {
     length: u16,
@@ -18,6 +19,7 @@ impl EncodedString {
         }
     }
 
+    /// Convierte un stream de bytes en un EncodedString.
     pub fn from_bytes(stream: &mut dyn Read) -> Result<Self, Error> {
         let mut length_buffer = [0; LENGTH_SIZE];
         stream.read_exact(&mut length_buffer)?;
@@ -30,6 +32,7 @@ impl EncodedString {
         Ok(Self { length, content })
     }
 
+    /// Convierte un string en un EncodedString.
     pub fn from_string(string: &String) -> Self {
         let length = string.len() as u16;
         let content = string.as_bytes().to_vec();
@@ -37,6 +40,7 @@ impl EncodedString {
         Self { length, content }
     }
 
+    /// Convierte el EncodedString en un vector de bytes.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = vec![];
         bytes.extend(&self.length.to_be_bytes());
@@ -45,10 +49,12 @@ impl EncodedString {
         bytes
     }
 
+    /// Devuelve el largo del EncodedString.
     pub fn length(&self) -> usize {
         LENGTH_SIZE + self.length as usize
     }
 
+    /// Devuelve el contenido del EncodedString.
     pub fn content(&self) -> &Vec<u8> {
         &self.content
     }
