@@ -1,8 +1,8 @@
-/// componentes de los packets
+/// packet shared components
 pub mod components;
-/// packet generico
+/// generic packet
 pub mod packet;
-/// implementacion de los packets
+/// packet types
 pub mod packets;
-/// codigos de retorno
+/// packet return codes
 pub mod return_codes;

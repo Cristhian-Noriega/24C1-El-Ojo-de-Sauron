@@ -3,7 +3,7 @@ use std::fmt::{Display, Formatter};
 use super::{CONNACK_PACKET_TYPE, DEFAULT_VARIABLE_HEADER_LENGTH, RESERVED_FIXED_HEADER_FLAGS};
 use crate::{ConnectReturnCode, Error, FixedHeader, Read, RemainingLength};
 
-/// Representa un paquete CONNECT de MQTT que se utiliza para aceptar una conexión proveniente de un cliente.
+/// Represents a CONNECT packet of MQTT that is used to accept a connection from a client.
 #[derive(Debug)]
 pub struct Connack {
     // Variable Header Fields
@@ -21,7 +21,7 @@ impl Connack {
         }
     }
 
-    /// Convierte un stream de bytes en un Connack.
+    /// Converts a stream of bytes into a Connack.
     pub fn from_bytes(fixed_header: FixedHeader, stream: &mut dyn Read) -> Result<Self, Error> {
         // Fixed Header
         let fixed_header_flags = fixed_header.first_byte() & 0b0000_1111;
@@ -43,7 +43,7 @@ impl Connack {
         Ok(Connack::new(session_present, connect_return_code))
     }
 
-    /// Convierte el Connack en un vector de bytes.
+    /// Converts the Connack into a vector of bytes.
     pub fn to_bytes(&self) -> Vec<u8> {
         // Variable Header
         let mut variable_header_bytes = vec![];
@@ -72,12 +72,12 @@ impl Connack {
         packet_bytes
     }
 
-    /// Devuelve si la sesión está presente.
+    /// Returns if the session is present.
     pub fn session_present(&self) -> bool {
         self.session_present
     }
 
-    /// Devuelve el código de retorno de conexión.
+    /// Returns the connection return code.
     pub fn connect_return_code(&self) -> &ConnectReturnCode {
         &self.connect_return_code
     }

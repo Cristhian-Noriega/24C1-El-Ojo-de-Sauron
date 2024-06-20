@@ -2,7 +2,7 @@ use super::{FORWARD_SLASH, SERVER_RESERVED};
 use crate::{EncodedString, Error, Read, TopicLevel};
 use std::fmt;
 
-/// Representa el nombre de un tópico en MQTT.
+/// Represents the name of a topic in MQTT.
 #[derive(Debug, PartialEq, Clone, Eq, Hash)]
 pub struct TopicName {
     levels: Vec<Vec<u8>>,
@@ -17,7 +17,7 @@ impl TopicName {
         }
     }
 
-    /// Convierte un stream de bytes en un TopicName.
+    /// Converts a stream of bytes into a TopicName.
     pub fn from_bytes(stream: &mut dyn Read) -> Result<Self, Error> {
         let encoded_string_topic_name = EncodedString::from_bytes(stream)?;
         let bytes = encoded_string_topic_name.content();
@@ -48,7 +48,7 @@ impl TopicName {
         })
     }
 
-    /// Convierte el TopicName en un vector de bytes.
+    /// Converts the TopicName into a vector of bytes.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut topic_bytes = vec![];
 
@@ -63,17 +63,17 @@ impl TopicName {
         EncodedString::new(topic_bytes).to_bytes()
     }
 
-    /// Devuelve los niveles del tópico.
+    /// Returns the levels of the topic.
     pub fn levels(&self) -> &Vec<Vec<u8>> {
         &self.levels
     }
 
-    /// Devuelve el largo del tópico.
+    /// Returns the length of the topic.
     pub fn length(&self) -> usize {
         self.to_bytes().len()
     }
 
-    /// Devuelve si el tópico es reservado por el servidor.
+    /// Returns whether the topic is reserved by the server.
     pub fn server_reserved(&self) -> bool {
         self.server_reserved
     }

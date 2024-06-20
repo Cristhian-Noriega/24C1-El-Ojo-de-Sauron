@@ -1,4 +1,4 @@
-/// codigos de retorno de un CONNECT
+/// CONNECT Return Codes
 pub mod connect_return_code;
-/// codigos de retorno de un SUBACK
+/// SUBACK Return Codes
 pub mod suback_return_code;

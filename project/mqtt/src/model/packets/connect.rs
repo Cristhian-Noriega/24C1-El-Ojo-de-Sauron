@@ -4,7 +4,7 @@ use crate::{
     PROTOCOL_NAME,
 };
 
-/// Representa un paquete CONNECT de MQTT que se utiliza para inicializar una conexión con el servidor.
+/// Represents a MQTT CONNECT packet used to initialize a connection with the server.
 #[derive(Debug)]
 pub struct Connect {
     // Variable Header Fields
@@ -35,7 +35,7 @@ impl Connect {
         }
     }
 
-    /// Convierte un stream de bytes en un Connect.
+    /// Converts a stream of bytes into a Connect.
     pub fn from_bytes(fixed_header: FixedHeader, stream: &mut dyn Read) -> Result<Self, Error> {
         // Fixed Header
         let fixed_header_flags = fixed_header.first_byte() & 0b0000_1111;
@@ -123,7 +123,7 @@ impl Connect {
         ))
     }
 
-    /// Convierte el Connect en un vector de bytes.
+    /// Converts the Connect into a vector of bytes.
     pub fn to_bytes(&self) -> Vec<u8> {
         // Payload
         let mut payload_bytes = vec![];
@@ -184,27 +184,27 @@ impl Connect {
         packet_bytes
     }
 
-    /// Devuelve si la sesión es limpia.
+    /// Returns if the session is clean.
     pub fn clean_session(&self) -> bool {
         self.clean_session
     }
 
-    /// Devuelve el keep alive del Connect.
+    /// Returns the keep alive of the Connect.
     pub fn keep_alive(&self) -> u16 {
         self.keep_alive
     }
 
-    /// Devuelve el client id del Connect.
+    /// Returns the client id of the Connect.
     pub fn client_id(&self) -> &EncodedString {
         &self.client_id
     }
 
-    /// Devuelve una referencia al Will del Connect.
+    /// Returns a reference to the Connect's Will.
     pub fn will(&self) -> Option<&Will> {
         self.will.as_ref()
     }
 
-    /// Devuelve una referencia al Login del Connect.
+    /// Returns a reference to the Connect's Login.
     pub fn login(&self) -> Option<&Login> {
         self.login.as_ref()
     }

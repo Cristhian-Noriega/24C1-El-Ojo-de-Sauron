@@ -7,7 +7,7 @@ use crate::{
 
 use super::packets::*;
 
-/// Un paquete de informacion que es enviado a traves de la red. MQTT tiene catorce tipos de paquetes.
+/// A packet of information that is sent over the network. MQTT has fourteen types of packets.
 #[derive(Debug)]
 pub enum Packet {
     Connect(Connect),
@@ -24,7 +24,7 @@ pub enum Packet {
 }
 
 impl Packet {
-    /// Convierte un stream de bytes en un paquete MQTT.
+    /// Converts a byte stream into an MQTT packet.
     pub fn from_bytes(stream: &mut dyn Read) -> Result<Self, Error> {
         let fixed_header = FixedHeader::from_bytes(stream)?;
 
@@ -101,7 +101,7 @@ impl Packet {
         Ok(packet)
     }
 
-    /// Convierte el paquete MQTT en un vector de bytes.
+    /// Converts the MQTT packet into a byte vector.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut packet_bytes = vec![];
 

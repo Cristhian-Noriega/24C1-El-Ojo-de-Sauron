@@ -1,18 +1,18 @@
 use crate::Error;
 
-/// Representa los distintos niveles de calidad de servicio (QoS) en MQTT.
+/// Represents the different levels of quality of service (QoS) in MQTT.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone)]
 pub enum QoS {
-    /// Los mensajes se entregan a lo sumo una vez.
+    /// Messages are delivered at most once.
     AtMost,
-    /// Los mensajes se entregan al menos una vez.
+    /// Messages are delivered at least once.
     AtLeast,
-    /// Los mensajes se entregan exactamente una vez.
+    /// Messages are delivered exactly once.
     Exactly,
 }
 
 impl QoS {
-    /// Convierte el QoS en un byte.
+    /// Converts the QoS to a byte.
     pub fn to_byte(&self) -> u8 {
         match self {
             QoS::AtMost => 0x00,
@@ -21,7 +21,7 @@ impl QoS {
         }
     }
 
-    /// Convierte un byte en un QoS.
+    /// Converts a byte into a QoS.
     pub fn from_byte(byte: u8) -> Result<Self, Error> {
         match byte {
             0x00 => Ok(QoS::AtMost),

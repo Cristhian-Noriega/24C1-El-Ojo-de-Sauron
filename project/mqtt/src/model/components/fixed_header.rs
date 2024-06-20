@@ -1,6 +1,6 @@
 use crate::{Error, Read, RemainingLength};
 
-/// Representa el fixed header de un paquete MQTT.
+/// Represents the fixed header of an MQTT packet.
 pub struct FixedHeader {
     first_byte: u8,
     remaining_length: RemainingLength,
@@ -14,7 +14,7 @@ impl FixedHeader {
         }
     }
 
-    /// Convierte un stream de bytes en un FixedHeader.
+    /// Converts a byte stream into a FixedHeader.
     pub fn from_bytes(stream: &mut dyn Read) -> Result<FixedHeader, Error> {
         let first_byte_buffer = &mut [0; 1];
         stream.read_exact(first_byte_buffer)?;
@@ -28,7 +28,7 @@ impl FixedHeader {
         })
     }
 
-    /// Convierte el FixedHeader en un vector de bytes.
+    /// Converts the FixedHeader into a byte vector.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut fixed_header_bytes = vec![self.first_byte];
         fixed_header_bytes.extend(self.remaining_length.to_bytes());
@@ -36,12 +36,12 @@ impl FixedHeader {
         fixed_header_bytes
     }
 
-    /// Devuelve el primer byte del fixed header.
+    /// Returns the first byte of the fixed header.
     pub fn first_byte(&self) -> u8 {
         self.first_byte
     }
 
-    /// Devuelve el remaining length del fixed header.
+    /// Returns the remaining length of the fixed header.
     pub fn remaining_length(&self) -> &RemainingLength {
         &self.remaining_length
     }

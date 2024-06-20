@@ -5,7 +5,7 @@ use crate::{Error, FixedHeader, Read, RemainingLength};
 
 const PACKAGE_IDENTIFIER_LENGTH: usize = 2;
 
-/// Representa un paquete PUBACK de MQTT. El servidor lo utiliza para confirmar la recepción de un paquete PUBLISH.
+/// Represents a PUBACK packet from MQTT. The server uses it to confirm the reception of a PUBLISH packet.
 #[derive(Debug, PartialEq)]
 pub struct Puback {
     packet_identifier: Option<u16>,
@@ -16,7 +16,7 @@ impl Puback {
         Self { packet_identifier }
     }
 
-    /// Convierte un stream de bytes en un Puback.
+    /// Converts a stream of bytes into a Puback.
     pub fn from_bytes(fixed_header: FixedHeader, stream: &mut dyn Read) -> Result<Self, Error> {
         // Fixed Header
         let fixed_header_flags = fixed_header.first_byte() & 0b0000_1111;
@@ -34,7 +34,7 @@ impl Puback {
         Ok(Puback::new(packet_identifier))
     }
 
-    /// Convierte el Puback en un vector de bytes.
+    /// Converts the Puback into a vector of bytes.
     pub fn to_bytes(&self) -> Vec<u8> {
         // Variable Header
         let mut variable_header_bytes = vec![];
@@ -60,7 +60,7 @@ impl Puback {
         packet_bytes
     }
 
-    /// Devuelve el identificador del paquete.
+    /// Returns the packet identifier.
     pub fn packet_identifier(&self) -> Option<u16> {
         self.packet_identifier
     }

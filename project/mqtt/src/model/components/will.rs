@@ -1,6 +1,6 @@
 use crate::{EncodedString, Error, QoS, Read, TopicName};
 
-/// Representa un mensaje que se publicará en caso de que el cliente se desconecte inesperadamente.
+/// Represents a message that will be published in case the client disconnects unexpectedly.
 #[derive(Debug, PartialEq)]
 pub struct Will {
     qos: QoS,
@@ -19,7 +19,7 @@ impl Will {
         }
     }
 
-    /// Convierte un stream de bytes en un Will.
+    /// Converts a stream of bytes into a Will.
     pub fn from_bytes(stream: &mut dyn Read, qos: QoS, retain: bool) -> Result<Will, Error> {
         let topic = TopicName::from_bytes(stream)?;
         let message = EncodedString::from_bytes(stream)?;
@@ -27,7 +27,7 @@ impl Will {
         Ok(Will::new(qos, retain, topic, message))
     }
 
-    /// Convierte el Will en un vector de bytes.
+    /// Converts the Will into a vector of bytes.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = vec![];
         bytes.extend(self.topic.to_bytes());
@@ -36,22 +36,22 @@ impl Will {
         bytes
     }
 
-    /// Devuelve el QoS del Will.
+    /// Returns the QoS of the Will.
     pub fn qos(&self) -> &QoS {
         &self.qos
     }
 
-    /// Devuelve si el mensaje del Will se retiene.
+    /// Returns whether the Will message is retained.
     pub fn retain(&self) -> bool {
         self.retain
     }
 
-    /// Devuelve el tópico del Will.
+    /// Returns the topic of the Will.
     pub fn topic(&self) -> &TopicName {
         &self.topic
     }
 
-    /// Devuelve el mensaje del Will.
+    /// Returns the message of the Will.
     pub fn message(&self) -> &EncodedString {
         &self.message
     }

@@ -1,7 +1,7 @@
 use super::{DISCONNECT_PACKET_TYPE, RESERVED_FIXED_HEADER_FLAGS};
 use crate::{Error, FixedHeader, RemainingLength};
 
-/// Representa un paquete DISCONNECT de MQTT. El cliente lo utiliza para desconectarse del servidor.
+/// Represents a DISCONNECT packet in MQTT. The client uses it to disconnect from the server.
 #[derive(Debug, Default, PartialEq)]
 pub struct Disconnect;
 
@@ -10,7 +10,7 @@ impl Disconnect {
         Self
     }
 
-    /// Convierte un stream de bytes en un Disconnect.
+    /// Converts a stream of bytes into a Disconnect.
     pub fn from_bytes(fixed_header: FixedHeader) -> Result<Self, Error> {
         // Fixed Header
         let fixed_header_flags = fixed_header.first_byte() & 0b0000_1111;
@@ -22,7 +22,7 @@ impl Disconnect {
         Ok(Disconnect::new())
     }
 
-    /// Convierte el Disconnect en un vector de bytes.
+    /// Converts the Disconnect into a vector of bytes.
     pub fn to_bytes(&self) -> Vec<u8> {
         // Fixed Header
         let mut packet_bytes = vec![DISCONNECT_PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS];

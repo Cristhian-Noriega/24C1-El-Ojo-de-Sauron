@@ -1,18 +1,18 @@
-/// convertir string a bytes
+/// manage encoded strings
 pub mod encoded_string;
-/// fixed header de los packets
+/// fixed header of MQTT packets
 pub mod fixed_header;
 /// login
 pub mod login;
-/// calidad de servicio
+/// quality of service
 pub mod qos;
-/// calculo del remaining length
+/// calculate the remaining length
 pub mod remaining_length;
-/// filtro de topic
+/// topic filter
 pub mod topic_filter;
-/// nivel de topic
+/// topic levels
 pub mod topic_level;
-/// nombre del topic
+/// topic name
 pub mod topic_name;
 /// will
 pub mod will;

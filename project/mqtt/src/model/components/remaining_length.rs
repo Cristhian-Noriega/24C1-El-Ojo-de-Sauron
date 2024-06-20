@@ -3,7 +3,7 @@ use crate::{Error, Read};
 const MAX_MULTIPLIER: u32 = u32::pow(128, 3);
 const MAX_LENGTH: u32 = u32::pow(128, 4); // 268.435.455 bytes
 
-/// Representa el largo restante de un paquete MQTT.
+/// Represents the remaining length of an MQTT packet.
 #[derive(Debug, PartialEq)]
 pub struct RemainingLength {
     value: u32,
@@ -17,7 +17,7 @@ impl RemainingLength {
         RemainingLength { value: length }
     }
 
-    /// Calcula el largo restante de un paquete MQTT a partir de un stream de bytes.
+    /// Calculates the remaining length of an MQTT packet from a byte stream.
     pub fn from_bytes(stream: &mut dyn Read) -> Result<Self, Error> {
         let mut multiplier = 1;
         let mut value = 0;
@@ -43,7 +43,7 @@ impl RemainingLength {
         Ok(RemainingLength { value })
     }
 
-    /// Convierte el largo restante de un paquete MQTT en un vector de bytes.
+    /// Converts the remaining length of an MQTT packet into a byte vector.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = vec![];
         let mut length = self.value;
@@ -61,12 +61,12 @@ impl RemainingLength {
         bytes
     }
 
-    /// Devuelve el valor del largo restante.
+    /// Returns the value of the remaining length.
     pub fn value(&self) -> usize {
         self.value as usize
     }
 
-    /// Devuelve el largo del vector de bytes que representa el largo restante.
+    /// Returns the length of the byte vector that represents the remaining length.
     pub fn length(&self) -> usize {
         let mut length = 0;
         let mut value = self.value;
