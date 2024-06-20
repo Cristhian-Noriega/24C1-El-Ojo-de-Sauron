@@ -13,6 +13,28 @@ cargo doc --no-deps --open
 ```
 
 ## Como usar
+Todos los ejecutables requieren de un archivo de configuración.
+
+### Server
+```
+cargo run --bin server <settings-toml-path>
+```
+
+### Monitor
+```
+cargo run --bin monitor <settings-toml-path>
+```
+
+### Camera System
+```
+cargo run --bin camera-system <config-json-path>
+```
+
+### Drone
+```
+cargo run --bin drone <config-json-path>
+```
+
 
 ## Como testear
 ```
