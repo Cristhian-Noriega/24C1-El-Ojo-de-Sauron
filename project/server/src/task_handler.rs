@@ -164,7 +164,7 @@ impl TaskHandler {
 
         for client in self.clients.read().unwrap().values() {
             if client.is_subscribed(topic_name) {
-                clients.push(client.id.clone());
+                clients.push(client.id());
             }
         }
 
@@ -199,7 +199,7 @@ impl TaskHandler {
         let connack_packet_vec = connack_packet.to_bytes();
         let connack_packet_bytes = connack_packet_vec.as_slice();
 
-        let client_id = client.id.clone();
+        let client_id = client.id();
         let mut clients = self.clients.write().unwrap();
 
         if clients.contains_key(&client_id) {
@@ -255,14 +255,14 @@ impl TaskHandler {
         let mut stream = match client.stream.lock() {
             Ok(stream) => stream,
             Err(_) => {
-                self.log_file.log_error_getting_stream(&client.id, "suback");
+                self.log_file.log_error_getting_stream(&client.id(), "suback");
                 return;
             }
         };
 
         match stream.write_all(suback_packet_bytes) {
-            Ok(_) => self.log_file.log_info_sent_packet("Suback", &client.id),
-            Err(_) => self.log_file.log_error_sending_packet("Suback", &client.id),
+            Ok(_) => self.log_file.log_info_sent_packet("Suback", &client.id()),
+            Err(_) => self.log_file.log_error_sending_packet("Suback", &client.id()),
         };
     }
 
@@ -275,14 +275,14 @@ impl TaskHandler {
         let mut stream = match client.stream.lock() {
             Ok(stream) => stream,
             Err(_) => {
-                self.log_file.log_error_getting_stream(&client.id, "puback");
+                self.log_file.log_error_getting_stream(&client.id(), "puback");
                 return;
             }
         };
 
         match stream.write_all(puback_packet_bytes) {
-            Ok(_) => self.log_file.log_info_sent_packet("Puback", &client.id),
-            Err(_) => self.log_file.log_error_sending_packet("Puback", &client.id),
+            Ok(_) => self.log_file.log_info_sent_packet("Puback", &client.id()),
+            Err(_) => self.log_file.log_error_sending_packet("Puback", &client.id()),
         };
     }
 
@@ -295,16 +295,16 @@ impl TaskHandler {
             Ok(stream) => stream,
             Err(_) => {
                 self.log_file
-                    .log_error_getting_stream(&client.id, "Unsuback");
+                    .log_error_getting_stream(&client.id(), "Unsuback");
                 return;
             }
         };
 
         match stream.write_all(unsuback_packet_bytes) {
-            Ok(_) => self.log_file.log_info_sent_packet("Unsuback", &client.id),
+            Ok(_) => self.log_file.log_info_sent_packet("Unsuback", &client.id()),
             Err(_) => self
                 .log_file
-                .log_error_sending_packet("Unsuback", &client.id),
+                .log_error_sending_packet("Unsuback", &client.id()),
         };
     }
 
