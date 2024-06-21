@@ -11,13 +11,11 @@ use egui::{Context, Id, Pos2, Response, Ui};
 use egui_extras::{Column, TableBuilder};
 use std::sync::mpsc::{Receiver, Sender};
 use walkers::{
-    extras::{Place, Places, Style},
-    sources::OpenStreetMap,
-    Map, MapMemory, Position, Tiles,
+    extras::{Place, Places, Style}, sources::OpenStreetMap, Map, MapMemory, Position, Projector, Tiles
 };
 
-const DEFAULT_LONGITUDE: f64 = -58.3717;
-const DEFAULT_LONGITUD: f64 = -34.6081;
+const DEFAULT_LONGITUDE: f64 = -58.372170426210836;
+const DEFAULT_LATITUDE: f64 = -34.60840997593428;
 
 #[derive(PartialEq)]
 enum Layout {
@@ -50,17 +48,48 @@ pub struct UIApplication {
 #[derive(Clone)]
 struct RightClickMenu {
     open: bool,
-    position: Pos2,
+    position: Position,
+    pos_2: Pos2,
     id: Id,
+    x_coordenate: f64,
+    y_coordenate: f64,
 }
 
 impl RightClickMenu {
     fn default() -> Self {
         Self {
             open: false,
-            position: Pos2::ZERO,
+            position: Position::from_lon_lat(0.0, 0.0),
             id: Id::new("right_click_menu"),
+            x_coordenate: 0.0,
+            y_coordenate: 0.0,
+            pos_2: Pos2::new(0.0, 0.0),
         }
+    }
+
+    fn update(&mut self, click_location_pixels: Pos2, map_response: Response, map_memory: &MapMemory) -> &mut Self {
+        let map_center_position = Position::from_lon_lat(DEFAULT_LONGITUDE, DEFAULT_LATITUDE);
+    
+       // Create a Projector instance
+        let projector = Projector::new(map_response.interact_rect, map_memory, map_center_position);
+
+        let mut click_vec2 = click_location_pixels.to_vec2() - map_response.rect.min.to_vec2();
+
+        click_vec2.x = click_vec2.x - map_response.interact_rect.width() / 2.0;
+        click_vec2.y = click_vec2.y - map_response.interact_rect.height() / 2.0;
+
+        // Get the geographic coordinates from the click position
+        let map_coordinates = projector.unproject(click_vec2);
+
+        println!("Clicked at map coordinates: {:?}", map_coordinates);
+        
+        self.open = true;
+        self.position = map_coordinates;
+        self.x_coordenate = map_coordinates.lon();
+        self.y_coordenate = map_coordinates.lat();
+        self.pos_2 = click_location_pixels;
+
+        self
     }
 }
 
@@ -131,37 +160,57 @@ fn update_cameras(cameras: &mut Vec<Camera>, camera: Camera) {
     cameras.push(camera);
 }
 
-fn handle_right_click(ui: &mut Ui, response: Response, right_click_menu: &mut RightClickMenu) {
+fn handle_right_clicks
+(
+    ui: &mut Ui, 
+    response: Response, 
+    right_click_menu: &mut RightClickMenu, 
+    map_memory: &mut MapMemory, 
+    new_incident_registration: &mut IncidentRegistration,
+    sender: &Sender<UIAction>,
+    layout: &mut Layout,
+) {
 
     ui.ctx().input(|i| {
         if response.hovered() && i.pointer.secondary_clicked() {
-            right_click_menu.open = true;
-            right_click_menu.position = i.pointer.hover_pos().unwrap_or_default();
+            let click_location_pixels = i.pointer.hover_pos().unwrap_or_default();
+            right_click_menu.update(click_location_pixels, response, map_memory);
+            
+        }
+        else if response.hovered() && i.pointer.primary_clicked() {
+            right_click_menu.open = false;
         }
     });
 
     if right_click_menu.open {
         egui::Area::new(right_click_menu.id)
-            .fixed_pos(right_click_menu.position)
+            .fixed_pos(right_click_menu.pos_2)
             .show(ui.ctx(), |ui| {
                 ui.vertical(|ui| {
-                    if ui.button("Option 1").clicked() {
-                        // Handle Option 1 click
-                        println!("Option 1 selected");
+                    if ui.button("Register New Incident").clicked() {
+
+                        new_incident_registration.name = String::new();
+                        new_incident_registration.description = String::new();
+                        new_incident_registration.x = right_click_menu.x_coordenate.to_string();
+                        new_incident_registration.y = right_click_menu.y_coordenate.to_string();
+                        println!("New incident at coordenates: ({}, {})", right_click_menu.x_coordenate, right_click_menu.y_coordenate);
+                        display_new_incident(ui, new_incident_registration, sender);
+                        *layout = Layout::NewIncident;
+
                         right_click_menu.open = false; // Close menu
                     }
-                    if ui.button("Option 2").clicked() {
+                    // if ui.button("Register New Drone").clicked() {
+                    //     // Handle Option 2 click
+                    //     println!("New drone at at coordenates: ({}, {})", right_click_menu.x_coordenate, right_click_menu.y_coordenate);
+                    //     right_click_menu.open = false; // Close menu
+                    // }
+                    if ui.button("Cancel").clicked() {
                         // Handle Option 2 click
-                        println!("Option 2 selected");
+                        println!("Menu closed");
                         right_click_menu.open = false; // Close menu
                     }
                 });
-            });
-
-        // // Close the menu if the user clicks outside of it
-        // if ui.input(|i| i.pointer.any_click() && !ui.rect_contains_pointer(ui.min_rect())) {
-        //     right_click_menu.open = false;
-        // }
+        });
     }
 }
 
@@ -173,21 +222,21 @@ fn display_incident_map(
     tiles: &mut Tiles,
     map_memory: &mut MapMemory,
     right_click_menu: &mut RightClickMenu,
+    new_incident_registration: &mut IncidentRegistration,
+    layout: &mut Layout,
+    sender: &Sender<UIAction>
 ) {
 
-    let position = Position::from_lon_lat(DEFAULT_LONGITUDE, DEFAULT_LONGITUD);
+    let position = Position::from_lon_lat(DEFAULT_LONGITUDE, DEFAULT_LATITUDE);
 
     let map = Map::new(Some(tiles), map_memory, position);
     
-    // Create map with plugin
     let places_plugin = update_places(incidents, drones, cameras);
     let map_with_plugin = map.with_plugin(places_plugin);
 
-    // Container for map interaction
     let response = ui.add(map_with_plugin);
 
-    // Handle right-click
-    handle_right_click(ui, response, right_click_menu);
+    handle_right_clicks(ui, response, right_click_menu, map_memory, new_incident_registration, sender, layout);
 }
 
 fn display_new_incident(
@@ -506,6 +555,9 @@ impl eframe::App for UIApplication {
                     &mut self.tiles,
                     &mut self.map_memory,
                     &mut self.right_click_menu,
+                    &mut self.new_incident_registration,
+                    &mut self.current_layout,
+                    &self.sender,
                 ),
                 Layout::NewIncident => {
                     display_new_incident(ui, &mut self.new_incident_registration, &self.sender)
@@ -586,3 +638,4 @@ fn update_places(incidents: &Vec<Incident>, drones: &Vec<Drone>, cameras: &Vec<C
 
     Places::new(places)
 }
+
