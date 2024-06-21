@@ -7,7 +7,7 @@ use common::incident::{Incident, IncidentStatus};
 use eframe::egui::{Color32, FontId, Stroke};
 
 use eframe::egui;
-use egui::Context;
+use egui::{Context, Id, Pos2, Response, Ui};
 use egui_extras::{Column, TableBuilder};
 use std::sync::mpsc::{Receiver, Sender};
 use walkers::{
@@ -44,6 +44,24 @@ pub struct UIApplication {
     drones: Vec<Drone>,
     incidents: Vec<Incident>,
     cameras: Vec<Camera>,
+    right_click_menu: RightClickMenu,
+}
+
+#[derive(Clone)]
+struct RightClickMenu {
+    open: bool,
+    position: Pos2,
+    id: Id,
+}
+
+impl RightClickMenu {
+    fn default() -> Self {
+        Self {
+            open: false,
+            position: Pos2::ZERO,
+            id: Id::new("right_click_menu"),
+        }
+    }
 }
 
 impl UIApplication {
@@ -75,6 +93,7 @@ impl UIApplication {
             drones: vec![],
             incidents: vec![],
             cameras: vec![],
+            right_click_menu: RightClickMenu::default(),
         }
     }
 }
@@ -112,6 +131,40 @@ fn update_cameras(cameras: &mut Vec<Camera>, camera: Camera) {
     cameras.push(camera);
 }
 
+fn handle_right_click(ui: &mut Ui, response: Response, right_click_menu: &mut RightClickMenu) {
+
+    ui.ctx().input(|i| {
+        if response.hovered() && i.pointer.secondary_clicked() {
+            right_click_menu.open = true;
+            right_click_menu.position = i.pointer.hover_pos().unwrap_or_default();
+        }
+    });
+
+    if right_click_menu.open {
+        egui::Area::new(right_click_menu.id)
+            .fixed_pos(right_click_menu.position)
+            .show(ui.ctx(), |ui| {
+                ui.vertical(|ui| {
+                    if ui.button("Option 1").clicked() {
+                        // Handle Option 1 click
+                        println!("Option 1 selected");
+                        right_click_menu.open = false; // Close menu
+                    }
+                    if ui.button("Option 2").clicked() {
+                        // Handle Option 2 click
+                        println!("Option 2 selected");
+                        right_click_menu.open = false; // Close menu
+                    }
+                });
+            });
+
+        // // Close the menu if the user clicks outside of it
+        // if ui.input(|i| i.pointer.any_click() && !ui.rect_contains_pointer(ui.min_rect())) {
+        //     right_click_menu.open = false;
+        // }
+    }
+}
+
 fn display_incident_map(
     ui: &mut egui::Ui,
     incidents: &Vec<Incident>,
@@ -119,16 +172,22 @@ fn display_incident_map(
     cameras: &Vec<Camera>,
     tiles: &mut Tiles,
     map_memory: &mut MapMemory,
+    right_click_menu: &mut RightClickMenu,
 ) {
+
     let position = Position::from_lon_lat(DEFAULT_LONGITUDE, DEFAULT_LONGITUD);
-    // let map = Map::new(Some(tiles), map_memory, position);
-    // ui.add(map);
 
-    //let center_position = Position::from_lon_lat(-58.3717, -34.6081);
-
+    let map = Map::new(Some(tiles), map_memory, position);
+    
+    // Create map with plugin
     let places_plugin = update_places(incidents, drones, cameras);
+    let map_with_plugin = map.with_plugin(places_plugin);
 
-    ui.add(Map::new(Some(tiles), map_memory, position).with_plugin(places_plugin));
+    // Container for map interaction
+    let response = ui.add(map_with_plugin);
+
+    // Handle right-click
+    handle_right_click(ui, response, right_click_menu);
 }
 
 fn display_new_incident(
@@ -446,6 +505,7 @@ impl eframe::App for UIApplication {
                     &self.cameras,
                     &mut self.tiles,
                     &mut self.map_memory,
+                    &mut self.right_click_menu,
                 ),
                 Layout::NewIncident => {
                     display_new_incident(ui, &mut self.new_incident_registration, &self.sender)
