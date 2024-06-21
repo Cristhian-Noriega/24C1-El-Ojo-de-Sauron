@@ -40,6 +40,7 @@ const BATTERY_RECHARGE_INTERVAL: u64 = 1;
 
 const DRONE_ATTENDING_DURATION: u64 = 10;
 
+/// Runs the client with the specified configuration
 pub fn client_run(config: Config) -> std::io::Result<()> {
     let address = config.get_address().to_owned();
 
@@ -104,6 +105,7 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
     Ok(())
 }
 
+/// Reads incoming packets from the server
 fn read_incoming_packets(stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<Drone>>) {
     loop {
         let mut buffer = [0; 1024];
@@ -147,6 +149,7 @@ fn read_incoming_packets(stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<Drone>>
     }
 }
 
+/// Handles the incoming publish packet
 fn handle_publish(
     publish: Publish,
     drone: Arc<Mutex<Drone>>,
@@ -186,6 +189,7 @@ fn handle_publish(
     }
 }
 
+/// Handles a new incident
 fn handle_new_incident(
     incident: Incident,
     drone: Arc<Mutex<Drone>>,
@@ -262,6 +266,7 @@ fn handle_new_incident(
     });
 }
 
+/// Starts the travel to the new incident
 fn travel_to_new_incident(
     drone: Arc<Mutex<Drone>>,
     server_stream: Arc<Mutex<TcpStream>>,
@@ -333,6 +338,7 @@ fn travel_to_new_incident(
     drop(locked_stream);
 }
 
+/// Handles the attending incident
 fn handle_attending_incident(
     uuid: String,
     drone: Arc<Mutex<Drone>>,
@@ -431,6 +437,7 @@ fn handle_attending_incident(
     drop(drone_locked);
 }
 
+/// Simulates the incident resolution
 fn simulate_incident_resolution(uuid: String, server_stream: Arc<Mutex<TcpStream>>) {
     let duration_incident = Duration::from_secs(DRONE_ATTENDING_DURATION);
 
@@ -470,6 +477,7 @@ fn simulate_incident_resolution(uuid: String, server_stream: Arc<Mutex<TcpStream
     drop(locked_stream);
 }
 
+/// Handles the closing of an incident
 fn handle_close_incident(
     closing_incident_uuid: String,
     drone: Arc<Mutex<Drone>>,
@@ -546,6 +554,7 @@ fn handle_close_incident(
     drop(locked_drone);
 }
 
+/// Updates the drone status
 fn update_drone_status(server_stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<Drone>>) {
     loop {
         let drone = match drone.lock() {
@@ -582,12 +591,14 @@ fn update_drone_status(server_stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<Dr
     }
 }
 
+/// Connects to the server with the specified address
 fn connect_to_server(
     address: &str,
     id: u8,
     username: &str,
     password: &str,
 ) -> std::io::Result<TcpStream> {
+    
     println!("\nConnecting to address: {:?}", address);
     let mut to_server_stream = TcpStream::connect(address)?;
 
@@ -616,6 +627,7 @@ fn connect_to_server(
     }
 }
 
+/// Subscribes to the specified topic filter
 fn subscribe(
     filter: TopicFilter,
     server_stream: &mut MutexGuard<TcpStream>,
@@ -639,6 +651,7 @@ fn subscribe(
     }
 }
 
+/// Unsubscribes from the specified topic filter
 fn unsubscribe(
     filter: TopicFilter,
     server_stream: &mut MutexGuard<TcpStream>,
@@ -662,6 +675,7 @@ fn unsubscribe(
     }
 }
 
+/// Publishes the specified message to the server
 fn publish(
     topic_name: TopicName,
     message: Vec<u8>,
@@ -705,6 +719,7 @@ fn publish(
     }
 }
 
+/// Travels to the specified location
 fn travel(drone: Arc<Mutex<Drone>>, x: f64, y: f64, travel_location: TravelLocation) {
     println!("Traveling to ({}, {})", x, y);
     let mut locked_drone = match drone.lock() {
@@ -740,6 +755,7 @@ fn travel(drone: Arc<Mutex<Drone>>, x: f64, y: f64, travel_location: TravelLocat
     }
 }
 
+/// Discharges the battery of the drone
 fn discharge_battery(drone: Arc<Mutex<Drone>>) {
     loop {
         let mut locked_drone = match drone.lock() {
@@ -757,6 +773,7 @@ fn discharge_battery(drone: Arc<Mutex<Drone>>) {
     }
 }
 
+/// Recharges the battery of the drone
 fn recharge_battery(drone: Arc<Mutex<Drone>>) {
     loop {
         let locked_drone = match drone.lock() {

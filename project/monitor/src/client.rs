@@ -25,6 +25,7 @@ use crate::{
     ui_application::UIApplication,
 };
 
+/// Starts the client
 pub fn client_run(config: Config) -> Result<(), String> {
     // Create the channels to communicate between the monitor and the UI
     let (monitor_sender, monitor_receiver) = channel();
@@ -69,7 +70,9 @@ pub fn client_run(config: Config) -> Result<(), String> {
     Ok(())
 }
 
+/// Connects to the server
 fn connect_to_server(address: &str, username: &str, password: &str) -> std::io::Result<TcpStream> {
+
     println!("\nConnecting to address: {:?}", address);
     let mut to_server_stream = TcpStream::connect(address)?;
 
@@ -97,6 +100,7 @@ fn connect_to_server(address: &str, username: &str, password: &str) -> std::io::
     }
 }
 
+/// Starts the UI
 fn start_ui(
     ui_sender: Sender<UIAction>,
     from_monitor_receiver: Receiver<MonitorAction>,
@@ -131,6 +135,7 @@ const CLOSE_INCIDENT: &[u8] = b"close-incident";
 const SEPARATOR: char = ';';
 const ENUMARATOR: char = '|';
 
+/// Starts the monitor
 fn start_monitor(
     stream: TcpStream,
     monitor_sender: Sender<MonitorAction>,
@@ -230,6 +235,7 @@ fn start_monitor(
     }
 }
 
+/// Handles the drone data
 fn drone_data(publish: Publish, monitor_sender: Sender<MonitorAction>) {
     let topic_name = publish.topic();
     let topic_levels = topic_name.levels();
@@ -258,6 +264,8 @@ fn drone_data(publish: Publish, monitor_sender: Sender<MonitorAction>) {
     }
 }
 
+
+/// Handles the camera data
 fn camera_data(publish: Publish, monitor_sender: Sender<MonitorAction>) {
     let content = publish.message();
 
@@ -285,6 +293,8 @@ fn camera_data(publish: Publish, monitor_sender: Sender<MonitorAction>) {
     }
 }
 
+
+/// Handles the attending incident
 fn attend_incident(publish: Publish, monitor: &mut Monitor, monitor_sender: Sender<MonitorAction>) {
     let topic_name = publish.topic();
     let topic_levels = topic_name.levels();
@@ -303,6 +313,7 @@ fn attend_incident(publish: Publish, monitor: &mut Monitor, monitor_sender: Send
     }
 }
 
+/// Handles the ready incident
 fn ready_incident(publish: Publish, monitor: &mut Monitor, monitor_sender: Sender<MonitorAction>) {
     let topic_name = publish.topic();
     let topic_levels = topic_name.levels();
@@ -323,6 +334,7 @@ fn ready_incident(publish: Publish, monitor: &mut Monitor, monitor_sender: Sende
     }
 }
 
+/// Registers a drone
 fn register_drone(
     drone_registration: DroneRegistration,
     package_identifier: u16,
@@ -344,6 +356,7 @@ fn register_drone(
     ))
 }
 
+/// Registers an incident
 fn register_incident(
     incident_registration: IncidentRegistration,
     monitor: &mut Monitor,
@@ -376,6 +389,7 @@ fn register_incident(
     }
 }
 
+/// Resolves an incident
 fn resolve_incident(incident: Incident, package_identifier: u16) -> Option<Publish> {
     let topic_name = TopicName::new(
         vec![CLOSE_INCIDENT.to_vec(), incident.uuid.clone().into_bytes()],
@@ -397,6 +411,7 @@ fn resolve_incident(incident: Incident, package_identifier: u16) -> Option<Publi
     ))
 }
 
+/// Subscribes to the topics that the monitor need to work properly
 fn subscribe_to_topics(stream: &mut TcpStream) -> std::io::Result<()> {
     let mut topic_filters = vec![];
 

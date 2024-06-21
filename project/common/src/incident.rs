@@ -5,6 +5,7 @@ use crate::error::Error;
 pub const SEPARATOR: char = ';';
 const ELEMENTS_COUNT: usize = 6;
 
+/// Represents the different statuses an incident can have
 #[derive(Debug, PartialEq, Clone)]
 pub enum IncidentStatus {
     Pending,
@@ -14,6 +15,7 @@ pub enum IncidentStatus {
 }
 
 impl IncidentStatus {
+    /// Creates a new incident status from a string
     pub fn from_string(string: String) -> Self {
         match string.as_str() {
             "0" => IncidentStatus::Pending,
@@ -24,6 +26,7 @@ impl IncidentStatus {
         }
     }
 
+    /// Returns the meaning of the incident status in string format
     pub fn meaning(&self) -> String {
         match self {
             IncidentStatus::Pending => "Pending".to_string(),
@@ -47,6 +50,7 @@ impl fmt::Display for IncidentStatus {
     }
 }
 
+/// Represents an incident
 #[derive(Debug, PartialEq, Clone)]
 pub struct Incident {
     pub uuid: String,
@@ -58,6 +62,7 @@ pub struct Incident {
 }
 
 impl Incident {
+    /// Creates a new incident
     pub fn new(
         uuid: String,
         name: String,
@@ -76,6 +81,7 @@ impl Incident {
         }
     }
 
+    /// Creates a new incident from a string
     pub fn from_string(string: String) -> Result<Self, Error> {
         let splited_string: Vec<&str> = string.split(SEPARATOR).collect();
 

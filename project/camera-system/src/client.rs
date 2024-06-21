@@ -22,6 +22,7 @@ const NEW_INCIDENT: &[u8] = b"new-incident";
 const CLOSE_INCIDENT: &[u8] = b"close-incident";
 const CAMERA_DATA: &[u8] = b"camera-data";
 
+/// Runs the client
 pub fn client_run(config: Config) -> std::io::Result<()> {
     let address = config.get_address().to_owned();
     let username = config.get_username().to_owned();
@@ -93,6 +94,7 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
 //     }
 // }
 
+/// Handles the subscription to a topic
 fn subscribe(filter: Vec<TopicFilter>, server_stream: &mut TcpStream) -> std::io::Result<()> {
     let mut topics_filters = vec![];
 
@@ -120,6 +122,7 @@ fn subscribe(filter: Vec<TopicFilter>, server_stream: &mut TcpStream) -> std::io
     }
 }
 
+/// Publishes a message to a topic
 fn publish(
     topic_name: TopicName,
     message: Vec<u8>,
@@ -151,7 +154,9 @@ fn publish(
     }
 }
 
+/// Connects to the server
 fn connect_to_server(address: &str, username: &str, password: &str) -> std::io::Result<TcpStream> {
+
     println!("\nConnecting to address: {:?}", address);
     let mut to_server_stream = TcpStream::connect(address)?;
 
@@ -179,6 +184,7 @@ fn connect_to_server(address: &str, username: &str, password: &str) -> std::io::
     }
 }
 
+/// Publishes the camera state to the server
 fn publish_camera_state(
     camera_system: &mut CameraSystem,
     server_stream: &mut TcpStream,
@@ -194,6 +200,7 @@ fn publish_camera_state(
 //      publicar el estado actualizado de la camaras
 //      subscribe to close-incident/uuid
 
+/// Handles a new incident
 fn handle_new_incident(
     incoming_publish: Publish,
     camera_system: &mut CameraSystem,
@@ -222,6 +229,8 @@ fn handle_new_incident(
 //      pasar a Sleep las camaras correspondientes
 //      publicar el estado actualizado de las camaras
 //      unsubscribe from close-incident/uuid
+
+/// Handles the closing of an incident
 fn handle_close_incident(
     incoming_publish: Publish,
     camera_system: &mut CameraSystem,

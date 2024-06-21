@@ -18,6 +18,7 @@ use mqtt::model::{
     return_codes::{connect_return_code::ConnectReturnCode, suback_return_code::SubackReturnCode},
 };
 
+/// Represents the different tasks that the task handler can perform
 pub enum Task {
     SubscribeClient(Subscribe, Vec<u8>),
     UnsubscribeClient(Unsubscribe, Vec<u8>),
@@ -26,10 +27,14 @@ pub enum Task {
     DisconnectClient(Vec<u8>),
     RespondPing(Vec<u8>),
 }
+
+/// Represents the quality of service of a subscription
 #[derive(Clone, Debug)]
 pub struct SubscriptionData {
     qos: QoS,
 }
+
+/// Represents a message
 #[derive(Clone, Debug)]
 pub struct Message {
     pub client_id: Vec<u8>,
@@ -37,14 +42,17 @@ pub struct Message {
 }
 
 impl Message {
+    /// Creates a new message from a client id and a publish packet
     pub fn new(client_id: Vec<u8>, packet: Publish) -> Self {
         Self { client_id, packet }
     }
 
+    /// Returns the client id of the message
     pub fn client_id(&self) -> &Vec<u8> {
         &self.client_id
     }
 
+    /// Returns the publish packet of the message
     pub fn packet(&self) -> &Publish {
         &self.packet
     }
@@ -59,6 +67,8 @@ const ADMIN_USERNAME: &[u8] = b"admin";
 const CLIENT_REGISTER: &[u8] = b"$client-register";
 const SEPARATOR: u8 = b';';
 
+
+/// Represents the task handler that will handle all the tasks that the server needs to process
 #[derive(Debug)]
 pub struct TaskHandler {
     client_actions_receiver_channel: mpsc::Receiver<Task>,
@@ -80,10 +90,10 @@ pub struct TaskHandler {
 }
 
 impl TaskHandler {
+    /// Creates a new task handler with the specified receiver channel, logger and client manager
     pub fn new(
         receiver_channel: mpsc::Receiver<Task>,
         log_file: Arc<Logger>,
-        //registered_clients: Logins,
         client_manager: Arc<RwLock<ClientManager>>,
     ) -> Self {
         TaskHandler {
@@ -98,12 +108,14 @@ impl TaskHandler {
         }
     }
 
+    /// Initializes the task handler thread
     pub fn initialize_task_handler_thread(self) {
         std::thread::spawn(move || {
             self.run();
         });
     }
 
+    /// Runs the task handler in a loop
     pub fn run(mut self) {
         loop {
             match self.client_actions_receiver_channel.recv() {
@@ -135,7 +147,7 @@ impl TaskHandler {
         }
     }
 
-    // Subscribe a client_id into a set of topics given a Subscribe packet
+    /// Subscribe a client_id into a set of topics given a Subscribe packet
     pub fn subscribe(&self, subscribe_packet: Subscribe, client_id: Vec<u8>) {
         let mut clients = self.clients.write().unwrap();
 
@@ -151,7 +163,7 @@ impl TaskHandler {
         }
     }
 
-    // Unsubscribe a client_id from a set of topics given an Unsubscribe packet
+    /// Unsubscribe a client_id from a set of topics given an Unsubscribe packet
     pub fn unsubscribe(&self, unsubscribe_packet: Unsubscribe, client_id: Vec<u8>) {
         let mut clients = self.clients.write().unwrap();
 
@@ -168,7 +180,7 @@ impl TaskHandler {
         }
     }
 
-    /*publish uses a publish method of the topic struct and also sends to the clients subscribed to the topic the message*/
+    /// Publish a message to all clients subscribed to the topic of the Publish packet
     pub fn publish(&self, publish_packet: &Publish, client_id: Vec<u8>) {
         let topic_name = publish_packet.topic();
 
@@ -211,6 +223,7 @@ impl TaskHandler {
         }
     }
 
+    /// Handle a server reserved topic (e.g. $client-register)
     pub fn handle_server_reserved_topic(&self, publish_packet: &Publish, client_id: Vec<u8>) {
         let topic_name = publish_packet.topic();
         let levels = topic_name.levels();
@@ -252,6 +265,7 @@ impl TaskHandler {
         }
     }
 
+    /// Handle a new client connection
     pub fn handle_new_client_connection(&self, client: Client) {
         let connack_packet = Connack::new(true, ConnectReturnCode::ConnectionAccepted);
         let connack_packet_vec = connack_packet.to_bytes();
@@ -300,7 +314,7 @@ impl TaskHandler {
         };
     }
 
-    // Send a suback packet to a client
+    /// Send a suback packet to a client
     pub fn suback(&self, package_identifier: u16, client: &mut Client) {
         //return code hardcodeado
         let suback_packet = Suback::new(
@@ -324,7 +338,7 @@ impl TaskHandler {
         };
     }
 
-    // Send a puback packet to a client
+    /// Send a puback packet to a client
     pub fn puback(&self, package_identifier: Option<u16>, client: &mut Client) {
         let puback_packet = Puback::new(package_identifier);
         let puback_packet_vec = puback_packet.to_bytes();
@@ -344,6 +358,7 @@ impl TaskHandler {
         };
     }
 
+    /// Send an unsuback packet to a client
     pub fn unsuback(&self, package_identifier: u16, client: &mut Client) {
         let unsuback_packet = Unsuback::new(package_identifier);
         let unsuback_packet_vec = unsuback_packet.to_bytes();
@@ -366,7 +381,7 @@ impl TaskHandler {
         };
     }
 
-    // Send a ping response to a client
+    /// Send a ping response to a client
     pub fn respond_ping(&self, client_id: Vec<u8>) {
         let clients = self.clients.read().unwrap();
 
@@ -396,11 +411,13 @@ impl TaskHandler {
         };
     }
 
+    /// Handle a client disconnection
     pub fn handle_client_disconnected(&mut self, client_id: Vec<u8>) {
         let mut active_connections = self.active_connections.write().unwrap();
         active_connections.remove(&client_id);
     }
 
+    /// Register a puback packet
     pub fn register_puback(&mut self, puback: Puback) {
         let message_id = match puback.packet_identifier() {
             Some(id) => id,

@@ -12,6 +12,7 @@ pub enum ErrorServer {
     LockError,
 }
 
+/// Error type for the server
 #[derive(Debug)]
 pub struct Error {
     _message: String,

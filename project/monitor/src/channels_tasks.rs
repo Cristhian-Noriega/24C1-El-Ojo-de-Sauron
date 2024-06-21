@@ -3,12 +3,15 @@ use common::incident::Incident;
 use crate::{camera::Camera, drone::Drone};
 
 // A REFACTORIZAR EN VARIOS ARCHIVOS
+
+/// Represents the action that the UI wants to perform
 pub enum UIAction {
     RegistrateDrone(DroneRegistration),
     RegistrateIncident(IncidentRegistration),
     ResolveIncident(Incident),
 }
 
+/// Represents a drone registration
 #[derive(Clone)]
 pub struct DroneRegistration {
     pub id: String,
@@ -22,6 +25,7 @@ impl DroneRegistration {
     }
 }
 
+/// Represents an incident registration
 #[derive(Clone)]
 pub struct IncidentRegistration {
     pub name: String,
@@ -30,6 +34,7 @@ pub struct IncidentRegistration {
     pub y: String,
 }
 
+/// Represents the action that the monitor wants to perform
 pub enum MonitorAction {
     // Connect,
     // Disconnect,
