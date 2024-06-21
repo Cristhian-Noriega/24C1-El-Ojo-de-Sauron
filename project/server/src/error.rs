@@ -1,3 +1,4 @@
+/// Error type for the server
 #[derive(Debug)]
 pub struct Error {
     _message: String,
