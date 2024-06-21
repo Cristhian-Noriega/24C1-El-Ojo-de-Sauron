@@ -52,7 +52,7 @@ impl Server {
         let log_file = Arc::new(Logger::new(config.get_log_file()));
         let client_manager = ClientManager::new();
         client_manager.make_initial_registrations(config.clone());
-        let client_manager = Arc::new(RwLock::new(ClientManager::new()));
+        let client_manager = Arc::new(RwLock::new(client_manager));
 
         let task_handler = TaskHandler::new(
             client_actions_receiver,
@@ -147,7 +147,6 @@ impl Server {
                 self.log_file.error("Error connecting client");
             }
         };
-        // TODO para que le sirve el password? yo creo que nada
     }
 
     pub fn create_new_client_thread(

@@ -56,7 +56,7 @@ type Subscriptions = HashMap<TopicName, SubscriptionData>; // key: topic_name, v
 type ClientId = Vec<u8>;
 
 const ADMIN_USERNAME: &[u8] = b"admin";
-const CLIENT_REGISTRED: &[u8] = b"$client-register";
+const CLIENT_REGISTER: &[u8] = b"$client-register";
 const SEPARATOR: u8 = b';';
 
 #[derive(Debug)]
@@ -220,28 +220,26 @@ impl TaskHandler {
             return;
         }
 
-        // println!("{}", levels[0] == CLIENT_REGISTRED);
-
-        if levels.len() == 1 && levels[0] == CLIENT_REGISTRED {
-            println!("DRONE REGISTRED");
+        if levels.len() == 1 && levels[0] == CLIENT_REGISTER {
             let message = publish_packet.message();
             //  split username and password by SEPARATOR
             let split = message.split(|&c| c == SEPARATOR).collect::<Vec<&[u8]>>();
 
-            if split.len() != 2 {
+            if split.len() != 3 {
                 self.log_file
                     .error("Invalid message for client registration");
                 return;
             }
 
-            let username = split[0].to_vec();
-            let password = split[1].to_vec();
+            let client_id = split[0].to_vec();
+            let username = split[1].to_vec();
+            let password = split[2].to_vec();
 
             let client_manager = self.client_manager.write().unwrap();
-            if client_manager.authenticate_client(username.clone(), password.clone()) {
+            if client_manager.authenticate_client(client_id.clone(), username.clone(), password.clone()) {
                 self.log_file.info("Client already registered");
             } else {
-                client_manager.register_client(username, password);
+                client_manager.register_client(client_id, username, password);
                 self.log_file.info("Client registered");
             }
         } else {

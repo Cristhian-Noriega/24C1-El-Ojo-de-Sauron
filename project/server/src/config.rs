@@ -37,6 +37,9 @@ impl Config {
                             )
                         })?
                     }
+                    "admin_username" => {
+                        config.admin_password = parts[1].trim_matches('"').to_string()
+                    }
                     "admin_password" => {
                         config.admin_password = parts[1].trim_matches('"').to_string()
                     }
@@ -65,6 +68,9 @@ impl Config {
     // pub fn get_segs_to_disconnect(&self) -> u32 {
     //     self.segs_to_disconnect
     // }
+    pub fn get_admin_username(&self) -> &str {
+        &self.admin_password
+    }
 
     pub fn get_admin_password(&self) -> &str {
         &self.admin_password
