@@ -23,15 +23,13 @@ use mqtt::model::{
     packets::connack::Connack, return_codes::connect_return_code::ConnectReturnCode,
 };
 
-use crate::client::Client;
+use crate::{client::Client, client_manager::{self, ClientManager}};
 
 use super::{
     config::Config,
     logfile::Logger,
     task_handler::{Task, TaskHandler},
 };
-
-const ADMIN_USERNAME: &[u8] = b"admin";
 
 pub struct Server {
     config: Config,
@@ -40,37 +38,18 @@ pub struct Server {
     // Map to store client senders for communication
     client_senders: RwLock<HashMap<Vec<u8>, Sender<Publish>>>,
     log_file: Arc<Logger>,
-    registered_clients: Arc<Mutex<HashMap<(Vec<u8>, Vec<u8>), bool>>>,
+    //registered_clients: Arc<Mutex<HashMap<(Vec<u8>, Vec<u8>), bool>>>,
+    client_manager: Arc<RwLock<ClientManager>>,
 }
 
 impl Server {
     pub fn new(config: Config) -> Self {
         let (client_actions_sender, client_actions_receiver) = mpsc::channel();
 
-        let mut registered_clients = HashMap::new();
-        registered_clients.insert(
-            (
-                ADMIN_USERNAME.to_vec(),
-                config.get_admin_password().as_bytes().to_vec(),
-            ),
-            false,
-        );
-        registered_clients.insert(
-            (
-                config.get_camera_system_username().as_bytes().to_vec(),
-                config.get_camera_system_password().as_bytes().to_vec(),
-            ),
-            false,
-        );
-
-        let registered_clients = Arc::new(Mutex::new(registered_clients));
-
         let log_file = Arc::new(Logger::new(config.get_log_file()));
-        let task_handler = TaskHandler::new(
-            client_actions_receiver,
-            log_file.clone(),
-            registered_clients.clone(),
-        );
+        let client_manager = Arc::new(RwLock::new(ClientManager::new()));
+        let task_handler = TaskHandler::new(client_actions_receiver, log_file.clone(), client_manager.clone());
+
         task_handler.initialize_task_handler_thread();
 
         Server {
@@ -78,7 +57,7 @@ impl Server {
             client_actions_sender,
             client_senders: RwLock::new(HashMap::new()),
             log_file,
-            registered_clients,
+            client_manager,
         }
     }
 
@@ -136,70 +115,29 @@ impl Server {
             connect_packet.client_id()
         );
         self.log_file.info(&message);
-        let client_id = connect_packet.client_id().content();
-        let (usermame, password) = match connect_packet.login() {
-            Some(login) => {
-                let username = login.username().content();
-                match login.password() {
-                    Some(password) => {
-                        let password = password.content();
-                        (username, password)
-                    }
-                    None => {
-                        self.log_file.error("No password provided");
-                        failure_connection(stream, ConnectReturnCode::IdentifierRejected);
-                        return;
-                    }
-                }
+
+        let client_manager = self.client_manager.read().unwrap();
+
+        let stream_clone = stream.try_clone().unwrap();
+
+        let new_client = match client_manager.process_connect_packet(connect_packet, stream_clone) {
+            Some(new_client) => {
+                self.log_file.info("Client connected successfully");
+
+                let client_id = new_client.id();
+                handle_connect(self.client_actions_sender.clone(), new_client);
+                self.create_new_client_thread(
+                    self.client_actions_sender.clone(),
+                    stream,
+                    client_id,
+                    self.log_file.clone(),
+                );
             }
             None => {
-                self.log_file.error("No login information provided");
-                failure_connection(stream, ConnectReturnCode::IdentifierRejected);
-                return;
+                self.log_file.error("Error connecting client");
             }
         };
-
-        let mut registered_clients = match self.registered_clients.lock() {
-            Ok(registered_clients) => registered_clients,
-            Err(err) => {
-                self.log_file
-                    .error(&format!("Error locking registered clients: {:?}", err));
-                return;
-            }
-        };
-
-        match registered_clients.get(&(usermame.to_vec(), password.to_vec())) {
-            Some(true) => {
-                self.log_file.error("Client already connected");
-                failure_connection(stream, ConnectReturnCode::IdentifierRejected);
-                return;
-            }
-            Some(false) => {
-                registered_clients.insert((usermame.to_vec(), password.to_vec()), true);
-            }
-            None => {
-                self.log_file.error("Client not registered");
-                failure_connection(stream, ConnectReturnCode::IdentifierRejected);
-                return;
-            }
-        }
-
         // TODO para que le sirve el password? yo creo que nada
-        let new_client = Client::new(
-            client_id.clone(),
-            "PASSWORD".to_string(),
-            stream.try_clone().unwrap(),
-            true,
-            0,
-        );
-        handle_connect(self.client_actions_sender.clone(), new_client);
-
-        self.create_new_client_thread(
-            self.client_actions_sender.clone(),
-            stream,
-            client_id.clone(),
-            self.log_file.clone(),
-        );
     }
 
     pub fn create_new_client_thread(
@@ -234,18 +172,6 @@ impl Server {
             }
             log_file.info("Closing connection");
         });
-    }
-}
-
-fn failure_connection(mut stream: TcpStream, return_code: ConnectReturnCode) {
-    let connack = Connack::new(false, return_code);
-    let connack_bytes = connack.to_bytes();
-
-    match stream.write_all(&connack_bytes) {
-        Ok(_) => {}
-        Err(err) => {
-            println!("Error sending Connack packet: {:?}", err);
-        }
     }
 }
 

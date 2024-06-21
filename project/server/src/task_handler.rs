@@ -3,11 +3,11 @@
 use std::{
     collections::{HashMap, HashSet},
     io::Write,
-    sync::{mpsc, Arc, Mutex, RwLock},
+    sync::{mpsc, Arc, RwLock},
     time::Duration,
 };
 
-use crate::{client::Client, logfile::Logger};
+use crate::{client::Client, client_manager::ClientManager, logfile::Logger};
 
 use mqtt::model::{
     components::{qos::QoS, topic_filter::TopicFilter, topic_name::TopicName},
@@ -54,10 +54,9 @@ type Subscribers = HashMap<Vec<u8>, SubscriptionData>; // key : client_id , valu
                                                        // type Subtopic = HashMap<Vec<u8>, Topic>; // key: level, value: Topic
 type Subscriptions = HashMap<TopicName, SubscriptionData>; // key: topic_name, value: SubscriptionData
 type ClientId = Vec<u8>;
-type Logins = HashMap<(Vec<u8>, Vec<u8>), bool>; // key: (username, password), value: is_connected
 
-const ADMIN: &[u8] = b"admin";
-const DRONE_REGISTRED: &[u8] = b"$drone-register";
+const ADMIN_USERNAME: &[u8] = b"admin";
+const CLIENT_REGISTRED: &[u8] = b"$client-register";
 const SEPARATOR: u8 = b';';
 
 #[derive(Debug)]
@@ -66,7 +65,6 @@ pub struct TaskHandler {
     clients: RwLock<HashMap<Vec<u8>, Client>>,
     active_connections: RwLock<HashSet<Vec<u8>>>,
     retained_messages: RwLock<HashMap<Vec<u8>, Publish>>,
-    // topics: RwLock<HashMap<TopicName, Vec<ClientId>>>,
 
     // monitor se subscribe a (drone-data/+) <- es un topic filter
 
@@ -77,14 +75,16 @@ pub struct TaskHandler {
     // si matchea, le mando el msg
     topics: RwLock<Vec<(TopicFilter, ClientId)>>,
     log_file: Arc<Logger>,
-    registered_clients: Arc<Mutex<Logins>>,
+    //registered_clients: Arc<Mutex<Logins>>,
+    client_manager: Arc<RwLock<ClientManager>>,
 }
 
 impl TaskHandler {
     pub fn new(
         receiver_channel: mpsc::Receiver<Task>,
         log_file: Arc<Logger>,
-        registered_clients: Arc<Mutex<Logins>>,
+        //registered_clients: Logins,
+        client_manager: Arc<RwLock<ClientManager>>,
     ) -> Self {
         TaskHandler {
             client_actions_receiver_channel: receiver_channel,
@@ -93,7 +93,8 @@ impl TaskHandler {
             retained_messages: RwLock::new(HashMap::new()),
             topics: RwLock::new(Vec::new()),
             log_file,
-            registered_clients,
+            //registered_clients: Arc::new(Mutex::new(registered_clients)),
+            client_manager,
         }
     }
 
@@ -214,32 +215,38 @@ impl TaskHandler {
         let topic_name = publish_packet.topic();
         let levels = topic_name.levels();
 
-        if client_id != ADMIN {
+        if client_id != ADMIN_USERNAME {
             self.log_file.error("Client is not admin");
             return;
         }
 
-        if levels.len() == 1 && levels[0] == DRONE_REGISTRED {
+        // println!("{}", levels[0] == CLIENT_REGISTRED);
+
+        if levels.len() == 1 && levels[0] == CLIENT_REGISTRED {
+            println!("DRONE REGISTRED");
             let message = publish_packet.message();
             //  split username and password by SEPARATOR
             let split = message.split(|&c| c == SEPARATOR).collect::<Vec<&[u8]>>();
 
             if split.len() != 2 {
                 self.log_file
-                    .error("Invalid message for drone registration");
+                    .error("Invalid message for client registration");
                 return;
             }
 
-            let username = split[0];
-            let password = split[1];
+            let username = split[0].to_vec();
+            let password = split[1].to_vec();
 
-            let mut registered_clients = self.registered_clients.lock().unwrap();
-            if registered_clients.contains_key(&(username.to_vec(), password.to_vec())) {
-                self.log_file.error("Client already registered");
+            let client_manager = self.client_manager.write().unwrap();
+            if client_manager.authenticate_client(username.clone(), password.clone()) {
+                self.log_file.info("Client already registered");
             } else {
-                registered_clients.insert((username.to_vec(), password.to_vec()), false);
+                client_manager.register_client(username, password);
                 self.log_file.info("Client registered");
             }
+
+        } else {
+            self.log_file.error("Invalid topic for server reserved topic");
         }
     }
 

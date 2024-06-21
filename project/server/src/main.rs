@@ -3,6 +3,7 @@ use std::env;
 use std::path::Path;
 
 mod client;
+mod client_manager;
 mod config;
 mod error;
 mod logfile;

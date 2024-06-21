@@ -1,3 +1,16 @@
+pub enum ErrorResgistration {
+    LockError,
+    AuthenticationError,
+    IoError(std::io::Error),
+    ClientAlreadyRegistered,
+    ClientNotFound,
+}
+
+pub enum ErrorServer {
+    LockError,
+}
+
+
 #[derive(Debug)]
 pub struct Error {
     _message: String,

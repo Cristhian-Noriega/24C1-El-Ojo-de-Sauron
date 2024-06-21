@@ -1,11 +1,11 @@
-use std::path::Path;
 use config::Config;
 use std::env::args;
+use std::path::Path;
 
 mod client;
+mod config;
 mod drone;
 mod drone_status;
-mod config;
 
 static CLIENT_ARGS: usize = 2;
 

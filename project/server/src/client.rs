@@ -16,7 +16,6 @@ use crate::task_handler::Message;
 #[derive(Debug)]
 pub struct Client {
     pub id: Vec<u8>,
-    pub password: String,
     pub subscriptions: Vec<TopicFilter>,
     pub alive: AtomicBool,
     pub stream: Arc<Mutex<TcpStream>>, // ARC MUTEX TCP STREAM
@@ -25,14 +24,12 @@ pub struct Client {
 impl Client {
     pub fn new(
         id: Vec<u8>,
-        password: String,
         stream: TcpStream,
         clean_session: bool,
         keep_alive: u16,
     ) -> Client {
         Client {
             id,
-            password,
             subscriptions: Vec::new(),
             alive: AtomicBool::new(true),
             stream: Arc::new(Mutex::new(stream)),
@@ -77,6 +74,14 @@ impl Client {
             Err(e) => logfile.log_sending_message_error(message_str, client_id_str),
         }
     }
+
+    pub fn stream(&self) -> Arc<Mutex<TcpStream>> {
+        self.stream.clone()
+    }
+
+    pub fn id(&self) -> Vec<u8> {
+        self.id.clone()
+    }
 }
 
 impl fmt::Display for Client {
@@ -91,9 +96,8 @@ impl fmt::Display for Client {
 
         write!(
             f,
-            "Client ID: {}\nPassword: {}\nSubscriptions: {}\nAlive: {}",
+            "Client ID: {}\nSubscriptions: {}\nAlive: {}",
             id,
-            self.password,
             subscriptions,
             self.alive.load(Ordering::Relaxed)
         )

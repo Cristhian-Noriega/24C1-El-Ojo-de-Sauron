@@ -73,7 +73,7 @@ fn connect_to_server(address: &str, username: &str, password: &str) -> std::io::
     println!("\nConnecting to address: {:?}", address);
     let mut to_server_stream = TcpStream::connect(address)?;
 
-    let client_id_bytes: Vec<u8> = b"monitor".to_vec();
+    let client_id_bytes: Vec<u8> = b"admin".to_vec();
     let client_id = EncodedString::new(client_id_bytes);
     let will = None;
 
@@ -122,7 +122,7 @@ fn start_ui(
 
 const CAMERA_DATA: &[u8] = b"camera-data";
 const DRONE_DATA: &[u8] = b"drone-data";
-const DRONE_REGISTER: &[u8] = b"$drone-register";
+const CLIENT_REGISTER: &[u8] = b"$client-register";
 const NEW_INCIDENT: &[u8] = b"new-incident";
 const ATTENDING_INCIDENT: &[u8] = b"attending-incident";
 const READY_INCIDENT: &[u8] = b"ready-incident";
@@ -327,7 +327,7 @@ fn register_drone(
     drone_registration: DroneRegistration,
     package_identifier: u16,
 ) -> Option<Publish> {
-    let topic_name = TopicName::new(vec![DRONE_REGISTER.to_vec()], true);
+    let topic_name = TopicName::new(vec![CLIENT_REGISTER.to_vec()], true);
     let message = drone_registration.build_drone_message().into_bytes();
     let dup = false;
     let qos = QoS::AtLeast;
