@@ -24,6 +24,7 @@ use super::{
     task_handler::{Task, TaskHandler},
 };
 
+/// Represents the MQTT server that will be handling all messages
 pub struct Server {
     config: Config,
     // Channel for client actions
@@ -34,6 +35,7 @@ pub struct Server {
 }
 
 impl Server {
+    /// Creates a new server with the specified configuration
     pub fn new(config: Config) -> Self {
         let (client_actions_sender, client_actions_receiver) = mpsc::channel();
 
@@ -48,6 +50,7 @@ impl Server {
         }
     }
 
+    /// Starts the server
     pub fn server_run(&self) -> std::io::Result<()> {
         let address = self.config.get_address();
 
@@ -71,6 +74,7 @@ impl Server {
         Ok(())
     }
 
+    /// Handles a new connection by checking if it is a valid packet
     pub fn handle_new_connection(&self, mut stream: TcpStream) -> std::io::Result<()> {
         match Packet::from_bytes(&mut stream) {
             Ok(packet) => self.handle_incoming_packet(packet, stream),
@@ -83,12 +87,14 @@ impl Server {
         Ok(())
     }
 
+    /// Initializes the task handler thread
     pub fn initialize_task_handler_thread(task_handler: TaskHandler) {
         std::thread::spawn(move || {
             task_handler.run();
         });
     }
 
+    /// Handles an incoming packet from a connection. If it is a Connect packet, it will create a new client. Otherwise, it will log an error.
     pub fn handle_incoming_packet(&self, packet: Packet, stream: TcpStream) {
         match packet {
             Packet::Connect(connect_packet) => self.connect_new_client(connect_packet, stream),
@@ -96,6 +102,7 @@ impl Server {
         }
     }
 
+    /// Establishes a new connection with a client by creating a new client and a new thread for it
     pub fn connect_new_client(&self, connect_packet: Connect, stream: TcpStream) {
         let message = format!(
             "Received Connect Packet from client with ID: {}",
@@ -121,6 +128,7 @@ impl Server {
         );
     }
 
+    /// Creates a new thread for a client
     pub fn create_new_client_thread(
         &self,
         sender_to_task_channel: std::sync::mpsc::Sender<Task>,
@@ -156,6 +164,7 @@ impl Server {
     }
 }
 
+/// Handles a packet by checking its type and calling the corresponding function
 pub fn handle_packet(
     packet: Packet,
     client_id: Vec<u8>,
@@ -204,6 +213,7 @@ pub fn handle_packet(
     }
 }
 
+/// Handles a CONNECT packet
 pub fn handle_connect(
     sender_to_topics_channel: std::sync::mpsc::Sender<Task>,
     client: Client,
@@ -214,6 +224,7 @@ pub fn handle_connect(
     true
 }
 
+/// Handles a PUBLISH packet
 pub fn handle_publish(
     publish_packet: Publish,
     sender_to_topics_channel: std::sync::mpsc::Sender<Task>,
@@ -225,6 +236,7 @@ pub fn handle_publish(
     true
 }
 
+/// Handles a PUBACK packet
 pub fn handle_puback(
     puback_packet: Puback,
     sender_to_topics_channel: std::sync::mpsc::Sender<Task>,
@@ -233,6 +245,7 @@ pub fn handle_puback(
     true
 }
 
+/// Handles a SUBSCRIBE packet
 pub fn handle_subscribe(
     subscribe_packet: Subscribe,
     sender_to_task_channel: std::sync::mpsc::Sender<Task>,
@@ -245,6 +258,7 @@ pub fn handle_subscribe(
     true
 }
 
+/// Handles an UNSUBSCRIBE packet
 pub fn handle_unsubscribe(
     unsubscribe_packet: Unsubscribe,
     sender_to_task_channel: std::sync::mpsc::Sender<Task>,
@@ -257,6 +271,7 @@ pub fn handle_unsubscribe(
     true
 }
 
+/// Handles a PINGREQ packet
 pub fn handle_pingreq(
     sender_to_task_channel: std::sync::mpsc::Sender<Task>,
     client_id: Vec<u8>,
@@ -267,6 +282,7 @@ pub fn handle_pingreq(
     true
 }
 
+/// Handles a DISCONNECT packet
 pub fn disconnect_client(
     sender_to_task_channel: std::sync::mpsc::Sender<Task>,
     client_id: Vec<u8>,

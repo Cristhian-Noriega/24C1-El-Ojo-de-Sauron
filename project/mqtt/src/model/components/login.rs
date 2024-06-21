@@ -1,5 +1,6 @@
 use crate::{EncodedString, Error, Read};
 
+/// Represents a login in MQTT.
 #[derive(Debug, PartialEq)]
 pub struct Login {
     pub username: EncodedString,
@@ -11,6 +12,7 @@ impl Login {
         Login { username, password }
     }
 
+    /// Converts a stream of bytes into a Login.
     pub fn from_bytes(stream: &mut dyn Read, has_password: bool) -> Result<Login, Error> {
         let username = EncodedString::from_bytes(stream)?;
 
@@ -23,6 +25,7 @@ impl Login {
         Ok(Login::new(username, password))
     }
 
+    /// Converts the Login into a vector of bytes.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = vec![];
         bytes.extend(self.username.to_bytes());
@@ -34,10 +37,12 @@ impl Login {
         bytes
     }
 
+    /// Returns the username of the Login.
     pub fn username(&self) -> &EncodedString {
         &self.username
     }
 
+    /// Returns a reference to the password of the Login.
     pub fn password(&self) -> Option<&EncodedString> {
         self.password.as_ref()
     }

@@ -19,6 +19,7 @@ use walkers::{
 const DEFAULT_LONGITUDE: f64 = -58.3717;
 const DEFAULT_LONGITUD: f64 = -34.6081;
 
+/// Represents the layout of the UI
 #[derive(PartialEq)]
 enum Layout {
     IncidentMap,
@@ -29,6 +30,7 @@ enum Layout {
     CameraList,
 }
 
+/// Represents the UI application
 pub struct UIApplication {
     new_incident_registration: IncidentRegistration,
     new_drone_registration: DroneRegistration,
@@ -47,6 +49,7 @@ pub struct UIApplication {
 }
 
 impl UIApplication {
+    /// Creates a new UI application
     pub fn new(
         egui_ctx: Context,
         sender: Sender<UIAction>,
@@ -79,6 +82,7 @@ impl UIApplication {
     }
 }
 
+/// Updates the drones in the UI
 fn update_drones(drones: &mut Vec<Drone>, drone: Drone) {
     for d in drones.iter_mut() {
         if d.id == drone.id {
@@ -90,6 +94,7 @@ fn update_drones(drones: &mut Vec<Drone>, drone: Drone) {
     drones.push(drone);
 }
 
+/// Updates the incidents in the UI
 fn update_incidents(incidents: &mut Vec<Incident>, incident: Incident) {
     for i in incidents.iter_mut() {
         if i.uuid == incident.uuid {
@@ -101,6 +106,7 @@ fn update_incidents(incidents: &mut Vec<Incident>, incident: Incident) {
     incidents.push(incident);
 }
 
+/// Updates the cameras in the UI
 fn update_cameras(cameras: &mut Vec<Camera>, camera: Camera) {
     for c in cameras.iter_mut() {
         if c.id == camera.id {
@@ -112,6 +118,7 @@ fn update_cameras(cameras: &mut Vec<Camera>, camera: Camera) {
     cameras.push(camera);
 }
 
+/// Displays the incident map
 fn display_incident_map(
     ui: &mut egui::Ui,
     incidents: &Vec<Incident>,
@@ -131,6 +138,7 @@ fn display_incident_map(
     ui.add(Map::new(Some(tiles), map_memory, position).with_plugin(places_plugin));
 }
 
+/// Displays the form to create a new incident
 fn display_new_incident(
     ui: &mut egui::Ui,
     new_incident: &mut IncidentRegistration,
@@ -164,6 +172,7 @@ fn display_new_incident(
     });
 }
 
+/// Displays the incident list
 fn display_incident_list(ui: &mut egui::Ui, incidents: &[Incident], sender: &Sender<UIAction>) {
     TableBuilder::new(ui)
         .striped(true)
@@ -234,6 +243,7 @@ fn display_incident_list(ui: &mut egui::Ui, incidents: &[Incident], sender: &Sen
         });
 }
 
+/// Displays the form to register a new drone
 fn display_new_drone(
     ui: &mut egui::Ui,
     drone_registration: &mut DroneRegistration,
@@ -285,6 +295,7 @@ fn display_new_drone(
     ui.add_space(20.0);
 }
 
+/// Displays the drone list
 fn display_drone_list(ui: &mut egui::Ui, drones: &[Drone]) {
     egui::Frame::group(ui.style()).show(ui, |ui| {
         ui.label("Active Drones:");
@@ -330,6 +341,7 @@ fn display_drone_list(ui: &mut egui::Ui, drones: &[Drone]) {
     });
 }
 
+/// Displays the camera list
 fn display_camera_list(ui: &mut egui::Ui, cameras: &[Camera]) {
     egui::Frame::group(ui.style()).show(ui, |ui| {
         ui.label("Camera List");
@@ -369,6 +381,7 @@ fn display_camera_list(ui: &mut egui::Ui, cameras: &[Camera]) {
     });
 }
 
+/// Displays the header of the UI
 fn display_header(
     ui: &mut egui::Ui,
     current_layout: &mut Layout,
@@ -461,6 +474,7 @@ impl eframe::App for UIApplication {
     }
 }
 
+/// Updates the places in the map
 fn update_places(incidents: &Vec<Incident>, drones: &Vec<Drone>, cameras: &Vec<Camera>) -> Places {
     let mut places = vec![];
 

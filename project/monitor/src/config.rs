@@ -2,12 +2,14 @@
 
 use std::{fs, path::Path};
 
+/// Represents the configuration of the server
 #[derive(Debug, Clone)]
 pub struct Config {
     address: String,
 }
 
 impl Config {
+    /// Reads the configuration from a file
     pub fn from_file(path: &Path) -> std::io::Result<Self> {
         let content = fs::read_to_string(path)?;
 
@@ -25,6 +27,7 @@ impl Config {
         Ok(config)
     }
 
+    /// Returns the address of the server
     pub fn get_address(&self) -> &str {
         &self.address
     }

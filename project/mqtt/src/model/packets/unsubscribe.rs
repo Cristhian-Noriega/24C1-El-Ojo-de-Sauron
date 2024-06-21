@@ -1,6 +1,7 @@
 use super::{DEFAULT_VARIABLE_HEADER_LENGTH, RESERVED_FIXED_HEADER_FLAGS, UNSUBSCRIBE_PACKET_TYPE};
 use crate::{Error, FixedHeader, Read, RemainingLength, TopicFilter};
 
+/// Represents an UNSUBSCRIBE packet from MQTT. The client uses it to unsubscribe from one or more topics.
 #[derive(Debug)]
 pub struct Unsubscribe {
     // Variable Header
@@ -17,6 +18,7 @@ impl Unsubscribe {
         }
     }
 
+    /// Converts a stream of bytes into an Unsubscribe.
     pub fn from_bytes(fixed_header: FixedHeader, stream: &mut dyn Read) -> Result<Self, Error> {
         // Fixed Header
         let fixed_header_flags = fixed_header.first_byte() & 0b0000_1111;
@@ -53,6 +55,7 @@ impl Unsubscribe {
         })
     }
 
+    /// Converts the Unsubscribe into a vector of bytes.
     pub fn to_bytes(&self) -> Vec<u8> {
         // Variable Header
         let mut variable_header_bytes = vec![];
@@ -85,11 +88,71 @@ impl Unsubscribe {
         packet_bytes
     }
 
+    /// Returns the packet identifier.
     pub fn packet_identifier(&self) -> u16 {
         self.packet_identifier
     }
 
+    /// Returns the topics to unsubscribe from.
     pub fn topics(&self) -> &Vec<TopicFilter> {
         &self.topics
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::TopicFilter;
+    use crate::EncodedString;
+    use std::io::Cursor;
+
+    #[allow(dead_code)]
+    fn from_slice(bytes: &[u8]) -> impl Read {
+        let encoded_string = EncodedString::new(bytes.to_vec());
+        Cursor::new(encoded_string.to_bytes())
+    }
+
+    #[test]
+    fn test_unsubscribe_from_bytes() {
+        let packet_identifier = 1;
+        let bytes = &mut from_slice(b"topic1");
+        let topic_filter = TopicFilter::from_bytes(bytes).unwrap();
+        let topics = vec![
+            topic_filter,
+        ];
+
+        let mut stream = std::io::Cursor::new(vec![
+            0x00,
+            0x01,
+            0x00, 0x06, b't', b'o', b'p', b'i', b'c', b'1'
+        ]);
+
+        let fixed_header = FixedHeader::new(UNSUBSCRIBE_PACKET_TYPE << 4, RemainingLength::new(10));
+        let unsubscribe = Unsubscribe::from_bytes(fixed_header, &mut stream).unwrap();
+
+        assert_eq!(unsubscribe.packet_identifier(), packet_identifier);
+        assert_eq!(unsubscribe.topics(), &topics);
+    }
+
+    #[test]
+    fn test_unsubscribe_to_bytes() {
+        let packet_identifier = 1;
+        let bytes = &mut from_slice(b"topic1");
+        let topic_filter = TopicFilter::from_bytes(bytes).unwrap();
+        let topics = vec![
+            topic_filter,
+        ];
+
+        let unsubscribe = Unsubscribe::new(packet_identifier, topics);
+
+        let expected_bytes = vec![
+            160_u8,
+            10_u8, 
+            0x00,
+            0x01,
+            0x00, 0x06, b't', b'o', b'p', b'i', b'c', b'1'
+        ];
+
+        assert_eq!(unsubscribe.to_bytes(), expected_bytes);
     }
 }

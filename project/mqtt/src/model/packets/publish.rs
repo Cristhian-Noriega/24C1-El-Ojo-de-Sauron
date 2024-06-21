@@ -1,6 +1,7 @@
 use super::{DEFAULT_VARIABLE_HEADER_LENGTH, PUBLISH_PACKET_TYPE};
 use crate::{Error, FixedHeader, QoS, Read, RemainingLength, TopicName};
 
+/// Represents a PUBLISH packet of MQTT. The client uses it to publish a message to a topic.
 #[derive(Debug, Clone)]
 pub struct Publish {
     dup: bool,
@@ -30,6 +31,7 @@ impl Publish {
         }
     }
 
+    /// Converts a stream of bytes into a Publish.
     pub fn from_bytes(fixed_header: FixedHeader, stream: &mut dyn Read) -> Result<Self, Error> {
         // Fixed Header
 
@@ -75,6 +77,7 @@ impl Publish {
         ))
     }
 
+    /// Converts the Publish into a vector of bytes.
     pub fn to_bytes(&self) -> Vec<u8> {
         // Payload
         let payload_bytes = &self.message;
@@ -111,26 +114,32 @@ impl Publish {
         packet_bytes
     }
 
+    /// Returns whether the packet is duplicated.
     pub fn dup(&self) -> bool {
         self.dup
     }
 
+    /// Returns the quality of service of the packet.
     pub fn qos(&self) -> &QoS {
         &self.qos
     }
 
+    /// Returns whether the packet should be retained.
     pub fn retain(&self) -> bool {
         self.retain
     }
 
+    /// Returns the topic of the packet.
     pub fn topic(&self) -> &TopicName {
         &self.topic
     }
 
+    /// Returns the package identifier of the packet.
     pub fn package_identifier(&self) -> Option<u16> {
         self.package_identifier
     }
 
+    /// Returns the message of the packet.
     pub fn message(&self) -> &Vec<u8> {
         &self.message
     }

@@ -1,5 +1,6 @@
 use crate::Error;
 
+/// Represents the different connection return codes in MQTT.
 #[derive(PartialEq, Debug)]
 pub enum ConnectReturnCode {
     ConnectionAccepted,
@@ -11,6 +12,7 @@ pub enum ConnectReturnCode {
 }
 
 impl ConnectReturnCode {
+    /// Converts the connection return code to a byte.
     pub fn to_byte(&self) -> u8 {
         match self {
             ConnectReturnCode::ConnectionAccepted => 0x00,
@@ -22,6 +24,7 @@ impl ConnectReturnCode {
         }
     }
 
+    /// Converts a byte into a connection return code.
     pub fn from_byte(byte: u8) -> Result<Self, Error> {
         match byte {
             0x00 => Ok(ConnectReturnCode::ConnectionAccepted),

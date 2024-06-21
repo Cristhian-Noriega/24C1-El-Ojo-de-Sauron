@@ -12,7 +12,7 @@ use mqtt::model::components::topic_name::TopicName;
 
 use crate::task_handler::Message;
 
-// represents the state of the client in the server
+/// Represents the state of the client in the server
 #[derive(Debug)]
 pub struct Client {
     pub id: Vec<u8>,
@@ -39,6 +39,8 @@ impl Client {
         }
     }
 
+
+    /// Subscribes the client to a topic
     pub fn add_subscription(&mut self, topic: TopicFilter) {
         let client_id = String::from_utf8(self.id.clone()).unwrap();
         println!(
@@ -49,6 +51,7 @@ impl Client {
         self.subscriptions.push(topic);
     }
 
+    /// Unsubscribes the client from a topic
     pub fn remove_subscription(&mut self, topic: &TopicFilter) {
         let client_id = String::from_utf8(self.id.clone()).unwrap();
         println!(
@@ -59,12 +62,14 @@ impl Client {
         self.subscriptions.retain(|t| t != topic);
     }
 
+    /// Checks if the client is subscribed to a topic
     pub fn is_subscribed(&self, topic: &TopicName) -> bool {
         self.subscriptions
             .iter()
             .any(|t| t.match_topic_name(topic.clone()))
     }
 
+    /// Sends a message to the client
     pub fn send_message(&self, message: Message, logfile: &Arc<crate::logfile::Logger>) {
         let message_str = std::str::from_utf8(message.packet().message()).unwrap();
         let client_id_str = std::str::from_utf8(&self.id).unwrap();
