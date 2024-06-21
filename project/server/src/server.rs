@@ -3,11 +3,10 @@
 
 use std::{
     collections::HashMap,
-    io::Write,
     net::{TcpListener, TcpStream},
     sync::{
         mpsc::{self, Sender},
-        Arc, Mutex, RwLock,
+        Arc, RwLock,
     },
     thread,
 };
@@ -19,14 +18,8 @@ pub use mqtt::model::{
         unsubscribe::Unsubscribe,
     },
 };
-use mqtt::model::{
-    packets::connack::Connack, return_codes::connect_return_code::ConnectReturnCode,
-};
 
-use crate::{
-    client::Client,
-    client_manager::{self, ClientManager},
-};
+use crate::{client::Client, client_manager::ClientManager};
 
 use super::{
     config::Config,
@@ -130,7 +123,7 @@ impl Server {
 
         let stream_clone = stream.try_clone().unwrap();
 
-        let new_client = match client_manager.process_connect_packet(connect_packet, stream_clone) {
+        match client_manager.process_connect_packet(connect_packet, stream_clone) {
             Some(new_client) => {
                 self.log_file.info("Client connected successfully");
 

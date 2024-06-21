@@ -236,7 +236,11 @@ impl TaskHandler {
             let password = split[2].to_vec();
 
             let client_manager = self.client_manager.write().unwrap();
-            if client_manager.authenticate_client(client_id.clone(), username.clone(), password.clone()) {
+            if client_manager.authenticate_client(
+                client_id.clone(),
+                username.clone(),
+                password.clone(),
+            ) {
                 self.log_file.info("Client already registered");
             } else {
                 client_manager.register_client(client_id, username, password);

@@ -12,7 +12,8 @@ use mqtt::model::{
 
 use crate::{client::Client, config::Config};
 
-const ADMIN_USERNAME: &[u8] = b"admin";
+const ADMIN_ID: &[u8] = b"admin";
+const CAMERA_SYSTEM_ID: &[u8] = b"camera-system";
 
 type ClientId = Vec<u8>;
 type Logins = (Vec<u8>, Vec<u8>, bool); // username, password, is_connected
@@ -35,10 +36,16 @@ impl ClientManager {
         registered_clients.insert(client_id, (username, password, false));
     }
 
-    pub fn authenticate_client(&self, client_id: Vec<u8>, username: Vec<u8>, password: Vec<u8>) -> bool {
+    pub fn authenticate_client(
+        &self,
+        client_id: Vec<u8>,
+        username: Vec<u8>,
+        password: Vec<u8>,
+    ) -> bool {
         let mut registered_clients = self.registered_clients.lock().unwrap();
-        println!("Registered clients: {:?}", registered_clients);
-        if let Some((stored_username, stored_password, is_connected)) = registered_clients.get_mut(&client_id) {
+        if let Some((stored_username, stored_password, is_connected)) =
+            registered_clients.get_mut(&client_id)
+        {
             if stored_username == &username && stored_password == &password {
                 *is_connected = true;
                 return true;
@@ -54,7 +61,7 @@ impl ClientManager {
     ) -> Option<Client> {
         let client_id = connect_packet.client_id().content().to_vec();
         let (username, password) = match self.get_login_info(&connect_packet) {
-            Ok(credentials) => credentials,
+            Ok(login) => login,
             Err(_) => {
                 self.failure_connection(stream, ConnectReturnCode::BadUsernameOrPassword);
                 return None;
@@ -88,23 +95,29 @@ impl ClientManager {
             .login()
             .ok_or("No login information provided")?;
         let username = login.username().content().to_vec();
-        let password = login.password().ok_or("No password provided")?.content().to_vec();
+        let password = login
+            .password()
+            .ok_or("No password provided")?
+            .content()
+            .to_vec();
         Ok((username, password))
     }
 
     pub fn make_initial_registrations(&self, config: Config) {
         let admin_username = config.get_admin_username().as_bytes().to_vec();
         let admin_password = config.get_admin_password().as_bytes().to_vec();
-        let admin_id = b"admin".to_vec();
+        let admin_id = ADMIN_ID.to_vec();
 
         self.register_client(admin_id, admin_username, admin_password);
 
         let camera_system_username = config.get_camera_system_username().as_bytes().to_vec();
         let camera_system_password = config.get_camera_system_password().as_bytes().to_vec();
-        let camera_system_id = b"camera-system".to_vec();
+        let camera_system_id = CAMERA_SYSTEM_ID.to_vec();
 
-        self.register_client(camera_system_id, camera_system_username, camera_system_password);
-
-        println!("Initial registrations complete: {:?}", self.registered_clients.lock().unwrap());
+        self.register_client(
+            camera_system_id,
+            camera_system_username,
+            camera_system_password,
+        );
     }
 }
