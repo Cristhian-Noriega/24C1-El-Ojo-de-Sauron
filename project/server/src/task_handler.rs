@@ -244,9 +244,9 @@ impl TaskHandler {
                 client_manager.register_client(username, password);
                 self.log_file.info("Client registered");
             }
-
         } else {
-            self.log_file.error("Invalid topic for server reserved topic");
+            self.log_file
+                .error("Invalid topic for server reserved topic");
         }
     }
 

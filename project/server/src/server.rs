@@ -23,7 +23,10 @@ use mqtt::model::{
     packets::connack::Connack, return_codes::connect_return_code::ConnectReturnCode,
 };
 
-use crate::{client::Client, client_manager::{self, ClientManager}};
+use crate::{
+    client::Client,
+    client_manager::{self, ClientManager},
+};
 
 use super::{
     config::Config,
@@ -47,8 +50,15 @@ impl Server {
         let (client_actions_sender, client_actions_receiver) = mpsc::channel();
 
         let log_file = Arc::new(Logger::new(config.get_log_file()));
+        let client_manager = ClientManager::new();
+        client_manager.make_initial_registrations(config.clone());
         let client_manager = Arc::new(RwLock::new(ClientManager::new()));
-        let task_handler = TaskHandler::new(client_actions_receiver, log_file.clone(), client_manager.clone());
+
+        let task_handler = TaskHandler::new(
+            client_actions_receiver,
+            log_file.clone(),
+            client_manager.clone(),
+        );
 
         task_handler.initialize_task_handler_thread();
 

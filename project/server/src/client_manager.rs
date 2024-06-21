@@ -30,13 +30,27 @@ impl ClientManager {
     }
 
     pub fn register_client(&self, username: Vec<u8>, password: Vec<u8>) {
-        let mut clients = self.registered_clients.lock().unwrap();
-        clients.insert((username, password), false);
+        match self.registered_clients.lock() {
+            Ok(mut registered_clients) => {
+                registered_clients.insert((username, password), false);
+            }
+            Err(_) => {
+                // self.log_file.error("Error locking registered clients");
+            }
+        }
     }
 
     pub fn authenticate_client(&self, username: Vec<u8>, password: Vec<u8>) -> bool {
-        let registered_clients = self.registered_clients.lock().unwrap();
-        registered_clients.contains_key(&(username, password))
+        match self.registered_clients.lock() {
+            Ok(registered_clients) => match registered_clients.get(&(username, password)) {
+                Some(true) => true,
+                _ => false,
+            },
+            Err(_) => {
+                // self.log_file.error("Error locking registered clients");
+                false
+            }
+        }
     }
 
     pub fn process_connect_packet(
@@ -45,49 +59,41 @@ impl ClientManager {
         stream: TcpStream,
     ) -> Option<Client> {
         let client_id = connect_packet.client_id().content();
-        let (usermame, password) = match connect_packet.login() {
-            Some(login) => {
-                let username = login.username().content();
-                match login.password() {
-                    Some(password) => {
-                        let password = password.content();
-                        (username, password)
-                    }
-                    None => {
-                        //self.log_file.error("No password provided");
-                        self.failure_connection(stream, ConnectReturnCode::IdentifierRejected);
-                        return None;
-                    }
-                }
-            }
-            None => {
-                //self.log_file.error("No login information provided");
-                self.failure_connection(stream, ConnectReturnCode::IdentifierRejected);
+        let (usermame, password) = match self.get_login_info(&connect_packet) {
+            Ok((username, password)) => (username, password),
+            Err(_) => {
+                // self.log_file.error(&format!("Error getting login info: {:?}", err));
                 return None;
             }
         };
 
         let mut registered_clients = match self.registered_clients.lock() {
             Ok(registered_clients) => registered_clients,
-            Err(err) => {
+            Err(_) => {
                 // self.log_file
                 // .error(&format!("Error locking registered clients: {:?}", err));
                 return None;
             }
         };
 
-        match registered_clients.get(&(usermame.to_vec(), password.to_vec())) {
-            Some(true) => {
-                //self.log_file.error("Client already connected");
-                self.failure_connection(stream, ConnectReturnCode::IdentifierRejected);
-                return None;
-            }
-            Some(false) => {
-                registered_clients.insert((usermame.to_vec(), password.to_vec()), true);
+        // if it is not registered i have to failure the connection
+        //i have to check if the client is already connected , with the bool value,
+        //if it is connected i have to return None
+        // if it is registered and is not connected i have to change the value to true
+
+        match registered_clients.get_mut(&(usermame.clone(), password.clone())) {
+            Some(is_connected) => {
+                if *is_connected {
+                    println!("Client already connected");
+                    self.failure_connection(stream, ConnectReturnCode::IdentifierRejected);
+                    return None;
+                }
+                *is_connected = true;
+                println!("Client registered now is connected")
             }
             None => {
-                //self.log_file.error("Client not registered");
-                self.failure_connection(stream, ConnectReturnCode::IdentifierRejected);
+                println!("Client not registered");
+                self.failure_connection(stream, ConnectReturnCode::BadUsernameOrPassword);
                 return None;
             }
         }
@@ -112,21 +118,24 @@ impl ClientManager {
         }
     }
 
+    pub fn get_login_info(&self, connect_packet: &Connect) -> Result<(Vec<u8>, Vec<u8>), String> {
+        let login = connect_packet
+            .login()
+            .ok_or("No login information provided")?;
+        let username = login.username().content();
+        let password = login.password().ok_or("No password provided")?.content();
+        Ok((username.to_vec(), password.to_vec()))
+    }
+
     pub fn make_initial_registrations(&self, config: Config) {
-        let mut registered_clients = self.registered_clients.lock().unwrap();
-        registered_clients.insert(
-            (
-                ADMIN_USERNAME.to_vec(),
-                config.get_admin_password().as_bytes().to_vec(),
-            ),
-            false,
-        );
-        registered_clients.insert(
-            (
-                config.get_camera_system_username().as_bytes().to_vec(),
-                config.get_camera_system_password().as_bytes().to_vec(),
-            ),
-            false,
-        );
+        let admin_username = ADMIN_USERNAME.to_vec();
+        let admin_password = config.get_admin_password().as_bytes().to_vec();
+
+        self.register_client(admin_username, admin_password);
+
+        let camera_system_username = config.get_camera_system_username().as_bytes().to_vec();
+        let camera_system_password = config.get_camera_system_password().as_bytes().to_vec();
+
+        self.register_client(camera_system_username, camera_system_password);
     }
 }
