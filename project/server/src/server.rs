@@ -1,8 +1,6 @@
-#![allow(unused_variables)]
-#![allow(dead_code)]
+// #![allow(unused_variables)]
 
 use std::{
-    collections::HashMap,
     net::{TcpListener, TcpStream},
     sync::{
         mpsc::{self, Sender},
@@ -13,10 +11,7 @@ use std::{
 
 pub use mqtt::model::{
     packet::Packet,
-    packets::{
-        connect::Connect, puback::Puback, publish::Publish, subscribe::Subscribe,
-        unsubscribe::Unsubscribe,
-    },
+    packets::{connect::Connect, publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe},
 };
 
 use crate::{client::Client, client_manager::ClientManager};
@@ -29,13 +24,13 @@ use super::{
 
 /// Represents the MQTT server that will be handling all messages
 pub struct Server {
+    /// Configuration of the server
     config: Config,
-    // Channel for client actions
+    /// Channel to send messages to clients
     client_actions_sender: Sender<Task>,
-    // Map to store client senders for communication
-    client_senders: RwLock<HashMap<Vec<u8>, Sender<Publish>>>,
+    /// Log file to log messages
     log_file: Arc<Logger>,
-    //registered_clients: Arc<Mutex<HashMap<(Vec<u8>, Vec<u8>), bool>>>,
+    /// Manages the registered clients in the server
     client_manager: Arc<RwLock<ClientManager>>,
 }
 
@@ -60,7 +55,6 @@ impl Server {
         Server {
             config,
             client_actions_sender,
-            client_senders: RwLock::new(HashMap::new()),
             log_file,
             client_manager,
         }
@@ -101,13 +95,6 @@ impl Server {
             }
         }
         Ok(())
-    }
-
-    /// Initializes the task handler thread
-    pub fn initialize_task_handler_thread(task_handler: TaskHandler) {
-        std::thread::spawn(move || {
-            task_handler.run();
-        });
     }
 
     /// Handles an incoming packet from a connection. If it is a Connect packet, it will create a new client. Otherwise, it will log an error.
@@ -165,7 +152,6 @@ impl Server {
                         let handling_result = handle_packet(
                             packet,
                             client_id.clone(),
-                            &mut stream,
                             sender_to_task_channel.clone(),
                             log_file.clone(),
                         );
@@ -189,7 +175,6 @@ impl Server {
 pub fn handle_packet(
     packet: Packet,
     client_id: Vec<u8>,
-    stream: &mut TcpStream,
     sender_to_task_channel: std::sync::mpsc::Sender<Task>,
     log_file: Arc<Logger>,
 ) -> bool {
@@ -205,10 +190,6 @@ pub fn handle_packet(
             log_message("Publish");
             handle_publish(publish_packet, sender_to_task_channel, client_id)
         }
-        Packet::Puback(puback_packet) => {
-            log_message("Puback");
-            handle_puback(puback_packet, sender_to_task_channel, client_id)
-        }
         Packet::Subscribe(subscribe_packet) => {
             log_message("Subscribe");
             handle_subscribe(subscribe_packet, sender_to_task_channel, client_id)
@@ -217,11 +198,11 @@ pub fn handle_packet(
             log_message("Unsubscribe");
             handle_unsubscribe(unsubscribe_packet, sender_to_task_channel, client_id)
         }
-        Packet::Pingreq(pingreq_packet) => {
+        Packet::Pingreq(_) => {
             log_message("Pingreq");
             handle_pingreq(sender_to_task_channel, client_id)
         }
-        Packet::Disconnect(disconnect_packet) => {
+        Packet::Disconnect(_) => {
             log_message("Disconnect");
             disconnect_client(sender_to_task_channel, client_id)
         }
@@ -254,15 +235,6 @@ pub fn handle_publish(
     sender_to_topics_channel
         .send(Task::Publish(publish_packet, client_id))
         .unwrap();
-    true
-}
-
-/// Handles a PUBACK packet
-pub fn handle_puback(
-    puback_packet: Puback,
-    sender_to_topics_channel: std::sync::mpsc::Sender<Task>,
-    client_id: Vec<u8>,
-) -> bool {
     true
 }
 

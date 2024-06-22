@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use std::{
     collections::{HashMap, HashSet},
     io::Write,
@@ -10,7 +8,7 @@ use std::{
 use crate::{client::Client, client_manager::ClientManager, logfile::Logger};
 
 use mqtt::model::{
-    components::{qos::QoS, topic_filter::TopicFilter, topic_name::TopicName},
+    components::qos::QoS,
     packets::{
         connack::Connack, pingresp::Pingresp, puback::Puback, publish::Publish, suback::Suback,
         subscribe::Subscribe, unsuback::Unsuback, unsubscribe::Unsubscribe,
@@ -28,12 +26,6 @@ pub enum Task {
     RespondPing(Vec<u8>),
 }
 
-/// Represents the quality of service of a subscription
-#[derive(Clone, Debug)]
-pub struct SubscriptionData {
-    qos: QoS,
-}
-
 /// Represents a message
 #[derive(Clone, Debug)]
 pub struct Message {
@@ -47,26 +39,15 @@ impl Message {
         Self { client_id, packet }
     }
 
-    /// Returns the client id of the message
-    pub fn client_id(&self) -> &Vec<u8> {
-        &self.client_id
-    }
-
     /// Returns the publish packet of the message
     pub fn packet(&self) -> &Publish {
         &self.packet
     }
 }
 
-type Subscribers = HashMap<Vec<u8>, SubscriptionData>; // key : client_id , value: SubscriptionData
-                                                       // type Subtopic = HashMap<Vec<u8>, Topic>; // key: level, value: Topic
-type Subscriptions = HashMap<TopicName, SubscriptionData>; // key: topic_name, value: SubscriptionData
-type ClientId = Vec<u8>;
-
 const ADMIN_USERNAME: &[u8] = b"admin";
 const CLIENT_REGISTER: &[u8] = b"$client-register";
 const SEPARATOR: u8 = b';';
-
 
 /// Represents the task handler that will handle all the tasks that the server needs to process
 #[derive(Debug)]
@@ -74,7 +55,7 @@ pub struct TaskHandler {
     client_actions_receiver_channel: mpsc::Receiver<Task>,
     clients: RwLock<HashMap<Vec<u8>, Client>>,
     active_connections: RwLock<HashSet<Vec<u8>>>,
-    retained_messages: RwLock<HashMap<Vec<u8>, Publish>>,
+    //retained_messages: RwLock<HashMap<Vec<u8>, Publish>>,
 
     // monitor se subscribe a (drone-data/+) <- es un topic filter
 
@@ -83,9 +64,7 @@ pub struct TaskHandler {
     // debería guardar que monitor está suscrito a (drone-data/+)
     // cuando drone data publica en (drone-data/1) recorro todos los subscribes y me fijo si alguno matchea
     // si matchea, le mando el msg
-    topics: RwLock<Vec<(TopicFilter, ClientId)>>,
     log_file: Arc<Logger>,
-    //registered_clients: Arc<Mutex<Logins>>,
     client_manager: Arc<RwLock<ClientManager>>,
 }
 
@@ -100,10 +79,8 @@ impl TaskHandler {
             client_actions_receiver_channel: receiver_channel,
             clients: RwLock::new(HashMap::new()),
             active_connections: RwLock::new(HashSet::new()),
-            retained_messages: RwLock::new(HashMap::new()),
-            topics: RwLock::new(Vec::new()),
+            //retained_messages: RwLock::new(HashMap::new()),
             log_file,
-            //registered_clients: Arc::new(Mutex::new(registered_clients)),
             client_manager,
         }
     }
@@ -215,7 +192,8 @@ impl TaskHandler {
         }
 
         let mut clients = self.clients.write().unwrap();
-        // si el qos no es at most (qos 0), se debe mandar un puback al cliente
+
+        // If QoS is not AtMostOnce, send a Puback packet to the client that published the message
         if &QoS::AtMost != publish_packet.qos() {
             if let Some(client) = clients.get_mut(&client_id) {
                 self.puback(publish_packet.package_identifier(), client);
@@ -417,20 +395,20 @@ impl TaskHandler {
         active_connections.remove(&client_id);
     }
 
-    /// Register a puback packet
-    pub fn register_puback(&mut self, puback: Puback) {
-        let message_id = match puback.packet_identifier() {
-            Some(id) => id,
-            None => {
-                self.log_file
-                    .error("Puback packet without packet identifier");
-                return;
-            }
-        };
-        let message_id_bytes = message_id.to_be_bytes().to_vec();
+    // TODO: Implement retained messages
+    // pub fn register_puback(&mut self, puback: Puback) {
+    //     let message_id = match puback.packet_identifier() {
+    //         Some(id) => id,
+    //         None => {
+    //             self.log_file
+    //                 .error("Puback packet without packet identifier");
+    //             return;
+    //         }
+    //     };
+    //     let message_id_bytes = message_id.to_be_bytes().to_vec();
 
-        let mut retained_messages = self.retained_messages.write().unwrap();
+    //     let mut retained_messages = self.retained_messages.write().unwrap();
 
-        retained_messages.remove(&message_id_bytes);
-    }
+    //     retained_messages.remove(&message_id_bytes);
+    // }
 }

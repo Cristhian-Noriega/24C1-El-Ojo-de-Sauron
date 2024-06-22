@@ -72,6 +72,7 @@ impl Config {
     // pub fn get_segs_to_disconnect(&self) -> u32 {
     //     self.segs_to_disconnect
     // }
+
     pub fn get_admin_username(&self) -> &str {
         &self.admin_password
     }

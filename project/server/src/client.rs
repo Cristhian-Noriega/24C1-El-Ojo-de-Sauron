@@ -31,7 +31,6 @@ impl Client {
         }
     }
 
-
     /// Subscribes the client to a topic
     pub fn add_subscription(&mut self, topic: TopicFilter) {
         let client_id = String::from_utf8(self.id.clone()).unwrap();
