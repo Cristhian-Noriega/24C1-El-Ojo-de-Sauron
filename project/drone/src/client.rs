@@ -43,12 +43,14 @@ const DRONE_ATTENDING_DURATION: u64 = 10;
 /// Runs the client with the specified configuration
 pub fn client_run(config: Config) -> std::io::Result<()> {
     let address = config.get_address().to_owned();
+    let key = config.get_key().to_owned();
 
     let server_stream = connect_to_server(
         &address,
         config.get_id(),
         config.get_username(),
         config.get_password(),
+        &key,
     )?;
     let server_stream = Arc::new(Mutex::new(server_stream));
 
@@ -66,7 +68,7 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
 
     match server_stream.lock() {
         Ok(mut server_stream) => {
-            subscribe(new_incident, &mut server_stream)?;
+            subscribe(new_incident, &mut server_stream, &key)?;
         }
         Err(_) => {
             return Err(std::io::Error::new(ErrorKind::Other, "Mutex was poisoned"));
@@ -77,14 +79,14 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
     let drone_clone = drone.clone();
 
     let thread_update = thread::spawn(move || {
-        update_drone_status(server_stream_clone, drone_clone);
+        update_drone_status(server_stream_clone, drone_clone, &key);
     });
 
     let server_stream_cloned = server_stream.clone();
     let drone_cloned = drone.clone();
 
     let thread_read = thread::spawn(move || {
-        read_incoming_packets(server_stream_cloned, drone_cloned);
+        read_incoming_packets(server_stream_cloned, drone_cloned, &key);
     });
 
     let drone_cloned = drone.clone();
@@ -106,7 +108,7 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
 }
 
 /// Reads incoming packets from the server
-fn read_incoming_packets(stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<Drone>>) {
+fn read_incoming_packets(stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<Drone>>, key: &[u8; 32]) {
     loop {
         let mut buffer = [0; 1024];
         let mut locked_stream = stream.lock().unwrap();
@@ -114,7 +116,7 @@ fn read_incoming_packets(stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<Drone>>
         locked_stream.set_nonblocking(true).unwrap();
         match locked_stream.read(&mut buffer) {
             Ok(_) => {
-                let packet = Packet::from_bytes(&mut buffer.as_slice()).unwrap();
+                let packet = Packet::from_bytes(&mut buffer.as_slice(), key).unwrap();
                 drop(locked_stream);
 
                 match packet {
@@ -122,7 +124,7 @@ fn read_incoming_packets(stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<Drone>>
                         let cloned_drone = drone.clone();
                         let cloned_stream = stream.clone();
 
-                        handle_publish(publish, cloned_drone, cloned_stream);
+                        handle_publish(publish, cloned_drone, cloned_stream, key);
                     }
                     Packet::Puback(_) => println!("Received Puback packet!"),
                     Packet::Pingresp(_) => println!("Received Pingresp packet!"),
@@ -154,6 +156,7 @@ fn handle_publish(
     publish: Publish,
     drone: Arc<Mutex<Drone>>,
     server_stream: Arc<Mutex<TcpStream>>,
+    key: &[u8; 32],
 ) {
     let message = String::from_utf8(publish.message().to_vec()).unwrap();
 
@@ -166,7 +169,7 @@ fn handle_publish(
                 return;
             }
         };
-        handle_new_incident(incident, drone, server_stream);
+        handle_new_incident(incident, drone, server_stream, key);
         return;
     }
 
@@ -183,9 +186,9 @@ fn handle_publish(
     };
 
     if topic_levels[0] == ATTENDING_INCIDENT {
-        handle_attending_incident(incident_uuid, drone, server_stream);
+        handle_attending_incident(incident_uuid, drone, server_stream, key)
     } else if topic_levels[0] == CLOSE_INCIDENT {
-        handle_close_incident(incident_uuid, drone, server_stream)
+        handle_close_incident(incident_uuid, drone, server_stream, key)
     }
 }
 
@@ -194,6 +197,7 @@ fn handle_new_incident(
     incident: Incident,
     drone: Arc<Mutex<Drone>>,
     server_stream: Arc<Mutex<TcpStream>>,
+    key: &[u8; 32],
 ) {
     let topic_filter = TopicFilter::new(
         vec![
@@ -211,7 +215,7 @@ fn handle_new_incident(
         }
     };
 
-    match subscribe(topic_filter, &mut stream_locked) {
+    match subscribe(topic_filter, &mut stream_locked, key) {
         Ok(_) => {
             println!("Subscribed to the incident topic");
         }
@@ -261,8 +265,10 @@ fn handle_new_incident(
         incident.x_coordinate, incident.y_coordinate
     );
 
+    let key_clone = *key;
+
     thread::spawn(move || {
-        travel_to_new_incident(drone, server_stream, incident);
+        travel_to_new_incident(drone, server_stream, incident, &key_clone);
     });
 }
 
@@ -271,6 +277,7 @@ fn travel_to_new_incident(
     drone: Arc<Mutex<Drone>>,
     server_stream: Arc<Mutex<TcpStream>>,
     incident: Incident,
+    key: &[u8; 32],
 ) {
     let cloned_drone = drone.clone();
 
@@ -316,7 +323,7 @@ fn travel_to_new_incident(
         false,
     );
 
-    match subscribe(topic_filter, &mut locked_stream) {
+    match subscribe(topic_filter, &mut locked_stream, key) {
         Ok(_) => println!("Subscribed to the close incident topic"),
         Err(_) => println!("Drone subscribe to close incident topic. no le llego el suback"),
     }
@@ -330,7 +337,7 @@ fn travel_to_new_incident(
     );
     let message = b"".to_vec();
 
-    match publish(topic_name, message, &mut locked_stream, QoS::AtMost) {
+    match publish(topic_name, message, &mut locked_stream, QoS::AtMost, key) {
         Ok(_) => println!("Drone is attending the incident"),
         Err(_) => println!("Drone is attending the incident. no le llego el puback"),
     }
@@ -343,6 +350,7 @@ fn handle_attending_incident(
     uuid: String,
     drone: Arc<Mutex<Drone>>,
     server_stream: Arc<Mutex<TcpStream>>,
+    key: &[u8; 32],
 ) {
     println!("ME LLEGO  UN ATTENDININCIDENT ??????");
     let mut drone_locked = match drone.lock() {
@@ -388,7 +396,7 @@ fn handle_attending_incident(
         }
     };
 
-    match unsubscribe(topic_filter, &mut locked_stream) {
+    match unsubscribe(topic_filter, &mut locked_stream, key) {
         Ok(_) => println!("Unsubscribed from the incident topic"),
         Err(e) => eprintln!("Error: {:?}", e),
     }
@@ -409,8 +417,10 @@ fn handle_attending_incident(
         let server_stream_clone = server_stream.clone();
         let uuid_clone = uuid.clone();
 
+        let key_clone = *key;
+
         let thread = thread::spawn(move || {
-            simulate_incident_resolution(uuid_clone, server_stream_clone);
+            simulate_incident_resolution(uuid_clone, server_stream_clone, &key_clone);
         });
 
         thread.join().unwrap();
@@ -438,7 +448,11 @@ fn handle_attending_incident(
 }
 
 /// Simulates the incident resolution
-fn simulate_incident_resolution(uuid: String, server_stream: Arc<Mutex<TcpStream>>) {
+fn simulate_incident_resolution(
+    uuid: String,
+    server_stream: Arc<Mutex<TcpStream>>,
+    key: &[u8; 32],
+) {
     let duration_incident = Duration::from_secs(DRONE_ATTENDING_DURATION);
 
     println!(
@@ -469,7 +483,7 @@ fn simulate_incident_resolution(uuid: String, server_stream: Arc<Mutex<TcpStream
 
     println!("Publishing incident resolution");
 
-    match publish(topic_name, message, &mut locked_stream, QoS::AtLeast) {
+    match publish(topic_name, message, &mut locked_stream, QoS::AtLeast, key) {
         Ok(_) => println!("Incident has been resolved"),
         Err(e) => eprintln!("Error: {:?}", e),
     }
@@ -482,6 +496,7 @@ fn handle_close_incident(
     closing_incident_uuid: String,
     drone: Arc<Mutex<Drone>>,
     server_stream: Arc<Mutex<TcpStream>>,
+    key: &[u8; 32],
 ) {
     println!("ME LLEGO UN CLOSE INCIDENT DEL MONITOR? ");
     let mut locked_drone = match drone.lock() {
@@ -527,7 +542,7 @@ fn handle_close_incident(
         }
     };
 
-    match unsubscribe(topic_filter, &mut stream) {
+    match unsubscribe(topic_filter, &mut stream, key) {
         Ok(_) => println!("Unsubscribed from the close incident topic"),
         Err(e) => eprintln!("Error: {:?}", e),
     }
@@ -555,7 +570,11 @@ fn handle_close_incident(
 }
 
 /// Updates the drone status
-fn update_drone_status(server_stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<Drone>>) {
+fn update_drone_status(
+    server_stream: Arc<Mutex<TcpStream>>,
+    drone: Arc<Mutex<Drone>>,
+    key: &[u8; 32],
+) {
     loop {
         let drone = match drone.lock() {
             Ok(drone) => drone,
@@ -580,7 +599,7 @@ fn update_drone_status(server_stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<Dr
             }
         };
 
-        match publish(topic_name, message, &mut stream, QoS::AtMost) {
+        match publish(topic_name, message, &mut stream, QoS::AtMost, key) {
             Ok(_) => {}
             Err(e) => eprintln!("Error: {:?}", e),
         }
@@ -597,8 +616,8 @@ fn connect_to_server(
     id: u8,
     username: &str,
     password: &str,
+    key: &[u8; 32],
 ) -> std::io::Result<TcpStream> {
-    
     println!("\nConnecting to address: {:?}", address);
     let mut to_server_stream = TcpStream::connect(address)?;
 
@@ -613,9 +632,9 @@ fn connect_to_server(
     let login = Some(Login::new(username, password));
     let connect = Connect::new(false, 0, client_id, will, login);
 
-    let _ = to_server_stream.write(connect.to_bytes().as_slice());
+    let _ = to_server_stream.write(connect.to_bytes(key).as_slice());
 
-    match Packet::from_bytes(&mut to_server_stream) {
+    match Packet::from_bytes(&mut to_server_stream, key) {
         Ok(Packet::Connack(connack)) => match connack.connect_return_code() {
             ConnectReturnCode::ConnectionAccepted => Ok(to_server_stream),
             _ => Err(std::io::Error::new(
@@ -631,6 +650,7 @@ fn connect_to_server(
 fn subscribe(
     filter: TopicFilter,
     server_stream: &mut MutexGuard<TcpStream>,
+    key: &[u8; 32],
 ) -> std::io::Result<()> {
     let mut server_stream = server_stream.try_clone().unwrap();
 
@@ -639,10 +659,10 @@ fn subscribe(
     let topics_filters = vec![(filter, qos)];
 
     let subscribe_packet = Subscribe::new(packet_id, topics_filters);
-    let _ = server_stream.write(subscribe_packet.to_bytes().as_slice());
+    let _ = server_stream.write(subscribe_packet.to_bytes(key).as_slice());
 
     server_stream.set_nonblocking(false).unwrap();
-    match Packet::from_bytes(&mut server_stream) {
+    match Packet::from_bytes(&mut server_stream, key) {
         Ok(Packet::Suback(_)) => Ok(()),
         _ => Err(std::io::Error::new(
             ErrorKind::Other,
@@ -655,6 +675,7 @@ fn subscribe(
 fn unsubscribe(
     filter: TopicFilter,
     server_stream: &mut MutexGuard<TcpStream>,
+    key: &[u8; 32],
 ) -> std::io::Result<()> {
     let mut server_stream = server_stream.try_clone().unwrap();
 
@@ -663,10 +684,10 @@ fn unsubscribe(
 
     let unsubscribe_packet = Unsubscribe::new(packet_id, topics_filters);
 
-    let _ = server_stream.write(unsubscribe_packet.to_bytes().as_slice());
+    let _ = server_stream.write(unsubscribe_packet.to_bytes(key).as_slice());
 
     server_stream.set_nonblocking(false).unwrap();
-    match Packet::from_bytes(&mut server_stream) {
+    match Packet::from_bytes(&mut server_stream, key) {
         Ok(Packet::Unsuback(_)) => Ok(()),
         _ => Err(std::io::Error::new(
             ErrorKind::Other,
@@ -681,6 +702,7 @@ fn publish(
     message: Vec<u8>,
     server_stream: &mut MutexGuard<TcpStream>,
     qos: QoS,
+    key: &[u8; 32],
 ) -> std::io::Result<()> {
     let mut server_stream = server_stream.try_clone().unwrap();
 
@@ -703,14 +725,14 @@ fn publish(
         message_bytes,
     );
 
-    let _ = server_stream.write(publish_packet.to_bytes().as_slice());
+    let _ = server_stream.write(publish_packet.to_bytes(key).as_slice());
 
     if qos == QoS::AtMost {
         return Ok(());
     }
 
     server_stream.set_nonblocking(false).unwrap();
-    match Packet::from_bytes(&mut server_stream) {
+    match Packet::from_bytes(&mut server_stream, key) {
         Ok(Packet::Puback(_)) => Ok(()),
         _ => Err(std::io::Error::new(
             ErrorKind::Other,

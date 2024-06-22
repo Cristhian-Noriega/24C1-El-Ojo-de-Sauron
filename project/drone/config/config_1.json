@@ -3,6 +3,7 @@
     "id": 1,
     "username": "drone1",
     "password": "sauron",
+    "key": "12345678901234567890123456789012",
     "x_central_position": -58.3703,
     "y_central_position": -34.6082,
     "x_anchor_position": -58.3713,
