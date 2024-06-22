@@ -18,7 +18,7 @@ use mqtt::model::{
 
 use crate::{
     camera::Camera,
-    channels_tasks::{DroneRegistration, IncidentRegistration, MonitorAction, UIAction},
+    channels_tasks::{DroneRegistration, IncidentEdit, IncidentRegistration, MonitorAction, UIAction},
     config::Config,
     drone::Drone,
     monitor::Monitor,
@@ -202,6 +202,15 @@ fn start_monitor(
                 publish_counter,
             ),
 
+            Ok(UIAction::EditIncident(incident_edit)) => {
+                edit_incident(
+                    incident_edit,
+                    &mut monitor,
+                    monitor_sender.clone(),
+                );
+                None
+            }
+
             Ok(UIAction::ResolveIncident(incident)) => resolve_incident(incident, publish_counter),
             Err(_) => None,
         };
@@ -370,6 +379,25 @@ fn register_incident(
     match monitor_sender.send(MonitorAction::Incident(incident.clone())) {
         Ok(_) => Some(publish),
         Err(_) => None,
+    }
+}
+
+/// Edits an incident
+fn edit_incident(
+    incident_registration: IncidentEdit,
+    monitor: &mut Monitor,
+    monitor_sender: Sender<MonitorAction>,
+) {
+
+    if let Some(incident) = monitor.edit_incident(incident_registration.uuid, incident_registration.name.clone(), incident_registration.description.clone()) {
+        match monitor_sender.send(MonitorAction::Incident(incident)) {
+            Ok(_) => {}
+            Err(_) => {
+                println!("Error sending incident data to UI");
+            }
+        }
+    } else {
+        println!("Unknown incident");
     }
 }
 

@@ -1,6 +1,6 @@
 use crate::{
     camera::Camera,
-    channels_tasks::{DroneRegistration, IncidentRegistration, MonitorAction, UIAction},
+    channels_tasks::{DroneRegistration, IncidentRegistration, IncidentEdit, MonitorAction, UIAction},
     drone::Drone,
 };
 use common::incident::{Incident, IncidentStatus};
@@ -25,6 +25,7 @@ enum Layout {
     IncidentMap,
     IncidentList,
     NewIncident,
+    EditIncident,
     DroneList,
     NewDrone,
     CameraList,
@@ -34,6 +35,7 @@ enum Layout {
 pub struct UIApplication {
     new_incident_registration: IncidentRegistration,
     new_drone_registration: DroneRegistration,
+    new_incident_edit: IncidentEdit,
 
     //connection_status: bool,
     current_layout: Layout,
@@ -67,6 +69,12 @@ impl UIApplication {
                 id: String::new(),
                 username: String::new(),
                 password: String::new(),
+            },
+
+            new_incident_edit: IncidentEdit {
+                uuid: String::new(),
+                name: String::new(),
+                description: String::new(),
             },
 
             //connection_status: false,
@@ -168,6 +176,41 @@ fn display_new_incident(
         if ui.button("Send").clicked() {
             sender
                 .send(UIAction::RegistrateIncident(new_incident.clone()))
+                .unwrap();
+        }
+    });
+}
+
+/// Displays the form to edit a incident
+fn display_edit_incident(
+    ui: &mut egui::Ui,
+    edit_incident: &mut IncidentEdit,
+    sender: &Sender<UIAction>,
+) {
+    ui.horizontal(|ui| {
+        ui.label("UUID:");
+        ui.add_space(38.0);
+        ui.text_edit_singleline(&mut edit_incident.uuid);
+    });
+    ui.add_space(5.0);
+    ui.horizontal(|ui| {
+        ui.label("New name:");
+        ui.add_space(38.0);
+        ui.text_edit_singleline(&mut edit_incident.name);
+    });
+    ui.add_space(5.0);
+    ui.horizontal(|ui| {
+        ui.label("New description:");
+        ui.add_space(8.0);
+        ui.text_edit_multiline(&mut edit_incident.description);
+    });
+    ui.add_space(5.0);
+
+    ui.add_space(20.0);
+    ui.vertical_centered(|ui| {
+        if ui.button("Edit").clicked() {
+            sender
+                .send(UIAction::EditIncident(edit_incident.clone()))
                 .unwrap();
         }
     });
@@ -409,6 +452,7 @@ fn display_header(
         ui.selectable_value(current_layout, Layout::IncidentMap, "Map");
         ui.selectable_value(current_layout, Layout::IncidentList, "Incident List");
         ui.selectable_value(current_layout, Layout::NewIncident, "Create incident");
+        ui.selectable_value(current_layout, Layout::EditIncident, "Edit incident");
         ui.selectable_value(current_layout, Layout::DroneList, "Drone List");
         ui.selectable_value(current_layout, Layout::NewDrone, "Register Drone");
         ui.selectable_value(current_layout, Layout::CameraList, "Camera List");
@@ -459,6 +503,9 @@ impl eframe::App for UIApplication {
                 ),
                 Layout::NewIncident => {
                     display_new_incident(ui, &mut self.new_incident_registration, &self.sender)
+                }
+                Layout::EditIncident => {
+                    display_edit_incident(ui, &mut self.new_incident_edit, &self.sender)
                 }
                 Layout::IncidentList => display_incident_list(ui, &self.incidents, &self.sender),
                 Layout::DroneList => display_drone_list(ui, &self.drones),
