@@ -184,19 +184,6 @@ fn start_monitor(
                         println!("Unknown topic");
                     }
                 }
-
-                if publish.qos() == &QoS::AtLeast {
-                    let package_identifier = publish.package_identifier();
-
-                    let puback = Puback::new(package_identifier);
-
-                    match stream.write_all(puback.to_bytes().as_slice()) {
-                        Ok(_) => {}
-                        Err(_) => {
-                            println!("Error sending puback packet");
-                        }
-                    }
-                }
             }
 
             Ok(_) => {}
