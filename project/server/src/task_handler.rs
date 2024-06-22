@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use std::{
     collections::{HashMap, HashSet},
     io::Write,
@@ -7,10 +5,10 @@ use std::{
     time::Duration,
 };
 
-use crate::{client::Client, logfile::Logger};
+use crate::{client::Client, client_manager::ClientManager, logfile::Logger};
 
 use mqtt::model::{
-    components::{qos::QoS, topic_filter::TopicFilter, topic_name::TopicName},
+    components::qos::QoS,
     packets::{
         connack::Connack, pingresp::Pingresp, puback::Puback, publish::Publish, suback::Suback,
         subscribe::Subscribe, unsuback::Unsuback, unsubscribe::Unsubscribe,
@@ -28,50 +26,17 @@ pub enum Task {
     RespondPing(Vec<u8>),
 }
 
-/// Represents the quality of service of a subscription
-#[derive(Clone, Debug)]
-pub struct SubscriptionData {
-    qos: QoS,
-}
+const ADMIN_ID: &[u8] = b"admin";
+const CLIENT_REGISTER: &[u8] = b"$client-register";
+const SEPARATOR: u8 = b';';
 
-/// Represents a message
-#[derive(Clone, Debug)]
-pub struct Message {
-    pub client_id: Vec<u8>,
-    pub packet: Publish,
-}
-
-impl Message {
-    /// Creates a new message from a client id and a publish packet
-    pub fn new(client_id: Vec<u8>, packet: Publish) -> Self {
-        Self { client_id, packet }
-    }
-
-    /// Returns the client id of the message
-    pub fn client_id(&self) -> &Vec<u8> {
-        &self.client_id
-    }
-
-    /// Returns the publish packet of the message
-    pub fn packet(&self) -> &Publish {
-        &self.packet
-    }
-}
-
-type Subscribers = HashMap<Vec<u8>, SubscriptionData>; // key : client_id , value: SubscriptionData
-                                                       // type Subtopic = HashMap<Vec<u8>, Topic>; // key: level, value: Topic
-type Subscriptions = HashMap<TopicName, SubscriptionData>; // key: topic_name, value: SubscriptionData
-type ClientId = Vec<u8>;
-
-
-/// Represents the task handler that will handle all the tasks from the clients
+/// Represents the task handler that will handle all the tasks that the server needs to process
 #[derive(Debug)]
 pub struct TaskHandler {
     client_actions_receiver_channel: mpsc::Receiver<Task>,
     clients: RwLock<HashMap<Vec<u8>, Client>>,
     active_connections: RwLock<HashSet<Vec<u8>>>,
-    retained_messages: RwLock<HashMap<Vec<u8>, Publish>>,
-    // topics: RwLock<HashMap<TopicName, Vec<ClientId>>>,
+    //retained_messages: RwLock<HashMap<Vec<u8>, Publish>>,
 
     // monitor se subscribe a (drone-data/+) <- es un topic filter
 
@@ -80,20 +45,24 @@ pub struct TaskHandler {
     // debería guardar que monitor está suscrito a (drone-data/+)
     // cuando drone data publica en (drone-data/1) recorro todos los subscribes y me fijo si alguno matchea
     // si matchea, le mando el msg
-    topics: RwLock<Vec<(TopicFilter, ClientId)>>,
     log_file: Arc<Logger>,
+    client_manager: Arc<RwLock<ClientManager>>,
 }
 
 impl TaskHandler {
-    /// Creates a new task handler with the specified receiver channel and logger
-    pub fn new(receiver_channel: mpsc::Receiver<Task>, log_file: Arc<Logger>) -> Self {
+    /// Creates a new task handler with the specified receiver channel, logger and client manager
+    pub fn new(
+        receiver_channel: mpsc::Receiver<Task>,
+        log_file: Arc<Logger>,
+        client_manager: Arc<RwLock<ClientManager>>,
+    ) -> Self {
         TaskHandler {
             client_actions_receiver_channel: receiver_channel,
             clients: RwLock::new(HashMap::new()),
             active_connections: RwLock::new(HashSet::new()),
-            retained_messages: RwLock::new(HashMap::new()),
-            topics: RwLock::new(Vec::new()),
+            //retained_messages: RwLock::new(HashMap::new()),
             log_file,
+            client_manager,
         }
     }
 
@@ -173,6 +142,11 @@ impl TaskHandler {
     pub fn publish(&self, publish_packet: &Publish, client_id: Vec<u8>) {
         let topic_name = publish_packet.topic();
 
+        if topic_name.server_reserved() {
+            self.handle_server_reserved_topic(publish_packet, client_id);
+            return;
+        }
+
         let mut clients = vec![];
 
         for client in self.clients.read().unwrap().values() {
@@ -190,20 +164,61 @@ impl TaskHandler {
         self.log_file
             .log_successful_publish(&client_id, publish_packet);
 
-        let message = Message::new(client_id.clone(), publish_packet.clone());
-
         for client_id in clients {
             if let Some(client) = self.clients.read().unwrap().get(&client_id) {
-                client.send_message(message.clone(), &self.log_file);
+                client.send_message(publish_packet.clone(), &self.log_file);
             }
         }
 
         let mut clients = self.clients.write().unwrap();
-        // si el qos no es at most (qos 0), se debe mandar un puback al cliente
+
+        // If QoS is not AtMostOnce, send a Puback packet to the client that published the message
         if &QoS::AtMost != publish_packet.qos() {
             if let Some(client) = clients.get_mut(&client_id) {
                 self.puback(publish_packet.package_identifier(), client);
             }
+        }
+    }
+
+    /// Handle a server reserved topic (e.g. $client-register)
+    pub fn handle_server_reserved_topic(&self, publish_packet: &Publish, client_id: Vec<u8>) {
+        let topic_name = publish_packet.topic();
+        let levels = topic_name.levels();
+
+        if client_id != ADMIN_ID {
+            self.log_file.error("Client is not admin");
+            return;
+        }
+
+        if levels.len() == 1 && levels[0] == CLIENT_REGISTER {
+            let message = publish_packet.message();
+            //  split username and password by SEPARATOR
+            let split = message.split(|&c| c == SEPARATOR).collect::<Vec<&[u8]>>();
+
+            if split.len() != 3 {
+                self.log_file
+                    .error("Invalid message for client registration");
+                return;
+            }
+
+            let client_id = split[0].to_vec();
+            let username = split[1].to_vec();
+            let password = split[2].to_vec();
+
+            let client_manager = self.client_manager.write().unwrap();
+            if client_manager.authenticate_client(
+                client_id.clone(),
+                username.clone(),
+                password.clone(),
+            ) {
+                self.log_file.info("Client already registered");
+            } else {
+                self.log_file.log_client_registrated(&client_id.clone());
+                client_manager.register_client(client_id, username, password);
+            }
+        } else {
+            self.log_file
+                .error("Invalid topic for server reserved topic");
         }
     }
 
@@ -359,20 +374,20 @@ impl TaskHandler {
         active_connections.remove(&client_id);
     }
 
-    /// Register a puback packet
-    pub fn register_puback(&mut self, puback: Puback) {
-        let message_id = match puback.packet_identifier() {
-            Some(id) => id,
-            None => {
-                self.log_file
-                    .error("Puback packet without packet identifier");
-                return;
-            }
-        };
-        let message_id_bytes = message_id.to_be_bytes().to_vec();
+    // TODO: Implement retained messages
+    // pub fn register_puback(&mut self, puback: Puback) {
+    //     let message_id = match puback.packet_identifier() {
+    //         Some(id) => id,
+    //         None => {
+    //             self.log_file
+    //                 .error("Puback packet without packet identifier");
+    //             return;
+    //         }
+    //     };
+    //     let message_id_bytes = message_id.to_be_bytes().to_vec();
 
-        let mut retained_messages = self.retained_messages.write().unwrap();
+    //     let mut retained_messages = self.retained_messages.write().unwrap();
 
-        retained_messages.remove(&message_id_bytes);
-    }
+    //     retained_messages.remove(&message_id_bytes);
+    // }
 }

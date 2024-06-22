@@ -15,12 +15,13 @@ pub enum UIAction {
 #[derive(Clone)]
 pub struct DroneRegistration {
     pub id: String,
+    pub username: String,
     pub password: String,
 }
 
 impl DroneRegistration {
     pub fn build_drone_message(&self) -> String {
-        format!("{};{}", self.id, self.password)
+        format!("{};{};{}", self.id, self.username, self.password)
     }
 }
 

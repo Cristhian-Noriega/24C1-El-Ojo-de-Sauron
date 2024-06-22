@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde_derive::{Deserialize, Serialize};
 use std::{fs::File, io::Read, path::Path};
 
 /// Represents a position in 2D space
@@ -12,6 +12,8 @@ pub struct Position {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Config {
     address: String,
+    username: String,
+    password: String,
     cameras: Vec<Position>,
 }
 
@@ -33,7 +35,17 @@ impl Config {
         &self.address
     }
 
-    /// Returns the cameras of the server
+    /// Returns the username of the camera system
+    pub fn get_username(&self) -> &str {
+        &self.username
+    }
+
+    /// Returns the password of the camera system
+    pub fn get_password(&self) -> &str {
+        &self.password
+    }
+
+    /// Returns the cameras of the camera system
     pub fn get_cameras(&self) -> Vec<Position> {
         self.cameras.clone()
     }

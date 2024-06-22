@@ -44,26 +44,7 @@ impl Monitor {
         None
     }
 
-    // pub fn is_incident_active(&self, incident_uuid: &str) -> bool {
-    //     self.active_incidents.contains_key(incident_uuid)
-    // }
-
-    // pub fn ready_incident(&mut self, incident_uuid: String) -> Option<Incident> {
-    //     if let Some(incident) = self.incidents.get_mut(&incident_uuid) {
-    //         if let Some(active_count) = self.active_incidents.get_mut(&incident_uuid) {
-    //             *active_count -= 1;
-    //             if *active_count == 0 {
-    //                 self.active_incidents.remove(&incident_uuid);
-    //                 incident.status = IncidentStatus::Resolvable;
-    //             }
-    //             return Some(incident.clone());
-    //         }
-    //     }
-
-    //     None
-    // }
-
-    /// Returns the incident with the given UUID
+    /// Gets the incident by its UUID
     pub fn get_incident(&self, incident_uuid: &str) -> Option<&Incident> {
         self.incidents.get(incident_uuid)
     }

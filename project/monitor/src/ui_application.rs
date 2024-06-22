@@ -65,6 +65,7 @@ impl UIApplication {
 
             new_drone_registration: DroneRegistration {
                 id: String::new(),
+                username: String::new(),
                 password: String::new(),
             },
 
@@ -261,6 +262,15 @@ fn display_new_drone(
 
         ui.add_space(10.0);
         ui.horizontal(|ui| {
+            ui.label("Username:");
+            ui.add_space(17.0);
+            ui.add(
+                egui::TextEdit::singleline(&mut drone_registration.username).desired_width(340.0),
+            );
+        });
+
+        ui.add_space(10.0);
+        ui.horizontal(|ui| {
             ui.label("Password:");
             ui.add_space(20.0);
             ui.add(
@@ -270,19 +280,6 @@ fn display_new_drone(
 
         ui.add_space(10.0);
         ui.horizontal(|ui| {
-            // ui.label("Anchor Point Coordinates:");
-
-            // ui.add_space(10.0);
-            // ui.label("x:");
-            // ui.add(
-            //     egui::TextEdit::singleline(&mut drone_registration.anchor_x).desired_width(100.0),
-            // );
-
-            // ui.add_space(10.0);
-            // ui.label("y:");
-            // ui.add(
-            //     egui::TextEdit::singleline(&mut drone_registration.anchor_y).desired_width(100.0),
-            // );
             ui.add_space(263.0);
             if ui.button("Register").clicked() {
                 sender

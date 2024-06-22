@@ -6,6 +6,8 @@ use std::{fs, path::Path};
 #[derive(Debug, Clone)]
 pub struct Config {
     address: String,
+    username: String,
+    password: String,
 }
 
 impl Config {
@@ -15,12 +17,19 @@ impl Config {
 
         let mut config = Config {
             address: String::new(),
+            username: String::new(),
+            password: String::new(),
         };
 
         for line in content.lines() {
             let parts: Vec<&str> = line.split('=').map(|s| s.trim()).collect();
-            if parts.len() == 2 && parts[0] == "address" {
-                config.address = parts[1].trim_matches('"').to_string()
+            if parts.len() == 2 {
+                match parts[0] {
+                    "address" => config.address = parts[1].trim_matches('"').to_string(),
+                    "username" => config.username = parts[1].trim_matches('"').to_string(),
+                    "password" => config.password = parts[1].trim_matches('"').to_string(),
+                    _ => {}
+                }
             }
         }
 
@@ -30,5 +39,13 @@ impl Config {
     /// Returns the address of the server
     pub fn get_address(&self) -> &str {
         &self.address
+    }
+
+    pub fn get_username(&self) -> &str {
+        &self.username
+    }
+
+    pub fn get_password(&self) -> &str {
+        &self.password
     }
 }

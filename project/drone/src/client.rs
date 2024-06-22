@@ -8,11 +8,12 @@ use std::{
 
 use mqtt::model::{
     components::{
-        encoded_string::EncodedString, qos::QoS, topic_filter::TopicFilter,
+        encoded_string::EncodedString, login::Login, qos::QoS, topic_filter::TopicFilter,
         topic_level::TopicLevel, topic_name::TopicName,
     },
     packet::Packet,
     packets::{connect::Connect, publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe},
+    return_codes::connect_return_code::ConnectReturnCode,
 };
 
 use crate::{
@@ -39,16 +40,16 @@ const BATTERY_RECHARGE_INTERVAL: u64 = 1;
 
 const DRONE_ATTENDING_DURATION: u64 = 10;
 
-//let server_stream = connect_to_server(address, client_id)?;
-// let server_stream = Arc::new(Mutex::new(server_stream));
-
-// let drone = Arc::new(Mutex::new(Drone::new(client_id.to_string())));
-
 /// Runs the client with the specified configuration
 pub fn client_run(config: Config) -> std::io::Result<()> {
     let address = config.get_address().to_owned();
 
-    let server_stream = connect_to_server(&address, config.get_id())?;
+    let server_stream = connect_to_server(
+        &address,
+        config.get_id(),
+        config.get_username(),
+        config.get_password(),
+    )?;
     let server_stream = Arc::new(Mutex::new(server_stream));
 
     let drone = Arc::new(Mutex::new(Drone::new(
@@ -358,12 +359,12 @@ fn handle_attending_incident(
     }
 
     drone_locked.increment_attending_counter();
-    
+
     println!(
         "A VER CUANTOS DRON COUNT? : {}",
         drone_locked.attending_counter()
     );
-    
+
     if drone_locked.attending_counter() < 2 {
         drop(drone_locked);
         return;
@@ -439,8 +440,11 @@ fn handle_attending_incident(
 /// Simulates the incident resolution
 fn simulate_incident_resolution(uuid: String, server_stream: Arc<Mutex<TcpStream>>) {
     let duration_incident = Duration::from_secs(DRONE_ATTENDING_DURATION);
-    
-    println!("Incident will be resolved in {} seconds", DRONE_ATTENDING_DURATION);
+
+    println!(
+        "Incident will be resolved in {} seconds",
+        DRONE_ATTENDING_DURATION
+    );
 
     thread::sleep(duration_incident);
 
@@ -577,7 +581,7 @@ fn update_drone_status(server_stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<Dr
         };
 
         match publish(topic_name, message, &mut stream, QoS::AtMost) {
-            Ok(_) => {},
+            Ok(_) => {}
             Err(e) => eprintln!("Error: {:?}", e),
         }
 
@@ -588,28 +592,37 @@ fn update_drone_status(server_stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<Dr
 }
 
 /// Connects to the server with the specified address
-fn connect_to_server(address: &str, id: u8) -> std::io::Result<TcpStream> {
+fn connect_to_server(
+    address: &str,
+    id: u8,
+    username: &str,
+    password: &str,
+) -> std::io::Result<TcpStream> {
+    
     println!("\nConnecting to address: {:?}", address);
     let mut to_server_stream = TcpStream::connect(address)?;
 
     let client_id_bytes: Vec<u8> = id.to_string().into_bytes();
-    //let client_id_bytes: Vec<u8> = b"drone".to_vec();
+
     let client_id = EncodedString::new(client_id_bytes);
     let will = None;
-    let login = None; // TODO: Add login
+
+    let username = EncodedString::from_string(&username.to_string());
+    let password = Some(EncodedString::from_string(&password.to_string()));
+
+    let login = Some(Login::new(username, password));
     let connect = Connect::new(false, 0, client_id, will, login);
 
     let _ = to_server_stream.write(connect.to_bytes().as_slice());
 
     match Packet::from_bytes(&mut to_server_stream) {
-        Ok(Packet::Connack(connack)) => {
-            println!(
-                "Received Connack packet with return code: {:?} and sessionPresent: {:?}\n",
-                connack.connect_return_code(),
-                connack.session_present()
-            );
-            Ok(to_server_stream)
-        }
+        Ok(Packet::Connack(connack)) => match connack.connect_return_code() {
+            ConnectReturnCode::ConnectionAccepted => Ok(to_server_stream),
+            _ => Err(std::io::Error::new(
+                ErrorKind::Other,
+                format!("Connection refused: {:?}", connack.connect_return_code()),
+            )),
+        },
         _ => Err(std::io::Error::new(ErrorKind::Other, "No connack recibed")),
     }
 }
