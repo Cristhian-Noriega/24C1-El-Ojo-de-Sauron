@@ -139,7 +139,7 @@ mod tests {
         let client = setup_client();
         assert_eq!(client.id, vec![1, 2, 3]);
         assert!(client.subscriptions.is_empty());
-        assert_eq!(client.alive.load(Ordering::Relaxed), true);
+        assert!(client.alive.load(Ordering::Relaxed));
     }
 
     #[test]
