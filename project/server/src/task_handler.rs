@@ -185,6 +185,14 @@ impl TaskHandler {
                 self.puback(publish_packet.package_identifier(), client);
             }
         }
+
+        let clients_retained_messages = self.retained_messages.get(&client_id);
+        let client = clients.get_mut(&client_id).unwrap();
+        if let Some(clients_retained_messages) = clients_retained_messages {
+            self.handle_retained_messages(client, clients_retained_messages);
+            self.retained_messages.get_mut(&client_id).unwrap().clear();
+        }
+
     }
 
     /// Handle a server reserved topic (e.g. $client-register)
@@ -229,11 +237,9 @@ impl TaskHandler {
         }
     }
 
-    pub fn handle_retained_messages(&self, client_id: Vec<u8>, retained_messages: &VecDeque<Publish>) {
+    pub fn handle_retained_messages(&self, client: &mut Client, retained_messages: &VecDeque<Publish>) {
         for message in retained_messages {
-            if let Some(client) = self.clients.read().unwrap().get(&client_id) {
-                client.send_message(message.clone(), &self.log_file);
-            }
+            client.send_message(message.clone(), &self.log_file);
         }
     }
 
@@ -281,7 +287,6 @@ impl TaskHandler {
         match stream.write_all(connack_packet_bytes) {
             Ok(_) => {
                 active_connections.insert(client_id.clone());
-                drop(active_connections);
                 let message = format!(
                     "New client connected! ID: {:?}",
                     std::str::from_utf8(&client_id).unwrap()
@@ -293,12 +298,6 @@ impl TaskHandler {
                 .log_file
                 .log_error_sending_packet("Connack", &client_id),
         };
-
-        let clients_retained_messages = self.retained_messages.get(&client_id);
-        if let Some(clients_retained_messages) = clients_retained_messages {
-            self.handle_retained_messages(client_id.clone(), clients_retained_messages);
-            self.retained_messages.get_mut(&client_id).unwrap().clear();
-        }
     }
 
     /// Send a suback packet to a client
