@@ -8,6 +8,7 @@ use crate::{camera::Camera, drone::Drone};
 pub enum UIAction {
     RegistrateDrone(DroneRegistration),
     RegistrateIncident(IncidentRegistration),
+    EditIncident(IncidentEdit),
     ResolveIncident(Incident),
 }
 
@@ -25,13 +26,21 @@ impl DroneRegistration {
     }
 }
 
-/// Represents an incident registration
+/// Represents the form to edit a drone
 #[derive(Clone)]
 pub struct IncidentRegistration {
     pub name: String,
     pub description: String,
     pub x: String,
     pub y: String,
+}
+
+/// Represents the form to edit an incident
+#[derive(Clone)]
+pub struct IncidentEdit {
+    pub uuid: String,
+    pub name: String,
+    pub description: String,
 }
 
 /// Represents the action that the monitor wants to perform

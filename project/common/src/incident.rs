@@ -105,6 +105,16 @@ impl Incident {
             status: state,
         })
     }
+
+    /// Changes the name of the incident
+    pub fn change_incident_name(&mut self, name: String) {
+        self.name = name;
+    }
+
+    /// Changes the description of the incident
+    pub fn change_incident_description(&mut self, description: String) {
+        self.description = description;
+    }
 }
 
 impl fmt::Display for Incident {
