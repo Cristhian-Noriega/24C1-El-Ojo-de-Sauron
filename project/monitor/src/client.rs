@@ -12,7 +12,7 @@ use mqtt::model::{
         topic_level::TopicLevel, topic_name::TopicName,
     },
     packet::Packet,
-    packets::{connect::Connect, puback::Puback, publish::Publish, subscribe::Subscribe},
+    packets::{connect::Connect, publish::Publish, subscribe::Subscribe},
     return_codes::connect_return_code::ConnectReturnCode,
 };
 
