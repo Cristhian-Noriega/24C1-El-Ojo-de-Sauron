@@ -2,7 +2,7 @@
 //! It recieves messages from the clients and sends them to the corresponding client.
 
 use config::Config;
-use error::{ServerResult, ServerError};
+use error::{ServerError, ServerResult};
 use server::Server;
 use std::env;
 use std::path::Path;
@@ -21,10 +21,14 @@ fn main() -> ServerResult<()> {
     let argv: Vec<String> = env::args().collect();
     if argv.len() != SERVER_ARGS {
         let app_name = &argv[0];
-        return Err(ServerError::argument_error(format!("Usage:\n{} <toml-file>", app_name)));
+        return Err(ServerError::ArgumentError(format!(
+            "Usage: {} <toml-file>",
+            app_name
+        )));
     }
 
     let config_path = Path::new(&argv[1]);
+
     let config = Config::from_file(config_path)?;
 
     let server = Server::new(config)?;

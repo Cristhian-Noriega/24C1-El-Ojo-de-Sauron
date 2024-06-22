@@ -105,22 +105,17 @@ mod tests {
     use mqtt::model::components::topic_level::TopicLevel;
 
     use super::*;
-    
+
     fn setup_stream() -> TcpStream {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();  
-        let port = listener.local_addr().unwrap().port();  
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
         let stream = TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
         listener.accept().unwrap().0
     }
 
     fn setup_client() -> Client {
         let stream = setup_stream();
-        Client::new(
-            vec![1, 2, 3],
-            stream,
-            true,
-            60,
-        )
+        Client::new(vec![1, 2, 3], stream, true, 60)
     }
 
     fn setup_topic_filter() -> Vec<TopicFilter> {
@@ -132,13 +127,12 @@ mod tests {
 
         let topic_filter1 = TopicFilter::new(vec![topic_level1, topic_level2], false);
         let topic_filter2 = TopicFilter::new(vec![topic_level3, topic_level4], false);
-       
+
         topic_filters.push(topic_filter1);
-        topic_filters.push(topic_filter2); 
-        
+        topic_filters.push(topic_filter2);
+
         topic_filters
     }
-
 
     #[test]
     fn test_new_client() {
@@ -161,7 +155,7 @@ mod tests {
     fn test_remove_subscription() {
         let mut client = setup_client();
         let topic = setup_topic_filter();
-        client.add_subscription(topic[0].clone()); 
+        client.add_subscription(topic[0].clone());
         client.remove_subscription(&topic[0]);
         assert!(client.subscriptions.is_empty());
     }

@@ -102,8 +102,8 @@ impl Unsubscribe {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::TopicFilter;
     use crate::EncodedString;
+    use crate::TopicFilter;
     use std::io::Cursor;
 
     #[allow(dead_code)]
@@ -117,14 +117,10 @@ mod tests {
         let packet_identifier = 1;
         let bytes = &mut from_slice(b"topic1");
         let topic_filter = TopicFilter::from_bytes(bytes).unwrap();
-        let topics = vec![
-            topic_filter,
-        ];
+        let topics = vec![topic_filter];
 
         let mut stream = std::io::Cursor::new(vec![
-            0x00,
-            0x01,
-            0x00, 0x06, b't', b'o', b'p', b'i', b'c', b'1'
+            0x00, 0x01, 0x00, 0x06, b't', b'o', b'p', b'i', b'c', b'1',
         ]);
 
         let fixed_header = FixedHeader::new(UNSUBSCRIBE_PACKET_TYPE << 4, RemainingLength::new(10));
@@ -139,18 +135,12 @@ mod tests {
         let packet_identifier = 1;
         let bytes = &mut from_slice(b"topic1");
         let topic_filter = TopicFilter::from_bytes(bytes).unwrap();
-        let topics = vec![
-            topic_filter,
-        ];
+        let topics = vec![topic_filter];
 
         let unsubscribe = Unsubscribe::new(packet_identifier, topics);
 
         let expected_bytes = vec![
-            160_u8,
-            10_u8, 
-            0x00,
-            0x01,
-            0x00, 0x06, b't', b'o', b'p', b'i', b'c', b'1'
+            160_u8, 10_u8, 0x00, 0x01, 0x00, 0x06, b't', b'o', b'p', b'i', b'c', b'1',
         ];
 
         assert_eq!(unsubscribe.to_bytes(), expected_bytes);

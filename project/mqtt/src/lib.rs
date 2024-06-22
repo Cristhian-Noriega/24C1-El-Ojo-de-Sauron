@@ -1,7 +1,7 @@
 //! This library implements the MQTT protocol version 3.1.1.
-//! 
+//!
 //! Its main goal is to provide an interface for the creation and manipulation of MQTT packets.
-//! 
+//!
 //! Using from_bytes and to_bytes you can convert the packets to and from bytes, respectively.
 
 use {

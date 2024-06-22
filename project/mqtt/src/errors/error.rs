@@ -19,4 +19,3 @@ impl From<std::io::Error> for Error {
         }
     }
 }
-

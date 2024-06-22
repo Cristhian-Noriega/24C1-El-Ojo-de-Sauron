@@ -284,14 +284,17 @@ impl TaskHandler {
         let mut stream = match client.stream.lock() {
             Ok(stream) => stream,
             Err(_) => {
-                self.log_file.log_error_getting_stream(&client.id(), "suback");
+                self.log_file
+                    .log_error_getting_stream(&client.id(), "suback");
                 return;
             }
         };
 
         match stream.write_all(suback_packet_bytes) {
             Ok(_) => self.log_file.log_info_sent_packet("Suback", &client.id()),
-            Err(_) => self.log_file.log_error_sending_packet("Suback", &client.id()),
+            Err(_) => self
+                .log_file
+                .log_error_sending_packet("Suback", &client.id()),
         };
     }
 
@@ -304,14 +307,17 @@ impl TaskHandler {
         let mut stream = match client.stream.lock() {
             Ok(stream) => stream,
             Err(_) => {
-                self.log_file.log_error_getting_stream(&client.id(), "puback");
+                self.log_file
+                    .log_error_getting_stream(&client.id(), "puback");
                 return;
             }
         };
 
         match stream.write_all(puback_packet_bytes) {
             Ok(_) => self.log_file.log_info_sent_packet("Puback", &client.id()),
-            Err(_) => self.log_file.log_error_sending_packet("Puback", &client.id()),
+            Err(_) => self
+                .log_file
+                .log_error_sending_packet("Puback", &client.id()),
         };
     }
 

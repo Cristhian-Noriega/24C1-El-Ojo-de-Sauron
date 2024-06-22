@@ -159,9 +159,8 @@ mod tests {
 
     #[test]
     fn test_from_bytes() {
-        let mut stream = std::io::Cursor::new(vec![
-            0b0011_0000, 6_u8, 0x00, 0x03, b'a', b'/', b'b', b'c'
-        ]);
+        let mut stream =
+            std::io::Cursor::new(vec![0b0011_0000, 6_u8, 0x00, 0x03, b'a', b'/', b'b', b'c']);
 
         let fixed_header = FixedHeader::from_bytes(&mut stream).unwrap();
         let publish = Publish::from_bytes(fixed_header, &mut stream).unwrap();
@@ -179,17 +178,13 @@ mod tests {
         let bytes = &mut from_slice(b"a/b");
         let topic_name = TopicName::from_bytes(bytes).unwrap();
 
-        let publish = Publish::new(
-            false,
-            QoS::AtMost,
-            false,
-            topic_name,
-            None,
-            vec![b'c'],
-        );
+        let publish = Publish::new(false, QoS::AtMost, false, topic_name, None, vec![b'c']);
 
         let bytes = publish.to_bytes();
 
-        assert_eq!(bytes, vec![0b0011_0000, 6_u8, 0x00, 0x03, b'a', b'/', b'b', b'c']);
+        assert_eq!(
+            bytes,
+            vec![0b0011_0000, 6_u8, 0x00, 0x03, b'a', b'/', b'b', b'c']
+        );
     }
 }

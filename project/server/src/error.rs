@@ -1,7 +1,7 @@
-use std::io;
-use std::fmt;
-use std::sync::mpsc::SendError;
 use mqtt::errors::error::Error as MqttError;
+use std::fmt;
+use std::io;
+use std::sync::mpsc::SendError;
 
 pub type ServerResult<T> = Result<T, ServerError>;
 
@@ -9,10 +9,9 @@ pub type ServerResult<T> = Result<T, ServerError>;
 pub enum ServerError {
     Io(io::Error),
     Mqtt(MqttError),
-    Config(String),
     ArgumentError(String),
     ClientConnection(String),
-    UnsupportedPacket(String),
+    UnsupportedPacket,
     ChannelSend(String),
 }
 
@@ -21,10 +20,9 @@ impl fmt::Display for ServerError {
         match self {
             ServerError::Io(err) => write!(f, "I/O error: {}", err),
             ServerError::Mqtt(err) => write!(f, "MQTT error: {:?}", err),
-            ServerError::Config(msg) => write!(f, "Configuration error: {}", msg),
             ServerError::ArgumentError(msg) => write!(f, "Argument error: {}", msg),
             ServerError::ClientConnection(msg) => write!(f, "Client connection error: {}", msg),
-            ServerError::UnsupportedPacket(msg) => write!(f, "Unsupported packet error: {}", msg),
+            ServerError::UnsupportedPacket => write!(f, "Unsupported packet error"),
             ServerError::ChannelSend(msg) => write!(f, "Channel send error: {}", msg),
         }
     }
@@ -45,15 +43,5 @@ impl From<MqttError> for ServerError {
 impl<T> From<SendError<T>> for ServerError {
     fn from(err: SendError<T>) -> Self {
         ServerError::ChannelSend(err.to_string())
-    }
-}
-
-impl ServerError {
-    pub fn argument_error<T: Into<String>>(msg: T) -> Self {
-        ServerError::ArgumentError(msg.into())
-    }
-
-    pub fn unsupported_packet<T: Into<String>>(msg: T) -> Self {
-        ServerError::UnsupportedPacket(msg.into())
     }
 }

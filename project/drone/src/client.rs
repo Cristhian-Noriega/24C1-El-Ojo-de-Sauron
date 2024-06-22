@@ -598,7 +598,6 @@ fn connect_to_server(
     username: &str,
     password: &str,
 ) -> std::io::Result<TcpStream> {
-    
     println!("\nConnecting to address: {:?}", address);
     let mut to_server_stream = TcpStream::connect(address)?;
 

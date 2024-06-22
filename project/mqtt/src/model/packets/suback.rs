@@ -48,7 +48,6 @@ impl Suback {
         Ok(Suback::new(packet_identifier, return_codes))
     }
 
-
     /// Converts the Suback into a vector of bytes.
     pub fn to_bytes(&self) -> Vec<u8> {
         // Variable Header
@@ -100,15 +99,7 @@ mod tests {
             ],
         );
 
-        let expected_bytes: Vec<u8> = vec![
-            144_u8,
-            5_u8,
-            0_u8,
-            42_u8,
-            0x00_u8,
-            0x01_u8,
-            0x02_u8
-        ];
+        let expected_bytes: Vec<u8> = vec![144_u8, 5_u8, 0_u8, 42_u8, 0x00_u8, 0x01_u8, 0x02_u8];
 
         let bytes = suback.to_bytes();
 
@@ -117,13 +108,7 @@ mod tests {
 
     #[test]
     fn test_suback_from_bytes() {
-        let bytes: Vec<u8> = vec![
-            0_u8,
-            42_u8,
-            0x00_u8,
-            0x01_u8,
-            0x02_u8
-        ];
+        let bytes: Vec<u8> = vec![0_u8, 42_u8, 0x00_u8, 0x01_u8, 0x02_u8];
 
         let mut stream = &bytes[..];
 
@@ -137,5 +122,4 @@ mod tests {
         assert_eq!(return_codes[1], SubackReturnCode::SuccessMaximumQoS1);
         assert_eq!(return_codes[2], SubackReturnCode::SuccessMaximumQoS2);
     }
-
 }
