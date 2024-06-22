@@ -76,24 +76,6 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
     }
 }
 
-// fn unsubscribe(filter: TopicFilter, server_stream: &mut TcpStream) -> std::io::Result<()> {
-//     let packet_id = 1;
-
-//     let topics_filters = vec![(filter)];
-
-//     let unsubscribe_packet = Unsubscribe::new(packet_id, topics_filters);
-
-//     let _ = server_stream.write(unsubscribe_packet.to_bytes().as_slice());
-
-//     match Packet::from_bytes(server_stream) {
-//         Ok(Packet::Unsuback(_)) => Ok(()),
-//         _ => Err(std::io::Error::new(
-//             ErrorKind::Other,
-//             "Unsuback was not received.",
-//         )),
-//     }
-// }
-
 /// Handles the subscription to a topic
 fn subscribe(filter: Vec<TopicFilter>, server_stream: &mut TcpStream) -> std::io::Result<()> {
     let mut topics_filters = vec![];
@@ -156,11 +138,10 @@ fn publish(
 
 /// Connects to the server
 fn connect_to_server(address: &str, username: &str, password: &str) -> std::io::Result<TcpStream> {
-
     println!("\nConnecting to address: {:?}", address);
     let mut to_server_stream = TcpStream::connect(address)?;
 
-    let client_id_bytes: Vec<u8> = b"camera system".to_vec();
+    let client_id_bytes: Vec<u8> = b"camera-system".to_vec();
     let client_id = EncodedString::new(client_id_bytes);
     let will = None;
 

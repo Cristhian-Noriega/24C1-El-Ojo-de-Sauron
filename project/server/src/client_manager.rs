@@ -12,30 +12,39 @@ use mqtt::model::{
 
 use crate::{client::Client, config::Config};
 
+// TODO: move to file with users and passwords
 const ADMIN_ID: &[u8] = b"admin";
 const CAMERA_SYSTEM_ID: &[u8] = b"camera-system";
 
+/// Represents a client ID
 type ClientId = Vec<u8>;
+/// Represents a tuple of a username, password, and whether the client is connected
 type Logins = (Vec<u8>, Vec<u8>, bool); // username, password, is_connected
+/// Represents a map of client IDs to login information
 type Clients = HashMap<ClientId, Logins>;
 
+/// Represents a manager that handles clients in the server such as registering and authenticating them
+/// and processing connect packets validating the login information
 #[derive(Debug, Clone)]
 pub struct ClientManager {
     registered_clients: Arc<Mutex<Clients>>,
 }
 
 impl ClientManager {
+    /// Creates a new client manager with an empty Clients map
     pub fn new() -> Self {
         Self {
             registered_clients: Arc::new(Mutex::new(Clients::new())),
         }
     }
 
+    /// Registers a client with the specified client ID, username, and password
     pub fn register_client(&self, client_id: Vec<u8>, username: Vec<u8>, password: Vec<u8>) {
         let mut registered_clients = self.registered_clients.lock().unwrap();
         registered_clients.insert(client_id, (username, password, false));
     }
 
+    /// Authenticates a client with the specified client ID, username, and password
     pub fn authenticate_client(
         &self,
         client_id: Vec<u8>,
@@ -54,6 +63,7 @@ impl ClientManager {
         false
     }
 
+    /// Processes a connect packet by validating the login information and authenticating the client
     pub fn process_connect_packet(
         &self,
         connect_packet: Connect,
@@ -81,6 +91,7 @@ impl ClientManager {
         }
     }
 
+    /// Handles a failed connection by sending a Connack packet with the specified return code
     fn failure_connection(&self, mut stream: TcpStream, return_code: ConnectReturnCode) {
         let connack = Connack::new(false, return_code);
         let connack_bytes = connack.to_bytes();
@@ -90,6 +101,7 @@ impl ClientManager {
         }
     }
 
+    /// Gets the login information from a connect packet
     pub fn get_login_info(&self, connect_packet: &Connect) -> Result<(Vec<u8>, Vec<u8>), String> {
         let login = connect_packet
             .login()
@@ -103,6 +115,7 @@ impl ClientManager {
         Ok((username, password))
     }
 
+    /// Makes the initial registrations for the admin and camera system clients
     pub fn make_initial_registrations(&self, config: Config) {
         let admin_username = config.get_admin_username().as_bytes().to_vec();
         let admin_password = config.get_admin_password().as_bytes().to_vec();

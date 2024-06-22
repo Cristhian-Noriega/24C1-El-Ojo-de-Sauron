@@ -72,7 +72,6 @@ pub fn client_run(config: Config) -> Result<(), String> {
 
 /// Connects to the server
 fn connect_to_server(address: &str, username: &str, password: &str) -> std::io::Result<TcpStream> {
-
     println!("\nConnecting to address: {:?}", address);
     let mut to_server_stream = TcpStream::connect(address)?;
 
@@ -264,7 +263,6 @@ fn drone_data(publish: Publish, monitor_sender: Sender<MonitorAction>) {
     }
 }
 
-
 /// Handles the camera data
 fn camera_data(publish: Publish, monitor_sender: Sender<MonitorAction>) {
     let content = publish.message();
@@ -292,7 +290,6 @@ fn camera_data(publish: Publish, monitor_sender: Sender<MonitorAction>) {
         }
     }
 }
-
 
 /// Handles the attending incident
 fn attend_incident(publish: Publish, monitor: &mut Monitor, monitor_sender: Sender<MonitorAction>) {

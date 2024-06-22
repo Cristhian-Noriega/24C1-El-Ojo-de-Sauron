@@ -26,26 +26,7 @@ pub enum Task {
     RespondPing(Vec<u8>),
 }
 
-/// Represents a message
-#[derive(Clone, Debug)]
-pub struct Message {
-    pub client_id: Vec<u8>,
-    pub packet: Publish,
-}
-
-impl Message {
-    /// Creates a new message from a client id and a publish packet
-    pub fn new(client_id: Vec<u8>, packet: Publish) -> Self {
-        Self { client_id, packet }
-    }
-
-    /// Returns the publish packet of the message
-    pub fn packet(&self) -> &Publish {
-        &self.packet
-    }
-}
-
-const ADMIN_USERNAME: &[u8] = b"admin";
+const ADMIN_ID: &[u8] = b"admin";
 const CLIENT_REGISTER: &[u8] = b"$client-register";
 const SEPARATOR: u8 = b';';
 
@@ -183,11 +164,9 @@ impl TaskHandler {
         self.log_file
             .log_successful_publish(&client_id, publish_packet);
 
-        let message = Message::new(client_id.clone(), publish_packet.clone());
-
         for client_id in clients {
             if let Some(client) = self.clients.read().unwrap().get(&client_id) {
-                client.send_message(message.clone(), &self.log_file);
+                client.send_message(publish_packet.clone(), &self.log_file);
             }
         }
 
@@ -206,7 +185,7 @@ impl TaskHandler {
         let topic_name = publish_packet.topic();
         let levels = topic_name.levels();
 
-        if client_id != ADMIN_USERNAME {
+        if client_id != ADMIN_ID {
             self.log_file.error("Client is not admin");
             return;
         }
@@ -234,8 +213,8 @@ impl TaskHandler {
             ) {
                 self.log_file.info("Client already registered");
             } else {
+                self.log_file.log_client_registrated(&client_id.clone());
                 client_manager.register_client(client_id, username, password);
-                self.log_file.info("Client registered");
             }
         } else {
             self.log_file

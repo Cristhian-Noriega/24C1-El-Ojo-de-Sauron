@@ -264,7 +264,9 @@ fn display_new_drone(
         ui.horizontal(|ui| {
             ui.label("Username:");
             ui.add_space(17.0);
-            ui.add(egui::TextEdit::singleline(&mut drone_registration.username).desired_width(340.0));
+            ui.add(
+                egui::TextEdit::singleline(&mut drone_registration.username).desired_width(340.0),
+            );
         });
 
         ui.add_space(10.0);

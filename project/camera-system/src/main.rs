@@ -1,9 +1,9 @@
 //! The camera system is a program that manages multiple cameras and updates their status depending on the
 //! information received from the monitor and the drones.
 
-use std::path::Path;
 use config::Config;
 use std::env::args;
+use std::path::Path;
 
 mod camera;
 mod camera_status;
@@ -11,7 +11,6 @@ mod camera_system;
 mod client;
 
 mod config;
-
 
 const CLIENT_ARGS: usize = 2;
 

@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 #![allow(unused_variables)]
 
 use std::fmt;
@@ -9,8 +8,7 @@ use std::sync::{Arc, Mutex};
 
 use mqtt::model::components::topic_filter::TopicFilter;
 use mqtt::model::components::topic_name::TopicName;
-
-use crate::task_handler::Message;
+use mqtt::model::packets::publish::Publish;
 
 /// Represents the state of the client in the server
 #[derive(Debug)]
@@ -61,12 +59,12 @@ impl Client {
     }
 
     /// Sends a message to the client
-    pub fn send_message(&self, message: Message, logfile: &Arc<crate::logfile::Logger>) {
-        let message_str = std::str::from_utf8(message.packet().message()).unwrap();
+    pub fn send_message(&self, publish_packet: Publish, logfile: &Arc<crate::logfile::Logger>) {
+        let message_str = std::str::from_utf8(publish_packet.message()).unwrap();
         let client_id_str = std::str::from_utf8(&self.id).unwrap();
 
         let mut stream = self.stream.lock().unwrap();
-        match stream.write_all(message.packet().to_bytes().as_slice()) {
+        match stream.write_all(publish_packet.to_bytes().as_slice()) {
             Ok(_) => {
                 logfile.log_sent_message(message_str, client_id_str);
             }
@@ -74,10 +72,7 @@ impl Client {
         }
     }
 
-    pub fn stream(&self) -> Arc<Mutex<TcpStream>> {
-        self.stream.clone()
-    }
-
+    /// Gets the id of the client
     pub fn id(&self) -> Vec<u8> {
         self.id.clone()
     }

@@ -156,4 +156,13 @@ impl Logger {
         let message = format!("Error sending message: {} to client {}", message, client_id);
         self.error(message.as_str());
     }
+
+    /// Logs a custom message for client registration
+    pub fn log_client_registrated(&self, client_id: &[u8]) {
+        let message = format!(
+            "Client with id {} has been registered successfully",
+            std::str::from_utf8(client_id).unwrap()
+        );
+        self.info(message.as_str());
+    }
 }
