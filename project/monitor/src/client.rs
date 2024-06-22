@@ -19,7 +19,7 @@ use crate::{
     camera::Camera,
     channels_tasks::{DroneRegistration, IncidentRegistration, MonitorAction, UIAction},
     config::Config,
-    drone::Drone,
+    drone::{Drone, DroneStatus},
     monitor::Monitor,
     ui_application::UIApplication,
 };
@@ -238,10 +238,10 @@ fn drone_data(publish: Publish, monitor_sender: Sender<MonitorAction>) {
 
     let x_coordinate = splitted_content[0].parse::<f64>().unwrap();
     let y_coordinate = splitted_content[1].parse::<f64>().unwrap();
-    let state = splitted_content[2].to_string();
+    let status = DroneStatus::from_str(splitted_content[2]);
     let battery = splitted_content[3].parse::<usize>().unwrap();
 
-    let drone = Drone::new(id.clone(), state, battery, x_coordinate, y_coordinate);
+    let drone = Drone::new(id.clone(), status, battery, x_coordinate, y_coordinate);
 
     match monitor_sender.send(MonitorAction::Drone(drone.clone())) {
         Ok(_) => {

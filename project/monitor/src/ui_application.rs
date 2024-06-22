@@ -1,7 +1,7 @@
 use crate::{
     camera::Camera,
     channels_tasks::{DroneRegistration, IncidentRegistration, MonitorAction, UIAction},
-    drone::Drone,
+    drone::{Drone, DroneStatus},
 };
 use common::incident::{Incident, IncidentStatus};
 use eframe::egui::{Color32, FontId, Stroke};
@@ -99,6 +99,82 @@ impl UIApplication {
         sender: Sender<UIAction>,
         receiver: Receiver<MonitorAction>,
     ) -> Self {
+        // let drone1 = Drone {
+        //     id: "1".to_string(),
+        //     status: DroneStatus::Free,
+        //     battery: 100,
+        //     x_coordinate: DEFAULT_LONGITUDE - 0.0001,
+        //     y_coordinate: DEFAULT_LATITUDE + 0.0001,
+        //     incident: None,
+        // };
+        // let drone2 = Drone {
+        //     id: "2".to_string(),
+        //     status: DroneStatus::AttendingIncident,
+        //     battery: 100,
+        //     x_coordinate: DEFAULT_LONGITUDE - 0.0005,
+        //     y_coordinate: DEFAULT_LATITUDE + 0.0006,
+        //     incident: None,
+        // };
+        // let drone3 = Drone {
+        //     id: "3".to_string(),
+        //     status: DroneStatus::Travelling,
+        //     battery: 100,
+        //     x_coordinate: DEFAULT_LONGITUDE - 0.0010,
+        //     y_coordinate: DEFAULT_LATITUDE + 0.0033,
+        //     incident: None,
+        // };
+        // let drone4 = Drone {
+        //     id: "4".to_string(),
+        //     status: DroneStatus::Recharging,
+        //     battery: 100,
+        //     x_coordinate: DEFAULT_LONGITUDE - 0.0098,
+        //     y_coordinate: DEFAULT_LATITUDE + 0.0039,
+        //     incident: None,
+        // };
+
+        // let incident1 = Incident {
+        //     uuid: "1".to_string(),
+        //     name: "Incident 1".to_string(),
+        //     description: "Description 1".to_string(),
+        //     x_coordinate: DEFAULT_LONGITUDE - 0.0039,
+        //     y_coordinate: DEFAULT_LATITUDE + 0.0098,
+        //     status: IncidentStatus::Resolvable,
+        // };
+
+        // let incident2 = Incident {
+        //     uuid: "2".to_string(),
+        //     name: "Incident 2".to_string(),
+        //     description: "Description 2".to_string(),
+        //     x_coordinate: DEFAULT_LONGITUDE - 0.0001,
+        //     y_coordinate: DEFAULT_LATITUDE + 0.0065,
+        //     status: IncidentStatus::Resolvable,
+        // };
+
+        // let incident3 = Incident {
+        //     uuid: "3".to_string(),
+        //     name: "Incident 3".to_string(),
+        //     description: "Description 3".to_string(),
+        //     x_coordinate: DEFAULT_LONGITUDE - 0.00044,
+        //     y_coordinate: DEFAULT_LATITUDE + 0.00031,
+        //     status: IncidentStatus::Resolvable,
+        // };
+
+        // let camera1 = Camera {
+        //     id: "1".to_string(),
+        //     x_coordinate: DEFAULT_LONGITUDE - 0.00021,
+        //     y_coordinate: DEFAULT_LATITUDE + 0.00081,
+        //     state: "Active".to_string(),
+        // };
+
+        // let camera2 = Camera {
+        //     id: "2".to_string(),
+        //     x_coordinate: DEFAULT_LONGITUDE - 0.00012,
+        //     y_coordinate: DEFAULT_LATITUDE + 0.000716,
+        //     state: "Active".to_string(),
+        // };
+
+        
+
         Self {
             new_incident_registration: IncidentRegistration {
                 name: String::new(),
@@ -119,9 +195,9 @@ impl UIApplication {
 
             sender,
             receiver,
-            drones: vec![],
-            incidents: vec![],
-            cameras: vec![],
+            drones: vec![drone1, drone2, drone3, drone4],
+            incidents: vec![incident1, incident2, incident3],
+            cameras: vec![camera1, camera2],
             right_click_menu: RightClickMenu::default(),
         }
     }
@@ -427,7 +503,7 @@ fn display_drone_list(ui: &mut egui::Ui, drones: &[Drone]) {
                             ui.label(position);
                         });
                         row.col(|ui| {
-                            ui.label(drone.state.clone());
+                            ui.label(drone.status.to_str());
                         });
                         row.col(|ui| {
                             ui.label(format!("{}%", drone.battery));
@@ -580,39 +656,39 @@ fn update_places(incidents: &Vec<Incident>, drones: &Vec<Drone>, cameras: &Vec<C
         let place = Place {
             position: Position::from_lon_lat(incident.x_coordinate, incident.y_coordinate),
             label: incident.name.clone(),
-            symbol: 'I',
+            symbol: '⚠', // 💥⌖
             style: Style {
-                label_font: FontId::proportional(14.0),
-                label_color: Color32::WHITE,
-                label_background: Color32::from_rgb(255, 0, 0), // Red background
-                symbol_font: FontId::monospace(18.0),
-                symbol_color: Color32::from_rgb(255, 255, 255), // White symbol
-                symbol_background: Color32::from_rgb(255, 0, 0), // Red background
-                symbol_stroke: Stroke::new(2.0, Color32::BLACK), // Black border
+                label_font: FontId::proportional(20.0),
+                label_color: Color32::BLACK,
+                label_background: Color32::TRANSPARENT, // Red background
+                symbol_font: FontId::monospace(25.0),
+                symbol_color: Color32::RED, // White symbol
+                symbol_background: Color32::TRANSPARENT, // Red background
+                symbol_stroke: Stroke::new(2.0, Color32::TRANSPARENT), // Black border
             },
         };
         places.push(place);
     }
 
     for drone in drones {
-        let color = match drone.state.as_str() {
-            "Free" => Color32::from_rgb(0, 255, 0),               // Green
-            "Attending Incident" => Color32::from_rgb(255, 0, 0), // Red
-            "Travelling" => Color32::from_rgb(255, 255, 0),       // Yellow
-            _ => Color32::from_rgb(0, 0, 255),                    // Blue
+        let color = match drone.status {
+            DroneStatus::Free => Color32::BLACK,    // MARINE GREEN                       
+            DroneStatus::AttendingIncident => Color32::BLACK, // CORAL RED            
+            DroneStatus::Travelling => Color32::BLACK,         // SHARK GREY          
+            DroneStatus::Recharging => Color32::BLACK,          // Coral orange     
         };
         let place = Place {
             position: Position::from_lon_lat(drone.x_coordinate, drone.y_coordinate),
             label: drone.id.clone(),
-            symbol: 'D',
+            symbol: '🚁', // ❇ 🛰  ✈  🚨🌀  👁 🕵
             style: Style {
                 label_font: FontId::proportional(14.0),
-                label_color: Color32::WHITE,
-                label_background: color, // Blue background
-                symbol_font: FontId::monospace(18.0),
-                symbol_color: Color32::from_rgb(255, 255, 255), // White symbol
-                symbol_background: color,                       // Blue background
-                symbol_stroke: Stroke::new(2.0, Color32::BLACK), // Black border
+                label_color: Color32::BLACK,
+                label_background: Color32::TRANSPARENT, // Blue background
+                symbol_font: FontId::monospace(25.0),
+                symbol_color: color, // White symbol
+                symbol_background: Color32::TRANSPARENT, // Orange background
+                symbol_stroke: Stroke::new(2.0, Color32::TRANSPARENT), // Black border
             },
         };
         places.push(place);
@@ -622,15 +698,15 @@ fn update_places(incidents: &Vec<Incident>, drones: &Vec<Drone>, cameras: &Vec<C
         let place = Place {
             position: Position::from_lon_lat(camera.x_coordinate, camera.y_coordinate),
             label: camera.id.clone(),
-            symbol: 'C',
+            symbol: '📷', // 📷 📸 📹🎥
             style: Style {
                 label_font: FontId::proportional(14.0),
-                label_color: Color32::WHITE,
-                label_background: Color32::from_rgb(255, 165, 0), // Orange background
-                symbol_font: FontId::monospace(18.0),
-                symbol_color: Color32::from_rgb(255, 255, 255), // White symbol
-                symbol_background: Color32::from_rgb(255, 165, 0), // Orange background
-                symbol_stroke: Stroke::new(2.0, Color32::BLACK), // Black border
+                label_color: Color32::BLACK,
+                label_background: Color32::TRANSPARENT, // Orange background
+                symbol_font: FontId::monospace(25.0),
+                symbol_color: Color32::BLACK, // Electric blue
+                symbol_background: Color32::TRANSPARENT, // Orange background
+                symbol_stroke: Stroke::new(2.0, Color32::TRANSPARENT), // Black border
             },
         };
         places.push(place);
