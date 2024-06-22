@@ -1,5 +1,5 @@
 use super::{DISCONNECT_PACKET_TYPE, RESERVED_FIXED_HEADER_FLAGS};
-use crate::{Error, FixedHeader, RemainingLength};
+use crate::{encrypt, Error, FixedHeader, RemainingLength};
 
 /// Represents a DISCONNECT packet in MQTT. The client uses it to disconnect from the server.
 #[derive(Debug, Default, PartialEq)]
@@ -23,7 +23,7 @@ impl Disconnect {
     }
 
     /// Converts the Disconnect into a vector of bytes.
-    pub fn to_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(&self, key: &[u8]) -> Vec<u8> {
         // Fixed Header
         let mut packet_bytes = vec![DISCONNECT_PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS];
 
@@ -31,7 +31,7 @@ impl Disconnect {
         let remaining_length_bytes = RemainingLength::new(remaining_length_value).to_bytes();
         packet_bytes.extend(remaining_length_bytes);
 
-        packet_bytes
+        encrypt(packet_bytes, key)
     }
 }
 
@@ -39,11 +39,17 @@ impl Disconnect {
 mod tests {
     use super::*;
 
+    const KEY: &[u8; 32] = &[0; 32];
+
     #[test]
     fn test_disconnect_to_bytes() {
         let disconnect = Disconnect::new();
+        let bytes = disconnect.to_bytes(KEY);
+
         let expected_bytes: Vec<u8> = vec![0b1110_0000, 0x00];
-        assert_eq!(disconnect.to_bytes(), expected_bytes);
+        let encrypted_bytes = encrypt(expected_bytes, KEY);
+
+        assert_eq!(bytes, encrypted_bytes);
     }
 
     #[test]

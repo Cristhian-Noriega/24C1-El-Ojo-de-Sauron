@@ -1,7 +1,7 @@
 use std::fmt::{self, Display, Formatter};
 
 use super::{PUBACK_PACKET_TYPE, RESERVED_FIXED_HEADER_FLAGS};
-use crate::{Error, FixedHeader, Read, RemainingLength};
+use crate::{encrypt, Error, FixedHeader, Read, RemainingLength};
 
 const PACKAGE_IDENTIFIER_LENGTH: usize = 2;
 
@@ -35,7 +35,7 @@ impl Puback {
     }
 
     /// Converts the Puback into a vector of bytes.
-    pub fn to_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(&self, key: &[u8]) -> Vec<u8> {
         // Variable Header
         let mut variable_header_bytes = vec![];
 
@@ -57,7 +57,7 @@ impl Puback {
         packet_bytes.extend(fixed_header_bytes);
         packet_bytes.extend(variable_header_bytes);
 
-        packet_bytes
+        encrypt(packet_bytes, key)
     }
 
     /// Returns the packet identifier.
@@ -84,11 +84,17 @@ impl Display for Puback {
 mod tests {
     use super::*;
 
+    const KEY: &[u8; 32] = &[0; 32];
+
     #[test]
     fn test_puback_to_bytes() {
         let puback = Puback::new(Some(42));
+        let bytes = puback.to_bytes(KEY);
+
         let expected_bytes: Vec<u8> = vec![0b0100_0000, 0x02, 0x00, 0x2A];
-        assert_eq!(puback.to_bytes(), expected_bytes);
+        let encrypted_bytes = encrypt(expected_bytes, KEY);
+
+        assert_eq!(bytes, encrypted_bytes);
     }
 
     #[test]

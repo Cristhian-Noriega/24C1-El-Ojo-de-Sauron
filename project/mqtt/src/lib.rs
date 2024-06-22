@@ -1,10 +1,14 @@
 //! This library implements the MQTT protocol version 3.1.1.
-//! 
+//!
 //! Its main goal is to provide an interface for the creation and manipulation of MQTT packets.
-//! 
+//!
 //! Using from_bytes and to_bytes you can convert the packets to and from bytes, respectively.
 
 use {
+    encryptation::{
+        encryptation::{decrypt, encrypt},
+        EXTRA_DATA_SIZE,
+    },
     errors::error::Error,
     model::{
         components::{
@@ -29,6 +33,9 @@ pub mod errors;
 
 /// mqtt model
 pub mod model;
+
+/// encryptation for packet
+mod encryptation;
 
 const PROTOCOL_NAME: [u8; 4] = [b'M', b'Q', b'T', b'T'];
 const PROTOCOL_LEVEL: u8 = 0x04;

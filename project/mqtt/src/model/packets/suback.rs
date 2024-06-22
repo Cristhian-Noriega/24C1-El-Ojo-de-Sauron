@@ -1,5 +1,5 @@
 use super::{DEFAULT_VARIABLE_HEADER_LENGTH, RESERVED_FIXED_HEADER_FLAGS, SUBACK_PACKET_TYPE};
-use crate::{Error, FixedHeader, Read, RemainingLength, SubackReturnCode};
+use crate::{encrypt, Error, FixedHeader, Read, RemainingLength, SubackReturnCode};
 
 /// Represents a SUBACK packet of MQTT. The server uses it to confirm the subscription to one or more topics.
 #[derive(Debug)]
@@ -48,9 +48,8 @@ impl Suback {
         Ok(Suback::new(packet_identifier, return_codes))
     }
 
-
     /// Converts the Suback into a vector of bytes.
-    pub fn to_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(&self, key: &[u8]) -> Vec<u8> {
         // Variable Header
         let mut variable_header_bytes = self.packet_identifier.to_be_bytes().to_vec();
 
@@ -71,7 +70,7 @@ impl Suback {
         packet_bytes.extend(fixed_header_bytes);
         packet_bytes.extend(variable_header_bytes);
 
-        packet_bytes
+        encrypt(packet_bytes, key)
     }
 
     /// Returns the packet identifier.
@@ -89,6 +88,8 @@ impl Suback {
 mod tests {
     use super::*;
 
+    const KEY: &[u8; 32] = &[0; 32];
+
     #[test]
     fn test_suback_to_bytes() {
         let suback = Suback::new(
@@ -100,30 +101,17 @@ mod tests {
             ],
         );
 
-        let expected_bytes: Vec<u8> = vec![
-            144_u8,
-            5_u8,
-            0_u8,
-            42_u8,
-            0x00_u8,
-            0x01_u8,
-            0x02_u8
-        ];
+        let expected_bytes: Vec<u8> = vec![144_u8, 5_u8, 0_u8, 42_u8, 0x00_u8, 0x01_u8, 0x02_u8];
+        let encrypted_bytes = encrypt(expected_bytes, KEY);
 
-        let bytes = suback.to_bytes();
+        let bytes = suback.to_bytes(KEY);
 
-        assert_eq!(bytes, expected_bytes);
+        assert_eq!(bytes, encrypted_bytes);
     }
 
     #[test]
     fn test_suback_from_bytes() {
-        let bytes: Vec<u8> = vec![
-            0_u8,
-            42_u8,
-            0x00_u8,
-            0x01_u8,
-            0x02_u8
-        ];
+        let bytes: Vec<u8> = vec![0_u8, 42_u8, 0x00_u8, 0x01_u8, 0x02_u8];
 
         let mut stream = &bytes[..];
 
@@ -137,5 +125,4 @@ mod tests {
         assert_eq!(return_codes[1], SubackReturnCode::SuccessMaximumQoS1);
         assert_eq!(return_codes[2], SubackReturnCode::SuccessMaximumQoS2);
     }
-
 }

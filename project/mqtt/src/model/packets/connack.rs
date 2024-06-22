@@ -1,7 +1,7 @@
 use std::fmt::{Display, Formatter};
 
 use super::{CONNACK_PACKET_TYPE, DEFAULT_VARIABLE_HEADER_LENGTH, RESERVED_FIXED_HEADER_FLAGS};
-use crate::{ConnectReturnCode, Error, FixedHeader, Read, RemainingLength};
+use crate::{encrypt, ConnectReturnCode, Error, FixedHeader, Read, RemainingLength};
 
 /// Represents a CONNECT packet of MQTT that is used to accept a connection from a client.
 #[derive(Debug)]
@@ -44,7 +44,7 @@ impl Connack {
     }
 
     /// Converts the Connack into a vector of bytes.
-    pub fn to_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(&self, key: &[u8]) -> Vec<u8> {
         // Variable Header
         let mut variable_header_bytes = vec![];
 
@@ -69,7 +69,7 @@ impl Connack {
         packet_bytes.extend(fixed_header_bytes);
         packet_bytes.extend(variable_header_bytes);
 
-        packet_bytes
+        encrypt(packet_bytes, key)
     }
 
     /// Returns if the session is present.
@@ -98,6 +98,8 @@ impl Display for Connack {
 mod test {
     use super::*;
     use crate::FixedHeader;
+
+    const KEY: &[u8; 32] = &[0; 32];
 
     #[allow(dead_code)]
     fn fixed_header_bytes() -> Vec<u8> {
@@ -132,12 +134,13 @@ mod test {
         let connect_return_code = ConnectReturnCode::ConnectionAccepted;
 
         let connack = Connack::new(session_present, connect_return_code);
-        let connack_bytes = connack.to_bytes();
+        let connack_bytes = connack.to_bytes(KEY);
 
         let connect_return_code = ConnectReturnCode::ConnectionAccepted;
         let expected_bytes = header_bytes(session_present, connect_return_code);
+        let encrypted_bytes = encrypt(expected_bytes, KEY);
 
-        assert_eq!(connack_bytes, expected_bytes);
+        assert_eq!(connack_bytes, encrypted_bytes);
     }
 
     #[test]

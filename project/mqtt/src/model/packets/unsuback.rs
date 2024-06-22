@@ -1,5 +1,5 @@
 use super::{DEFAULT_VARIABLE_HEADER_LENGTH, RESERVED_FIXED_HEADER_FLAGS, UNSUBACK_PACKET_TYPE};
-use crate::{Error, FixedHeader, Read, RemainingLength};
+use crate::{encrypt, Error, FixedHeader, Read, RemainingLength};
 
 /// Represents an UNSUBACK packet from MQTT. The server uses it to confirm the unsubscription of one or more topics.
 #[derive(Debug)]
@@ -32,7 +32,7 @@ impl Unsuback {
     }
 
     /// Converts the Unsuback into a vector of bytes.
-    pub fn to_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(&self, key: &[u8]) -> Vec<u8> {
         // Variable Header
         let variable_header_bytes = self.packet_identifier.to_be_bytes().to_vec();
 
@@ -48,7 +48,7 @@ impl Unsuback {
         packet_bytes.extend(fixed_header_bytes);
         packet_bytes.extend(variable_header_bytes);
 
-        packet_bytes
+        encrypt(packet_bytes, key)
     }
 
     /// Returns the packet identifier.
@@ -61,13 +61,17 @@ impl Unsuback {
 mod tests {
     use super::*;
 
+    const KEY: &[u8; 32] = &[0; 32];
+
     #[test]
     fn test_unsuback_to_bytes() {
         let unsuback = Unsuback::new(42);
+        let bytes = unsuback.to_bytes(KEY);
 
         let expected_bytes: Vec<u8> = vec![0b1011_0000, 0x02, 0x00, 0x2A];
+        let encrypted_bytes = encrypt(expected_bytes, KEY);
 
-        assert_eq!(unsuback.to_bytes(), expected_bytes);
+        assert_eq!(bytes, encrypted_bytes);
     }
 
     #[test]

@@ -1,5 +1,5 @@
 use super::{PINGRESP_PACKET_TYPE, RESERVED_FIXED_HEADER_FLAGS};
-use crate::{Error, FixedHeader, RemainingLength};
+use crate::{encrypt, Error, FixedHeader, RemainingLength};
 
 /// Represents a PINGRESP packet from MQTT. The server responds to the client's PING request.
 #[derive(Debug, Default, PartialEq)]
@@ -23,7 +23,7 @@ impl Pingresp {
     }
 
     /// Converts the Pingresp into a vector of bytes.
-    pub fn to_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(&self, key: &[u8]) -> Vec<u8> {
         // Fixed Header
         let mut packet_bytes = vec![PINGRESP_PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS];
 
@@ -31,7 +31,7 @@ impl Pingresp {
         let remaining_length_bytes = RemainingLength::new(remaining_length_value).to_bytes();
         packet_bytes.extend(remaining_length_bytes);
 
-        packet_bytes
+        encrypt(packet_bytes, key)
     }
 }
 
@@ -39,11 +39,17 @@ impl Pingresp {
 mod tests {
     use super::*;
 
+    const KEY: &[u8; 32] = &[0; 32];
+
     #[test]
     fn test_pingresp_to_bytes() {
         let pingresp = Pingresp::new();
+        let bytes = pingresp.to_bytes(KEY);
+
         let expected_bytes: Vec<u8> = vec![0b1101_0000, 0x00];
-        assert_eq!(pingresp.to_bytes(), expected_bytes);
+        let encrypted_bytes = encrypt(expected_bytes, KEY);
+
+        assert_eq!(bytes, encrypted_bytes);
     }
 
     #[test]
