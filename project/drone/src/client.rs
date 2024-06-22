@@ -156,7 +156,7 @@ fn handle_publish(
     server_stream: Arc<Mutex<TcpStream>>,
 ) {
     let message = String::from_utf8(publish.message().to_vec()).unwrap();
-
+    println!("Received message: {}", message);
     let topic_levels = publish.topic().levels();
     if topic_levels.len() == 1 && topic_levels[0] == NEW_INCIDENT {
         let incident = match Incident::from_string(message) {
@@ -344,7 +344,6 @@ fn handle_attending_incident(
     drone: Arc<Mutex<Drone>>,
     server_stream: Arc<Mutex<TcpStream>>,
 ) {
-    println!("ME LLEGO  UN ATTENDININCIDENT ??????");
     let mut drone_locked = match drone.lock() {
         Ok(drone) => drone,
         Err(_) => {
@@ -359,11 +358,6 @@ fn handle_attending_incident(
     }
 
     drone_locked.increment_attending_counter();
-
-    println!(
-        "A VER CUANTOS DRON COUNT? : {}",
-        drone_locked.attending_counter()
-    );
 
     if drone_locked.attending_counter() < 2 {
         drop(drone_locked);
@@ -601,6 +595,7 @@ fn connect_to_server(
     
     println!("\nConnecting to address: {:?}", address);
     let mut to_server_stream = TcpStream::connect(address)?;
+    println!("stream: {:?}", to_server_stream);
 
     let client_id_bytes: Vec<u8> = id.to_string().into_bytes();
 
@@ -617,7 +612,9 @@ fn connect_to_server(
 
     match Packet::from_bytes(&mut to_server_stream) {
         Ok(Packet::Connack(connack)) => match connack.connect_return_code() {
-            ConnectReturnCode::ConnectionAccepted => Ok(to_server_stream),
+            ConnectReturnCode::ConnectionAccepted => {
+                println!("Connection accepted");
+                Ok(to_server_stream)},
             _ => Err(std::io::Error::new(
                 ErrorKind::Other,
                 format!("Connection refused: {:?}", connack.connect_return_code()),
