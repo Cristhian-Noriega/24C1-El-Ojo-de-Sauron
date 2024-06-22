@@ -2,6 +2,7 @@ use mqtt::errors::error::Error as MqttError;
 use std::fmt;
 use std::io;
 use std::sync::mpsc::SendError;
+use std::sync::PoisonError;
 
 pub type ServerResult<T> = Result<T, ServerError>;
 
@@ -13,6 +14,7 @@ pub enum ServerError {
     ClientConnection(String),
     UnsupportedPacket,
     ChannelSend(String),
+    PoisonedLock,
 }
 
 impl fmt::Display for ServerError {
@@ -24,6 +26,7 @@ impl fmt::Display for ServerError {
             ServerError::ClientConnection(msg) => write!(f, "Client connection error: {}", msg),
             ServerError::UnsupportedPacket => write!(f, "Unsupported packet error"),
             ServerError::ChannelSend(msg) => write!(f, "Channel send error: {}", msg),
+            ServerError::PoisonedLock => write!(f, "Poisoned lock error"),
         }
     }
 }
@@ -43,5 +46,11 @@ impl From<MqttError> for ServerError {
 impl<T> From<SendError<T>> for ServerError {
     fn from(err: SendError<T>) -> Self {
         ServerError::ChannelSend(err.to_string())
+    }
+}
+
+impl<T> From<PoisonError<T>> for ServerError {
+    fn from(_: PoisonError<T>) -> Self {
+        ServerError::PoisonedLock
     }
 }

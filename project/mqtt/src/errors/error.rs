@@ -1,5 +1,3 @@
-use std::path::Display;
-
 /// Error type for the mqtt crate.
 #[derive(Debug)]
 pub struct Error {
