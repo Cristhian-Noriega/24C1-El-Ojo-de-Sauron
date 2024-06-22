@@ -1,22 +1,20 @@
-#![allow(unused_variables)]
-#![allow(dead_code)]
+// #![allow(unused_variables)]
 
 use std::{
-    collections::HashMap,
     net::{TcpListener, TcpStream},
-    sync::{mpsc, Arc, RwLock},
+    sync::{
+        mpsc::{self, Sender},
+        Arc, RwLock,
+    },
     thread,
 };
 
 pub use mqtt::model::{
     packet::Packet,
-    packets::{
-        connect::Connect, puback::Puback, publish::Publish, subscribe::Subscribe,
-        unsubscribe::Unsubscribe,
-    },
+    packets::{connect::Connect, publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe},
 };
 
-use crate::client::Client;
+use crate::{client::Client, client_manager::ClientManager};
 
 use super::{
     config::Config,
@@ -24,30 +22,45 @@ use super::{
     task_handler::{Task, TaskHandler},
 };
 
+/// Represents the MQTT server that will be handling all messages
 pub struct Server {
+    /// Configuration of the server
     config: Config,
-    // Channel for client actions
-    client_actions_sender: mpsc::Sender<Task>,
-    // Map to store client senders for communication
-    client_senders: RwLock<HashMap<Vec<u8>, mpsc::Sender<Publish>>>,
+    /// Channel to send messages to clients
+    client_actions_sender: Sender<Task>,
+    /// Log file to log messages
     log_file: Arc<Logger>,
+    /// Manages the registered clients in the server
+    client_manager: Arc<RwLock<ClientManager>>,
 }
 
 impl Server {
+    /// Creates a new server with the specified configuration
     pub fn new(config: Config) -> Self {
         let (client_actions_sender, client_actions_receiver) = mpsc::channel();
 
         let log_file = Arc::new(Logger::new(config.get_log_file()));
-        let task_handler = TaskHandler::new(client_actions_receiver, log_file.clone());
+        let client_manager = ClientManager::new();
+        client_manager.make_initial_registrations(config.clone());
+        let client_manager = Arc::new(RwLock::new(client_manager));
+
+        let task_handler = TaskHandler::new(
+            client_actions_receiver,
+            log_file.clone(),
+            client_manager.clone(),
+        );
+
         task_handler.initialize_task_handler_thread();
+
         Server {
             config,
             client_actions_sender,
-            client_senders: RwLock::new(HashMap::new()),
             log_file,
+            client_manager,
         }
     }
 
+    /// Starts the server
     pub fn server_run(&self) -> std::io::Result<()> {
         let address = self.config.get_address();
 
@@ -71,6 +84,7 @@ impl Server {
         Ok(())
     }
 
+    /// Handles a new connection by checking if it is a valid packet
     pub fn handle_new_connection(&self, mut stream: TcpStream) -> std::io::Result<()> {
         match Packet::from_bytes(&mut stream) {
             Ok(packet) => self.handle_incoming_packet(packet, stream),
@@ -83,12 +97,7 @@ impl Server {
         Ok(())
     }
 
-    pub fn initialize_task_handler_thread(task_handler: TaskHandler) {
-        std::thread::spawn(move || {
-            task_handler.run();
-        });
-    }
-
+    /// Handles an incoming packet from a connection. If it is a Connect packet, it will create a new client. Otherwise, it will log an error.
     pub fn handle_incoming_packet(&self, packet: Packet, stream: TcpStream) {
         match packet {
             Packet::Connect(connect_packet) => self.connect_new_client(connect_packet, stream),
@@ -96,31 +105,38 @@ impl Server {
         }
     }
 
+    /// Establishes a new connection with a client by creating a new client and a new thread for it
     pub fn connect_new_client(&self, connect_packet: Connect, stream: TcpStream) {
         let message = format!(
             "Received Connect Packet from client with ID: {}",
             connect_packet.client_id()
         );
         self.log_file.info(&message);
-        let client_id = connect_packet.client_id().content();
 
-        let new_client = Client::new(
-            client_id.clone(),
-            "PASSWORD".to_string(),
-            stream.try_clone().unwrap(),
-            true,
-            0,
-        );
-        handle_connect(self.client_actions_sender.clone(), new_client);
+        let client_manager = self.client_manager.read().unwrap();
 
-        self.create_new_client_thread(
-            self.client_actions_sender.clone(),
-            stream,
-            client_id.clone(),
-            self.log_file.clone(),
-        );
+        let stream_clone = stream.try_clone().unwrap();
+
+        match client_manager.process_connect_packet(connect_packet, stream_clone) {
+            Some(new_client) => {
+                self.log_file.info("Client connected successfully");
+
+                let client_id = new_client.id();
+                handle_connect(self.client_actions_sender.clone(), new_client);
+                self.create_new_client_thread(
+                    self.client_actions_sender.clone(),
+                    stream,
+                    client_id,
+                    self.log_file.clone(),
+                );
+            }
+            None => {
+                self.log_file.error("Error connecting client");
+            }
+        };
     }
 
+    /// Creates a new thread for a client
     pub fn create_new_client_thread(
         &self,
         sender_to_task_channel: std::sync::mpsc::Sender<Task>,
@@ -136,7 +152,6 @@ impl Server {
                         let handling_result = handle_packet(
                             packet,
                             client_id.clone(),
-                            &mut stream,
                             sender_to_task_channel.clone(),
                             log_file.clone(),
                         );
@@ -156,10 +171,10 @@ impl Server {
     }
 }
 
+/// Handles a packet by checking its type and calling the corresponding function
 pub fn handle_packet(
     packet: Packet,
     client_id: Vec<u8>,
-    stream: &mut TcpStream,
     sender_to_task_channel: std::sync::mpsc::Sender<Task>,
     log_file: Arc<Logger>,
 ) -> bool {
@@ -175,10 +190,6 @@ pub fn handle_packet(
             log_message("Publish");
             handle_publish(publish_packet, sender_to_task_channel, client_id)
         }
-        Packet::Puback(puback_packet) => {
-            log_message("Puback");
-            handle_puback(puback_packet, sender_to_task_channel, client_id)
-        }
         Packet::Subscribe(subscribe_packet) => {
             log_message("Subscribe");
             handle_subscribe(subscribe_packet, sender_to_task_channel, client_id)
@@ -187,11 +198,11 @@ pub fn handle_packet(
             log_message("Unsubscribe");
             handle_unsubscribe(unsubscribe_packet, sender_to_task_channel, client_id)
         }
-        Packet::Pingreq(pingreq_packet) => {
+        Packet::Pingreq(_) => {
             log_message("Pingreq");
             handle_pingreq(sender_to_task_channel, client_id)
         }
-        Packet::Disconnect(disconnect_packet) => {
+        Packet::Disconnect(_) => {
             log_message("Disconnect");
             disconnect_client(sender_to_task_channel, client_id)
         }
@@ -204,6 +215,7 @@ pub fn handle_packet(
     }
 }
 
+/// Handles a CONNECT packet
 pub fn handle_connect(
     sender_to_topics_channel: std::sync::mpsc::Sender<Task>,
     client: Client,
@@ -214,6 +226,7 @@ pub fn handle_connect(
     true
 }
 
+/// Handles a PUBLISH packet
 pub fn handle_publish(
     publish_packet: Publish,
     sender_to_topics_channel: std::sync::mpsc::Sender<Task>,
@@ -225,14 +238,7 @@ pub fn handle_publish(
     true
 }
 
-pub fn handle_puback(
-    puback_packet: Puback,
-    sender_to_topics_channel: std::sync::mpsc::Sender<Task>,
-    client_id: Vec<u8>,
-) -> bool {
-    true
-}
-
+/// Handles a SUBSCRIBE packet
 pub fn handle_subscribe(
     subscribe_packet: Subscribe,
     sender_to_task_channel: std::sync::mpsc::Sender<Task>,
@@ -245,6 +251,7 @@ pub fn handle_subscribe(
     true
 }
 
+/// Handles an UNSUBSCRIBE packet
 pub fn handle_unsubscribe(
     unsubscribe_packet: Unsubscribe,
     sender_to_task_channel: std::sync::mpsc::Sender<Task>,
@@ -257,6 +264,7 @@ pub fn handle_unsubscribe(
     true
 }
 
+/// Handles a PINGREQ packet
 pub fn handle_pingreq(
     sender_to_task_channel: std::sync::mpsc::Sender<Task>,
     client_id: Vec<u8>,
@@ -267,6 +275,7 @@ pub fn handle_pingreq(
     true
 }
 
+/// Handles a DISCONNECT packet
 pub fn disconnect_client(
     sender_to_task_channel: std::sync::mpsc::Sender<Task>,
     client_id: Vec<u8>,

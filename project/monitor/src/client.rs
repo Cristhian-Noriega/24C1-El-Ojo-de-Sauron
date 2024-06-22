@@ -8,11 +8,12 @@ use std::{
 use common::incident::{Incident, IncidentStatus};
 use mqtt::model::{
     components::{
-        encoded_string::EncodedString, qos::QoS, topic_filter::TopicFilter,
+        encoded_string::EncodedString, login::Login, qos::QoS, topic_filter::TopicFilter,
         topic_level::TopicLevel, topic_name::TopicName,
     },
     packet::Packet,
-    packets::{connect::Connect, puback::Puback, publish::Publish, subscribe::Subscribe},
+    packets::{connect::Connect, publish::Publish, subscribe::Subscribe},
+    return_codes::connect_return_code::ConnectReturnCode,
 };
 
 use crate::{
@@ -24,6 +25,7 @@ use crate::{
     ui_application::UIApplication,
 };
 
+/// Starts the client
 pub fn client_run(config: Config) -> Result<(), String> {
     // Create the channels to communicate between the monitor and the UI
     let (monitor_sender, monitor_receiver) = channel();
@@ -32,8 +34,10 @@ pub fn client_run(config: Config) -> Result<(), String> {
     // Connect to the server
 
     let address = config.get_address();
+    let username = config.get_username();
+    let password = config.get_password();
 
-    let mut stream = match connect_to_server(address) {
+    let mut stream = match connect_to_server(address, username, password) {
         Ok(stream) => stream,
         Err(e) => {
             return Err(format!("Error connecting to server: {:?}", e));
@@ -61,37 +65,41 @@ pub fn client_run(config: Config) -> Result<(), String> {
         }
     }
 
-    // wait for the monitor thread to finish
     monitor_thread.join().unwrap();
 
     Ok(())
 }
 
-fn connect_to_server(address: &str) -> std::io::Result<TcpStream> {
+/// Connects to the server
+fn connect_to_server(address: &str, username: &str, password: &str) -> std::io::Result<TcpStream> {
     println!("\nConnecting to address: {:?}", address);
     let mut to_server_stream = TcpStream::connect(address)?;
 
-    let client_id_bytes: Vec<u8> = b"monitor".to_vec();
+    let client_id_bytes: Vec<u8> = b"admin".to_vec();
     let client_id = EncodedString::new(client_id_bytes);
     let will = None;
-    let login = None; // TODO: Add login
+
+    let username = EncodedString::from_string(&username.to_string());
+    let password = Some(EncodedString::from_string(&password.to_string()));
+    let login = Some(Login::new(username, password));
+
     let connect = Connect::new(false, 0, client_id, will, login);
 
     let _ = to_server_stream.write(connect.to_bytes().as_slice());
 
     match Packet::from_bytes(&mut to_server_stream) {
-        Ok(Packet::Connack(connack)) => {
-            println!(
-                "Received Connack packet with return code: {:?} and sessionPresent: {:?}\n",
-                connack.connect_return_code(),
-                connack.session_present()
-            );
-            Ok(to_server_stream)
-        }
+        Ok(Packet::Connack(connack)) => match connack.connect_return_code() {
+            ConnectReturnCode::ConnectionAccepted => Ok(to_server_stream),
+            _ => Err(std::io::Error::new(
+                ErrorKind::Other,
+                format!("Connection refused: {:?}", connack.connect_return_code()),
+            )),
+        },
         _ => Err(std::io::Error::new(ErrorKind::Other, "No connack recibed")),
     }
 }
 
+/// Starts the UI
 fn start_ui(
     ui_sender: Sender<UIAction>,
     from_monitor_receiver: Receiver<MonitorAction>,
@@ -117,7 +125,7 @@ fn start_ui(
 
 const CAMERA_DATA: &[u8] = b"camera-data";
 const DRONE_DATA: &[u8] = b"drone-data";
-const DRONE_REGISTER: &[u8] = b"$drone-register";
+const CLIENT_REGISTER: &[u8] = b"$client-register";
 const NEW_INCIDENT: &[u8] = b"new-incident";
 const ATTENDING_INCIDENT: &[u8] = b"attending-incident";
 const READY_INCIDENT: &[u8] = b"ready-incident";
@@ -126,6 +134,7 @@ const CLOSE_INCIDENT: &[u8] = b"close-incident";
 const SEPARATOR: char = ';';
 const ENUMARATOR: char = '|';
 
+/// Starts the monitor
 fn start_monitor(
     stream: TcpStream,
     monitor_sender: Sender<MonitorAction>,
@@ -175,19 +184,6 @@ fn start_monitor(
                         println!("Unknown topic");
                     }
                 }
-
-                if publish.qos() == &QoS::AtLeast {
-                    let package_identifier = publish.package_identifier();
-
-                    let puback = Puback::new(package_identifier);
-
-                    match stream.write_all(puback.to_bytes().as_slice()) {
-                        Ok(_) => {}
-                        Err(_) => {
-                            println!("Error sending puback packet");
-                        }
-                    }
-                }
             }
 
             Ok(_) => {}
@@ -225,6 +221,7 @@ fn start_monitor(
     }
 }
 
+/// Handles the drone data
 fn drone_data(publish: Publish, monitor_sender: Sender<MonitorAction>) {
     let topic_name = publish.topic();
     let topic_levels = topic_name.levels();
@@ -253,6 +250,7 @@ fn drone_data(publish: Publish, monitor_sender: Sender<MonitorAction>) {
     }
 }
 
+/// Handles the camera data
 fn camera_data(publish: Publish, monitor_sender: Sender<MonitorAction>) {
     let content = publish.message();
 
@@ -280,6 +278,7 @@ fn camera_data(publish: Publish, monitor_sender: Sender<MonitorAction>) {
     }
 }
 
+/// Handles the attending incident
 fn attend_incident(publish: Publish, monitor: &mut Monitor, monitor_sender: Sender<MonitorAction>) {
     let topic_name = publish.topic();
     let topic_levels = topic_name.levels();
@@ -298,6 +297,7 @@ fn attend_incident(publish: Publish, monitor: &mut Monitor, monitor_sender: Send
     }
 }
 
+/// Handles the ready incident
 fn ready_incident(publish: Publish, monitor: &mut Monitor, monitor_sender: Sender<MonitorAction>) {
     let topic_name = publish.topic();
     let topic_levels = topic_name.levels();
@@ -318,11 +318,12 @@ fn ready_incident(publish: Publish, monitor: &mut Monitor, monitor_sender: Sende
     }
 }
 
+/// Registers a drone
 fn register_drone(
     drone_registration: DroneRegistration,
     package_identifier: u16,
 ) -> Option<Publish> {
-    let topic_name = TopicName::new(vec![DRONE_REGISTER.to_vec()], true);
+    let topic_name = TopicName::new(vec![CLIENT_REGISTER.to_vec()], true);
     let message = drone_registration.build_drone_message().into_bytes();
     let dup = false;
     let qos = QoS::AtLeast;
@@ -339,6 +340,7 @@ fn register_drone(
     ))
 }
 
+/// Registers an incident
 fn register_incident(
     incident_registration: IncidentRegistration,
     monitor: &mut Monitor,
@@ -371,6 +373,7 @@ fn register_incident(
     }
 }
 
+/// Resolves an incident
 fn resolve_incident(incident: Incident, package_identifier: u16) -> Option<Publish> {
     let topic_name = TopicName::new(
         vec![CLOSE_INCIDENT.to_vec(), incident.uuid.clone().into_bytes()],
@@ -392,6 +395,7 @@ fn resolve_incident(incident: Incident, package_identifier: u16) -> Option<Publi
     ))
 }
 
+/// Subscribes to the topics that the monitor need to work properly
 fn subscribe_to_topics(stream: &mut TcpStream) -> std::io::Result<()> {
     let mut topic_filters = vec![];
 

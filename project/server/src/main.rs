@@ -1,8 +1,12 @@
+//! MQTT Server that uses the mqtt library to handle multiple clients concurrently.
+//! It recieves messages from the clients and sends them to the corresponding client.
+
 use error::Error;
 use std::env;
 use std::path::Path;
 
 mod client;
+mod client_manager;
 mod config;
 mod error;
 mod logfile;

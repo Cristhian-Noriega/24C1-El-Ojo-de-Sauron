@@ -1,3 +1,9 @@
+//! This library implements the MQTT protocol version 3.1.1.
+//! 
+//! Its main goal is to provide an interface for the creation and manipulation of MQTT packets.
+//! 
+//! Using from_bytes and to_bytes you can convert the packets to and from bytes, respectively.
+
 use {
     errors::error::Error,
     model::{
@@ -18,7 +24,10 @@ use {
     std::io::Read,
 };
 
+/// error handling
 pub mod errors;
+
+/// mqtt model
 pub mod model;
 
 const PROTOCOL_NAME: [u8; 4] = [b'M', b'Q', b'T', b'T'];

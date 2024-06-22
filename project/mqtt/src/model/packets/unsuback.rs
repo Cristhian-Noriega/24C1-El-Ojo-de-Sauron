@@ -1,6 +1,7 @@
 use super::{DEFAULT_VARIABLE_HEADER_LENGTH, RESERVED_FIXED_HEADER_FLAGS, UNSUBACK_PACKET_TYPE};
 use crate::{Error, FixedHeader, Read, RemainingLength};
 
+/// Represents an UNSUBACK packet from MQTT. The server uses it to confirm the unsubscription of one or more topics.
 #[derive(Debug)]
 pub struct Unsuback {
     packet_identifier: u16,
@@ -11,6 +12,7 @@ impl Unsuback {
         Self { packet_identifier }
     }
 
+    /// Converts a stream of bytes into an Unsuback.
     pub fn from_bytes(fixed_header: FixedHeader, stream: &mut dyn Read) -> Result<Self, Error> {
         // Fixed Header
         let fixed_header_flags = fixed_header.first_byte() & 0b0000_1111;
@@ -29,6 +31,7 @@ impl Unsuback {
         Ok(Unsuback::new(packet_identifier))
     }
 
+    /// Converts the Unsuback into a vector of bytes.
     pub fn to_bytes(&self) -> Vec<u8> {
         // Variable Header
         let variable_header_bytes = self.packet_identifier.to_be_bytes().to_vec();
@@ -48,6 +51,7 @@ impl Unsuback {
         packet_bytes
     }
 
+    /// Returns the packet identifier.
     pub fn packet_identifier(&self) -> u16 {
         self.packet_identifier
     }

@@ -1,3 +1,7 @@
+//! The monitor is a program that manages the information received from the drones and the camera system.
+//! It has a UI that displays all the information in real time and let's the user create new incidents that will
+//! be handled by the drones.
+
 use std::{env::args, path::Path};
 
 use config::Config;

@@ -6,27 +6,29 @@ use std::{
 use common::incident::Incident;
 use mqtt::model::{
     components::{
-        encoded_string::EncodedString, qos::QoS, topic_filter::TopicFilter,
+        encoded_string::EncodedString, login::Login, qos::QoS, topic_filter::TopicFilter,
         topic_level::TopicLevel, topic_name::TopicName,
     },
     packet::Packet,
     packets::{connect::Connect, publish::Publish, subscribe::Subscribe},
+    return_codes::connect_return_code::ConnectReturnCode,
 };
 
 use crate::camera_system::CameraSystem;
 
-
-
 use crate::{camera::Camera, config::Config};
-
 
 const NEW_INCIDENT: &[u8] = b"new-incident";
 const CLOSE_INCIDENT: &[u8] = b"close-incident";
 const CAMERA_DATA: &[u8] = b"camera-data";
 
+/// Runs the client
 pub fn client_run(config: Config) -> std::io::Result<()> {
     let address = config.get_address().to_owned();
-    let mut server_stream = connect_to_server(&address)?;
+    let username = config.get_username().to_owned();
+    let password = config.get_password().to_owned();
+
+    let mut server_stream = connect_to_server(&address, &username, &password)?;
 
     let mut camera_system = CameraSystem::new();
 
@@ -74,24 +76,7 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
     }
 }
 
-// fn unsubscribe(filter: TopicFilter, server_stream: &mut TcpStream) -> std::io::Result<()> {
-//     let packet_id = 1;
-
-//     let topics_filters = vec![(filter)];
-
-//     let unsubscribe_packet = Unsubscribe::new(packet_id, topics_filters);
-
-//     let _ = server_stream.write(unsubscribe_packet.to_bytes().as_slice());
-
-//     match Packet::from_bytes(server_stream) {
-//         Ok(Packet::Unsuback(_)) => Ok(()),
-//         _ => Err(std::io::Error::new(
-//             ErrorKind::Other,
-//             "Unsuback was not received.",
-//         )),
-//     }
-// }
-
+/// Handles the subscription to a topic
 fn subscribe(filter: Vec<TopicFilter>, server_stream: &mut TcpStream) -> std::io::Result<()> {
     let mut topics_filters = vec![];
 
@@ -119,6 +104,7 @@ fn subscribe(filter: Vec<TopicFilter>, server_stream: &mut TcpStream) -> std::io
     }
 }
 
+/// Publishes a message to a topic
 fn publish(
     topic_name: TopicName,
     message: Vec<u8>,
@@ -150,31 +136,36 @@ fn publish(
     }
 }
 
-fn connect_to_server(address: &str) -> std::io::Result<TcpStream> {
+/// Connects to the server
+fn connect_to_server(address: &str, username: &str, password: &str) -> std::io::Result<TcpStream> {
     println!("\nConnecting to address: {:?}", address);
     let mut to_server_stream = TcpStream::connect(address)?;
 
-    let client_id_bytes: Vec<u8> = b"camera system".to_vec();
+    let client_id_bytes: Vec<u8> = b"camera-system".to_vec();
     let client_id = EncodedString::new(client_id_bytes);
     let will = None;
-    let login = None;
+
+    let username = EncodedString::new(username.as_bytes().to_vec());
+    let password = Some(EncodedString::new(password.as_bytes().to_vec()));
+    let login = Some(Login::new(username, password));
+
     let connect = Connect::new(false, 0, client_id, will, login);
 
     let _ = to_server_stream.write(connect.to_bytes().as_slice());
 
     match Packet::from_bytes(&mut to_server_stream) {
-        Ok(Packet::Connack(connack)) => {
-            println!(
-                "Received Connack packet with return code: {:?} and sessionPresent: {:?}\n",
-                connack.connect_return_code(),
-                connack.session_present()
-            );
-            Ok(to_server_stream)
-        }
+        Ok(Packet::Connack(connack)) => match connack.connect_return_code() {
+            ConnectReturnCode::ConnectionAccepted => Ok(to_server_stream),
+            _ => Err(std::io::Error::new(
+                ErrorKind::Other,
+                format!("Connection refused: {:?}", connack.connect_return_code()),
+            )),
+        },
         _ => Err(std::io::Error::new(ErrorKind::Other, "No connack recibed")),
     }
 }
 
+/// Publishes the camera state to the server
 fn publish_camera_state(
     camera_system: &mut CameraSystem,
     server_stream: &mut TcpStream,
@@ -190,6 +181,7 @@ fn publish_camera_state(
 //      publicar el estado actualizado de la camaras
 //      subscribe to close-incident/uuid
 
+/// Handles a new incident
 fn handle_new_incident(
     incoming_publish: Publish,
     camera_system: &mut CameraSystem,
@@ -218,6 +210,8 @@ fn handle_new_incident(
 //      pasar a Sleep las camaras correspondientes
 //      publicar el estado actualizado de las camaras
 //      unsubscribe from close-incident/uuid
+
+/// Handles the closing of an incident
 fn handle_close_incident(
     incoming_publish: Publish,
     camera_system: &mut CameraSystem,

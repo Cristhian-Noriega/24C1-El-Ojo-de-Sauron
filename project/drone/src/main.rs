@@ -1,11 +1,14 @@
-use std::path::Path;
+//! The drone system is a program that simulates a single drone. It recieves messages from the monitor and
+//! reacts to them depending on the situation.
+
 use config::Config;
 use std::env::args;
+use std::path::Path;
 
 mod client;
+mod config;
 mod drone;
 mod drone_status;
-mod config;
 
 static CLIENT_ARGS: usize = 2;
 

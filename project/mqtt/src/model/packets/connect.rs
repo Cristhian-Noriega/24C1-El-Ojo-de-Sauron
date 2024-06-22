@@ -4,6 +4,7 @@ use crate::{
     PROTOCOL_NAME,
 };
 
+/// Represents a MQTT CONNECT packet used to initialize a connection with the server.
 #[derive(Debug)]
 pub struct Connect {
     // Variable Header Fields
@@ -34,6 +35,7 @@ impl Connect {
         }
     }
 
+    /// Converts a stream of bytes into a Connect.
     pub fn from_bytes(fixed_header: FixedHeader, stream: &mut dyn Read) -> Result<Self, Error> {
         // Fixed Header
         let fixed_header_flags = fixed_header.first_byte() & 0b0000_1111;
@@ -121,6 +123,7 @@ impl Connect {
         ))
     }
 
+    /// Converts the Connect into a vector of bytes.
     pub fn to_bytes(&self) -> Vec<u8> {
         // Payload
         let mut payload_bytes = vec![];
@@ -181,22 +184,27 @@ impl Connect {
         packet_bytes
     }
 
+    /// Returns if the session is clean.
     pub fn clean_session(&self) -> bool {
         self.clean_session
     }
 
+    /// Returns the keep alive of the Connect.
     pub fn keep_alive(&self) -> u16 {
         self.keep_alive
     }
 
+    /// Returns the client id of the Connect.
     pub fn client_id(&self) -> &EncodedString {
         &self.client_id
     }
 
+    /// Returns a reference to the Connect's Will.
     pub fn will(&self) -> Option<&Will> {
         self.will.as_ref()
     }
 
+    /// Returns a reference to the Connect's Login.
     pub fn login(&self) -> Option<&Login> {
         self.login.as_ref()
     }

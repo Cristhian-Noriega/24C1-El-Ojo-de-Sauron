@@ -1,5 +1,7 @@
 {
     "address": "127.0.0.1:8080",
+    "username": "camera-system",
+    "password": "sauron",
     "cameras": [
         {
             "x_coordinate": -58.3815,
