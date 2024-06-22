@@ -6,7 +6,7 @@
 
 use {
     encryptation::{
-        encryptation::{decrypt, encrypt},
+        encryping_tool::{decrypt, encrypt},
         EXTRA_DATA_SIZE,
     },
     errors::error::Error,

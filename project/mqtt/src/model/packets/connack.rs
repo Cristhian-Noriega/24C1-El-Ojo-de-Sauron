@@ -63,13 +63,15 @@ impl Connack {
         let remaining_length_bytes = RemainingLength::new(remaining_length_value).to_bytes();
         fixed_header_bytes.extend(remaining_length_bytes);
 
+        let encrypted_bytes = encrypt(variable_header_bytes, key);
+
         // Packet
         let mut packet_bytes = vec![];
 
         packet_bytes.extend(fixed_header_bytes);
-        packet_bytes.extend(variable_header_bytes);
+        packet_bytes.extend(encrypted_bytes);
 
-        encrypt(packet_bytes, key)
+        packet_bytes
     }
 
     /// Returns if the session is present.
@@ -97,7 +99,7 @@ impl Display for Connack {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::FixedHeader;
+    use crate::{encryptation::encryping_tool::decrypt, ConnectReturnCode};
 
     const KEY: &[u8; 32] = &[0; 32];
 
@@ -134,13 +136,15 @@ mod test {
         let connect_return_code = ConnectReturnCode::ConnectionAccepted;
 
         let connack = Connack::new(session_present, connect_return_code);
-        let connack_bytes = connack.to_bytes(KEY);
+        let connack_encrypted_bytes = connack.to_bytes(KEY);
+        let fixed_header_bytes = connack_encrypted_bytes[0..2].to_vec();
+        let decrypted_bytes = decrypt(&connack_encrypted_bytes[2..], KEY).unwrap();
+        let connack_bytes = [fixed_header_bytes, decrypted_bytes].concat();
 
         let connect_return_code = ConnectReturnCode::ConnectionAccepted;
         let expected_bytes = header_bytes(session_present, connect_return_code);
-        let encrypted_bytes = encrypt(expected_bytes, KEY);
 
-        assert_eq!(connack_bytes, encrypted_bytes);
+        assert_eq!(connack_bytes, expected_bytes);
     }
 
     #[test]

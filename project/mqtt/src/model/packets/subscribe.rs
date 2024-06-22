@@ -81,13 +81,15 @@ impl Subscribe {
         let remaining_length_bytes = RemainingLength::new(remaining_length_value).to_bytes();
         fixed_header_bytes.extend(remaining_length_bytes);
 
+        let data_bytes = [&variable_header_bytes[..], &payload_bytes[..]].concat();
+        let encrypted_bytes = encrypt(data_bytes, key);
+
         let mut packet_bytes = vec![];
 
         packet_bytes.extend(fixed_header_bytes);
-        packet_bytes.extend(variable_header_bytes);
-        packet_bytes.extend(payload_bytes);
+        packet_bytes.extend(encrypted_bytes);
 
-        encrypt(packet_bytes, key)
+        packet_bytes
     }
 
     /// Returns the packet identifier.
@@ -104,7 +106,7 @@ impl Subscribe {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::EncodedString;
+    use crate::{encryptation::encryping_tool::decrypt, EncodedString};
     use std::io::Cursor;
 
     const KEY: &[u8; 32] = &[0; 32];
@@ -142,15 +144,17 @@ mod tests {
         let topics = vec![(topic_filter, QoS::AtMost)];
 
         let subscribe = Subscribe::new(packet_identifier, topics);
-        let bytes = subscribe.to_bytes(KEY);
+        let encrypted_bytes = subscribe.to_bytes(KEY);
+        let fixed_header = encrypted_bytes[0..2].to_vec();
+        let decrypted_bytes = decrypt(&encrypted_bytes[2..], KEY).unwrap();
+        let subscribe_bytes = [&fixed_header[..], &decrypted_bytes[..]].concat();
 
         let expected_bytes = vec![
             128_u8, 0x0b, // Fixed Header
             0x00, 0x01, // Packet Identifier
             0x00, 6_u8, b't', b'o', b'p', b'i', b'c', b'1', 0x00, // Topic Filter
         ];
-        let encrypted_bytes = encrypt(expected_bytes, KEY);
 
-        assert_eq!(bytes, encrypted_bytes);
+        assert_eq!(subscribe_bytes, expected_bytes);
     }
 }

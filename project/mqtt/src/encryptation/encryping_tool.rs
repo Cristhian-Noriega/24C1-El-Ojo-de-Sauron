@@ -13,15 +13,9 @@ pub fn encrypt(data: Vec<u8>, key: &[u8]) -> Vec<u8> {
 
     let nonce = Nonce::from_slice(&nonce); // 96-bits; unique per message
 
-    let fixed_header = data[0..2].to_vec();
-    let data = &data[2..];
-
     let ciphertext = cipher.encrypt(nonce, data.as_ref()).unwrap();
 
-    let mut encrypted_data = Vec::new();
-
-    encrypted_data.extend_from_slice(&fixed_header);
-    encrypted_data.extend_from_slice(&nonce);
+    let mut encrypted_data = nonce.to_vec();
     encrypted_data.extend_from_slice(&ciphertext);
 
     encrypted_data
@@ -48,11 +42,11 @@ mod tests {
     #[test]
     fn test_encrypt_decrypt() {
         let key = b"01234567890123456789012345678901";
+        let data = b"Hello world!";
 
-        let data = b"00hello world";
         let encrypted_data = encrypt(data.to_vec(), key);
-        let decrypted_data = decrypt(&encrypted_data[2..], key).unwrap();
+        let decrypted_data = decrypt(&encrypted_data, key).unwrap();
 
-        assert_eq!(data[2..], decrypted_data);
+        assert_eq!(data.to_vec(), decrypted_data);
     }
 }

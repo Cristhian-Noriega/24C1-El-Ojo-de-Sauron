@@ -1,5 +1,5 @@
 use super::{PINGREQ_PACKET_TYPE, RESERVED_FIXED_HEADER_FLAGS};
-use crate::{encrypt, Error, FixedHeader, RemainingLength};
+use crate::{Error, FixedHeader, RemainingLength};
 
 /// Represents a PINGREQ packet from MQTT. The client sends a PING request to the server.
 #[derive(Debug, Default, PartialEq)]
@@ -23,7 +23,7 @@ impl Pingreq {
     }
 
     /// Converts the Pingreq into a vector of bytes.
-    pub fn to_bytes(&self, key: &[u8]) -> Vec<u8> {
+    pub fn to_bytes(&self, _key: &[u8]) -> Vec<u8> {
         // Fixed Header
         let mut packet_bytes = vec![PINGREQ_PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS];
 
@@ -31,7 +31,7 @@ impl Pingreq {
         let remaining_length_bytes = RemainingLength::new(remaining_length_value).to_bytes();
         packet_bytes.extend(remaining_length_bytes);
 
-        encrypt(packet_bytes, key)
+        packet_bytes
     }
 }
 
@@ -47,9 +47,8 @@ mod tests {
         let bytes = pingreq.to_bytes(KEY);
 
         let expected_bytes: Vec<u8> = vec![0b1100_0000, 0x00];
-        let encrypted_bytes = encrypt(expected_bytes, KEY);
 
-        assert_eq!(bytes, encrypted_bytes);
+        assert_eq!(bytes, expected_bytes);
     }
 
     #[test]

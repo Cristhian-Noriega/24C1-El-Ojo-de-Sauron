@@ -34,8 +34,8 @@ impl Packet {
 
         let encrypted_content = &mut vec![0; remaining_length_value + EXTRA_DATA_SIZE];
         stream.read_exact(encrypted_content)?;
-        let content = decrypt(encrypted_content, key).unwrap();
 
+        let content = decrypt(encrypted_content, key).unwrap();
         let stream = &mut Cursor::new(content);
 
         let packet = match packet_type {

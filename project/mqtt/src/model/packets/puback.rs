@@ -52,12 +52,14 @@ impl Puback {
         fixed_header_bytes.extend(remaining_length_bytes);
 
         // Packet
+        let encrypted_bytes = encrypt(variable_header_bytes, key);
+
         let mut packet_bytes = vec![];
 
         packet_bytes.extend(fixed_header_bytes);
-        packet_bytes.extend(variable_header_bytes);
+        packet_bytes.extend(encrypted_bytes);
 
-        encrypt(packet_bytes, key)
+        packet_bytes
     }
 
     /// Returns the packet identifier.
@@ -82,6 +84,8 @@ impl Display for Puback {
 
 #[cfg(test)]
 mod tests {
+    use crate::encryptation::encryping_tool::decrypt;
+
     use super::*;
 
     const KEY: &[u8; 32] = &[0; 32];
@@ -89,12 +93,14 @@ mod tests {
     #[test]
     fn test_puback_to_bytes() {
         let puback = Puback::new(Some(42));
-        let bytes = puback.to_bytes(KEY);
+        let encrypted_bytes = puback.to_bytes(KEY);
+        let fixed_header = encrypted_bytes[0..2].to_vec();
+        let decrypted_bytes = decrypt(&encrypted_bytes[2..], KEY).unwrap();
+        let puback_bytes = [&fixed_header[..], &decrypted_bytes[..]].concat();
 
         let expected_bytes: Vec<u8> = vec![0b0100_0000, 0x02, 0x00, 0x2A];
-        let encrypted_bytes = encrypt(expected_bytes, KEY);
 
-        assert_eq!(bytes, encrypted_bytes);
+        assert_eq!(puback_bytes, expected_bytes);
     }
 
     #[test]

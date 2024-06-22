@@ -43,12 +43,14 @@ impl Unsuback {
         let remaining_length_bytes = RemainingLength::new(remaining_length_value).to_bytes();
         fixed_header_bytes.extend(remaining_length_bytes);
 
+        let encrypted_bytes = encrypt(variable_header_bytes, key);
+
         let mut packet_bytes = vec![];
 
         packet_bytes.extend(fixed_header_bytes);
-        packet_bytes.extend(variable_header_bytes);
+        packet_bytes.extend(encrypted_bytes);
 
-        encrypt(packet_bytes, key)
+        packet_bytes
     }
 
     /// Returns the packet identifier.
@@ -59,6 +61,8 @@ impl Unsuback {
 
 #[cfg(test)]
 mod tests {
+    use crate::encryptation::encryping_tool::decrypt;
+
     use super::*;
 
     const KEY: &[u8; 32] = &[0; 32];
@@ -66,12 +70,14 @@ mod tests {
     #[test]
     fn test_unsuback_to_bytes() {
         let unsuback = Unsuback::new(42);
-        let bytes = unsuback.to_bytes(KEY);
+        let encrypted_bytes = unsuback.to_bytes(KEY);
+        let fixed_header_bytes = encrypted_bytes[0..2].to_vec();
+        let decrypted_bytes = decrypt(&encrypted_bytes[2..], KEY).unwrap();
+        let unsuback_bytes = [&fixed_header_bytes[..], &decrypted_bytes[..]].concat();
 
         let expected_bytes: Vec<u8> = vec![0b1011_0000, 0x02, 0x00, 0x2A];
-        let encrypted_bytes = encrypt(expected_bytes, KEY);
 
-        assert_eq!(bytes, encrypted_bytes);
+        assert_eq!(unsuback_bytes, expected_bytes);
     }
 
     #[test]

@@ -105,13 +105,18 @@ impl Publish {
         let remaining_length_bytes = RemainingLength::new(remaining_length_value).to_bytes();
         fixed_header_bytes.extend(remaining_length_bytes);
 
+        let mut data_bytes = vec![];
+        data_bytes.extend(variable_header_bytes);
+        data_bytes.extend(payload_bytes);
+
+        let encrypted_bytes = encrypt(data_bytes, key);
+
         let mut packet_bytes = vec![];
 
         packet_bytes.extend(fixed_header_bytes);
-        packet_bytes.extend(variable_header_bytes);
-        packet_bytes.extend(payload_bytes);
+        packet_bytes.extend(encrypted_bytes);
 
-        encrypt(packet_bytes, key)
+        packet_bytes
     }
 
     /// Returns whether the packet is duplicated.
@@ -182,11 +187,13 @@ mod tests {
 
         let publish = Publish::new(false, QoS::AtMost, false, topic_name, None, vec![b'c']);
 
-        let bytes = publish.to_bytes(KEY);
+        let encrypted_bytes = publish.to_bytes(KEY);
+        let fixed_header = encrypted_bytes[0..2].to_vec();
+        let decrypted_bytes = crate::decrypt(&encrypted_bytes[2..], KEY).unwrap();
+        let bytes = [&fixed_header[..], &decrypted_bytes[..]].concat();
 
         let expected_bytes = vec![0b0011_0000, 6_u8, 0x00, 0x03, b'a', b'/', b'b', b'c'];
-        let encrypted_bytes = encrypt(expected_bytes, KEY);
 
-        assert_eq!(bytes, encrypted_bytes);
+        assert_eq!(bytes, expected_bytes);
     }
 }

@@ -79,13 +79,15 @@ impl Unsubscribe {
         let remaining_length_bytes = RemainingLength::new(remaining_length_value).to_bytes();
         fixed_header_bytes.extend(remaining_length_bytes);
 
+        let data_bytes = [&variable_header_bytes[..], &payload_bytes[..]].concat();
+        let encrypted_bytes = encrypt(data_bytes, key);
+
         let mut packet_bytes = vec![];
 
         packet_bytes.extend(fixed_header_bytes);
-        packet_bytes.extend(variable_header_bytes);
-        packet_bytes.extend(payload_bytes);
+        packet_bytes.extend(encrypted_bytes);
 
-        encrypt(packet_bytes, key)
+        packet_bytes
     }
 
     /// Returns the packet identifier.
@@ -102,6 +104,7 @@ impl Unsubscribe {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::encryptation::encryping_tool::decrypt;
     use crate::EncodedString;
     use crate::TopicFilter;
     use std::io::Cursor;
@@ -140,13 +143,15 @@ mod tests {
         let topics = vec![topic_filter];
 
         let unsubscribe = Unsubscribe::new(packet_identifier, topics);
-        let bytes = unsubscribe.to_bytes(KEY);
+        let encrypted_bytes = unsubscribe.to_bytes(KEY);
+        let fixed_header_bytes = &encrypted_bytes[0..2];
+        let decrypted_bytes = decrypt(&encrypted_bytes[2..], KEY).unwrap();
+        let unsubscribe_bytes = [&fixed_header_bytes[..], &decrypted_bytes[..]].concat();
 
         let expected_bytes = vec![
             160_u8, 10_u8, 0x00, 0x01, 0x00, 0x06, b't', b'o', b'p', b'i', b'c', b'1',
         ];
-        let encrypted_bytes = encrypt(expected_bytes, KEY);
 
-        assert_eq!(bytes, encrypted_bytes);
+        assert_eq!(unsubscribe_bytes, expected_bytes);
     }
 }
