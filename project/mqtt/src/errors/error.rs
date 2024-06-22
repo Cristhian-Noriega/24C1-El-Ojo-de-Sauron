@@ -1,3 +1,5 @@
+use std::path::Display;
+
 /// Error type for the mqtt crate.
 #[derive(Debug)]
 pub struct Error {
@@ -17,3 +19,4 @@ impl From<std::io::Error> for Error {
         }
     }
 }
+
