@@ -110,7 +110,7 @@ mod tests {
         let encrypted_bytes = suback.to_bytes(KEY);
         let fixed_header_bytes = &encrypted_bytes[0..2];
         let decrypted_bytes = decrypt(&encrypted_bytes[2..], KEY).unwrap();
-        let suback_bytes = [&fixed_header_bytes[..], &decrypted_bytes[..]].concat();
+        let suback_bytes = [fixed_header_bytes, &decrypted_bytes[..]].concat();
 
         assert_eq!(suback_bytes, expected_bytes);
     }

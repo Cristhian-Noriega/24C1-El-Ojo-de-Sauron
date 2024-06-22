@@ -146,7 +146,7 @@ mod tests {
         let encrypted_bytes = unsubscribe.to_bytes(KEY);
         let fixed_header_bytes = &encrypted_bytes[0..2];
         let decrypted_bytes = decrypt(&encrypted_bytes[2..], KEY).unwrap();
-        let unsubscribe_bytes = [&fixed_header_bytes[..], &decrypted_bytes[..]].concat();
+        let unsubscribe_bytes = [fixed_header_bytes, &decrypted_bytes[..]].concat();
 
         let expected_bytes = vec![
             160_u8, 10_u8, 0x00, 0x01, 0x00, 0x06, b't', b'o', b'p', b'i', b'c', b'1',
