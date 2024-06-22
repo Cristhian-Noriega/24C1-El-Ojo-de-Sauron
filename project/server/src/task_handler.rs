@@ -171,7 +171,7 @@ impl TaskHandler {
                 } else {
                     self.retained_messages
                         .entry(client_id.clone())
-                        .or_insert(VecDeque::new())
+                        .or_default()
                         .push_back(publish_packet.clone());
                 }
             }

@@ -477,7 +477,6 @@ fn handle_close_incident(
     drone: Arc<Mutex<Drone>>,
     server_stream: Arc<Mutex<TcpStream>>,
 ) {
-    println!("ME LLEGO UN CLOSE INCIDENT DEL MONITOR? ");
     let mut locked_drone = match drone.lock() {
         Ok(drone) => drone,
         Err(_) => {
