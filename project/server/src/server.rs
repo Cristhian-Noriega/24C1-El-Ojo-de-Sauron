@@ -138,15 +138,12 @@ impl Server {
                     client_id,
                     self.log_file.clone(),
                 );
-                Ok(())
             }
             None => {
                 self.log_file.error("Error connecting client");
-                Err(ServerError::ClientConnection(
-                    "Error connecting client".to_string(),
-                ))
             }
         }
+        Ok(())
     }
 
     /// Creates a new thread for a client

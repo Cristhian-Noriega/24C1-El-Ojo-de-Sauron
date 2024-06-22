@@ -19,7 +19,8 @@ impl std::fmt::Display for DroneStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             DroneStatus::Free => write!(f, "0"),
-            DroneStatus::AttendingIncident => write!(f, "1"),
+            DroneStatus::AttendingIncident => write!(f,
+             "1"),
             DroneStatus::Travelling(TravelLocation::Central) => write!(f, "2"),
             DroneStatus::Travelling(TravelLocation::Anchor) => write!(f, "3"),
             DroneStatus::Travelling(TravelLocation::Incident) => write!(f, "4"),
