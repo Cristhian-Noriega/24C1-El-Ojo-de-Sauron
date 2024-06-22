@@ -217,7 +217,7 @@ fn display_edit_incident(
 }
 
 /// Displays the incident list
-fn display_incident_list(ui: &mut egui::Ui, incidents: &[Incident], sender: &Sender<UIAction>) {
+fn display_incident_list(ui: &mut egui::Ui, incidents: &[Incident], sender: &Sender<UIAction>, new_incident_edit: &mut IncidentEdit) {
     TableBuilder::new(ui)
         .striped(true)
         .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
@@ -279,7 +279,11 @@ fn display_incident_list(ui: &mut egui::Ui, incidents: &[Incident], sender: &Sen
                                     .unwrap();
                             }
                         } else {
-                            ui.label("Resolve");
+                            if ui.button("Edit").clicked() {
+                                new_incident_edit.uuid = incident.uuid.clone();
+                                new_incident_edit.name = incident.name.clone();
+                                new_incident_edit.description = incident.description.clone();
+                            }
                         }
                     });
                 });
@@ -507,7 +511,7 @@ impl eframe::App for UIApplication {
                 Layout::EditIncident => {
                     display_edit_incident(ui, &mut self.new_incident_edit, &self.sender)
                 }
-                Layout::IncidentList => display_incident_list(ui, &self.incidents, &self.sender),
+                Layout::IncidentList => display_incident_list(ui, &self.incidents, &self.sender, &mut self.new_incident_edit),
                 Layout::DroneList => display_drone_list(ui, &self.drones),
                 Layout::NewDrone => {
                     display_new_drone(ui, &mut self.new_drone_registration, &self.sender)
