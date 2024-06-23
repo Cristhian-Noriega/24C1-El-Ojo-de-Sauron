@@ -5,10 +5,7 @@
 //! Using from_bytes and to_bytes you can convert the packets to and from bytes, respectively.
 
 use {
-    encryptation::{
-        encryping_tool::{decrypt, encrypt},
-        EXTRA_DATA_SIZE,
-    },
+    encryptation::encryping_tool::{decrypt, encrypt},
     errors::error::Error,
     model::{
         components::{
