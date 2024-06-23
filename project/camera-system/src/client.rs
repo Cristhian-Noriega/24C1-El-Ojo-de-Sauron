@@ -71,14 +71,14 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
                 incoming_publish,
                 &mut camera_system,
                 &mut server_stream,
-                &key,
+                key,
             )?;
         } else if topic_levels.len() == 2 && topic_levels[0] == CLOSE_INCIDENT {
             handle_close_incident(
                 incoming_publish,
                 &mut camera_system,
                 &mut server_stream,
-                &key,
+                key,
             )?;
         }
     }
