@@ -1,5 +1,5 @@
 use super::{DEFAULT_VARIABLE_HEADER_LENGTH, RESERVED_FIXED_HEADER_FLAGS, UNSUBSCRIBE_PACKET_TYPE};
-use crate::{Error, FixedHeader, Read, RemainingLength, TopicFilter};
+use crate::{encrypt, Error, FixedHeader, Read, RemainingLength, TopicFilter};
 
 /// Represents an UNSUBSCRIBE packet from MQTT. The client uses it to unsubscribe from one or more topics.
 #[derive(Debug)]
@@ -56,7 +56,7 @@ impl Unsubscribe {
     }
 
     /// Converts the Unsubscribe into a vector of bytes.
-    pub fn to_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(&self, key: &[u8]) -> Vec<u8> {
         // Variable Header
         let mut variable_header_bytes = vec![];
 
@@ -79,11 +79,13 @@ impl Unsubscribe {
         let remaining_length_bytes = RemainingLength::new(remaining_length_value).to_bytes();
         fixed_header_bytes.extend(remaining_length_bytes);
 
+        let data_bytes = [&variable_header_bytes[..], &payload_bytes[..]].concat();
+        let encrypted_bytes = encrypt(data_bytes, key);
+
         let mut packet_bytes = vec![];
 
         packet_bytes.extend(fixed_header_bytes);
-        packet_bytes.extend(variable_header_bytes);
-        packet_bytes.extend(payload_bytes);
+        packet_bytes.extend(encrypted_bytes);
 
         packet_bytes
     }
@@ -102,9 +104,12 @@ impl Unsubscribe {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::TopicFilter;
+    use crate::encryptation::encryping_tool::decrypt;
     use crate::EncodedString;
+    use crate::TopicFilter;
     use std::io::Cursor;
+
+    const KEY: &[u8; 32] = &[0; 32];
 
     #[allow(dead_code)]
     fn from_slice(bytes: &[u8]) -> impl Read {
@@ -117,14 +122,10 @@ mod tests {
         let packet_identifier = 1;
         let bytes = &mut from_slice(b"topic1");
         let topic_filter = TopicFilter::from_bytes(bytes).unwrap();
-        let topics = vec![
-            topic_filter,
-        ];
+        let topics = vec![topic_filter];
 
         let mut stream = std::io::Cursor::new(vec![
-            0x00,
-            0x01,
-            0x00, 0x06, b't', b'o', b'p', b'i', b'c', b'1'
+            0x00, 0x01, 0x00, 0x06, b't', b'o', b'p', b'i', b'c', b'1',
         ]);
 
         let fixed_header = FixedHeader::new(UNSUBSCRIBE_PACKET_TYPE << 4, RemainingLength::new(10));
@@ -139,20 +140,18 @@ mod tests {
         let packet_identifier = 1;
         let bytes = &mut from_slice(b"topic1");
         let topic_filter = TopicFilter::from_bytes(bytes).unwrap();
-        let topics = vec![
-            topic_filter,
-        ];
+        let topics = vec![topic_filter];
 
         let unsubscribe = Unsubscribe::new(packet_identifier, topics);
+        let encrypted_bytes = unsubscribe.to_bytes(KEY);
+        let fixed_header_bytes = &encrypted_bytes[0..2];
+        let decrypted_bytes = decrypt(&encrypted_bytes[2..], KEY).unwrap();
+        let unsubscribe_bytes = [fixed_header_bytes, &decrypted_bytes[..]].concat();
 
         let expected_bytes = vec![
-            160_u8,
-            10_u8, 
-            0x00,
-            0x01,
-            0x00, 0x06, b't', b'o', b'p', b'i', b'c', b'1'
+            160_u8, 10_u8, 0x00, 0x01, 0x00, 0x06, b't', b'o', b'p', b'i', b'c', b'1',
         ];
 
-        assert_eq!(unsubscribe.to_bytes(), expected_bytes);
+        assert_eq!(unsubscribe_bytes, expected_bytes);
     }
 }

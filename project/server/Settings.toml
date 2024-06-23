@@ -1,7 +1,5 @@
 address="127.0.0.1:8080"
-log_file="log.txt"
+key="12345678901234567890123456789012"
+log_file="server.log"
+login_file="Login.toml"
 segs_to_disconnect=30
-admin_username="admin"
-admin_password="admin"
-camera_system_username="camera-system"
-camera_system_password="sauron"

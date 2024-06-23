@@ -60,7 +60,13 @@ mod tests {
 
         let bytes = login.to_bytes();
 
-        assert_eq!(bytes, vec![0x00, 8, b'u', b's', b'e', b'r', b'n', b'a', b'm', b'e', 0x00, 8, b'p', b'a', b's', b's', b'w', b'o', b'r', b'd']);
+        assert_eq!(
+            bytes,
+            vec![
+                0x00, 8, b'u', b's', b'e', b'r', b'n', b'a', b'm', b'e', 0x00, 8, b'p', b'a', b's',
+                b's', b'w', b'o', b'r', b'd'
+            ]
+        );
     }
 
     #[test]
@@ -68,7 +74,13 @@ mod tests {
         let mut stream = &b"\x00\x08username\x00\x08password"[..];
         let login = Login::from_bytes(&mut stream, true).unwrap();
 
-        assert_eq!(login.username(), &EncodedString::from_string(&"username".to_string()));
-        assert_eq!(login.password(), Some(&EncodedString::from_string(&"password".to_string())));
+        assert_eq!(
+            login.username(),
+            &EncodedString::from_string(&"username".to_string())
+        );
+        assert_eq!(
+            login.password(),
+            Some(&EncodedString::from_string(&"password".to_string()))
+        );
     }
 }

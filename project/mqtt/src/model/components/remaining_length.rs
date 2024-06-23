@@ -48,7 +48,7 @@ impl RemainingLength {
         let mut bytes = vec![];
         let mut length = self.value;
         loop {
-            let mut byte = self.value % 128;
+            let mut byte = length % 128;
             length /= 128;
             if length > 0 {
                 byte |= 128;

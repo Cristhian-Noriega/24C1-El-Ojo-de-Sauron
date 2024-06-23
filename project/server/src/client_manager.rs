@@ -1,8 +1,13 @@
 use std::{
     collections::HashMap,
+    fs::{self, OpenOptions},
     io::Write,
     net::TcpStream,
-    sync::{Arc, Mutex},
+    sync::{
+        mpsc::{self, Sender},
+        Arc, Mutex,
+    },
+    thread,
 };
 
 use mqtt::model::{
@@ -10,11 +15,7 @@ use mqtt::model::{
     return_codes::connect_return_code::ConnectReturnCode,
 };
 
-use crate::{client::Client, config::Config};
-
-// TODO: move to file with users and passwords
-const ADMIN_ID: &[u8] = b"admin";
-const CAMERA_SYSTEM_ID: &[u8] = b"camera-system";
+use crate::client::Client;
 
 /// Represents a client ID
 type ClientId = Vec<u8>;
@@ -28,20 +29,83 @@ type Clients = HashMap<ClientId, Logins>;
 #[derive(Debug, Clone)]
 pub struct ClientManager {
     registered_clients: Arc<Mutex<Clients>>,
+    file_sender: Sender<String>,
 }
 
 impl ClientManager {
     /// Creates a new client manager with an empty Clients map
-    pub fn new() -> Self {
+    pub fn new(login_file_path: &str) -> Self {
+        let (sender, receiver) = mpsc::channel();
+        let file_path = login_file_path.to_string();
+
+        let registered_clients = Self::intials_registers(&file_path);
+
+        thread::spawn(move || {
+            let mut file = match OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&file_path)
+            {
+                Ok(file) => file,
+                Err(e) => {
+                    eprintln!("Failed to open login file: {}", e);
+                    return;
+                }
+            };
+
+            for log_entry in receiver {
+                if let Err(e) = writeln!(file, "{}", log_entry) {
+                    eprintln!("Failed to write to login file: {}", e);
+                }
+            }
+        });
+
         Self {
-            registered_clients: Arc::new(Mutex::new(Clients::new())),
+            registered_clients: Arc::new(Mutex::new(registered_clients)),
+            file_sender: sender,
         }
     }
 
     /// Registers a client with the specified client ID, username, and password
     pub fn register_client(&self, client_id: Vec<u8>, username: Vec<u8>, password: Vec<u8>) {
+        self.add_client(client_id.clone(), username.clone(), password.clone());
+        self.save_client(client_id, username, password);
+    }
+
+    /// Adds a client to the registered clients map
+    fn add_client(&self, client_id: Vec<u8>, username: Vec<u8>, password: Vec<u8>) {
         let mut registered_clients = self.registered_clients.lock().unwrap();
-        registered_clients.insert(client_id, (username, password, false));
+        registered_clients.insert(
+            client_id.clone(),
+            (username.clone(), password.clone(), false),
+        );
+    }
+
+    /// Saves a client to the login file
+    fn save_client(&self, client_id: Vec<u8>, username: Vec<u8>, password: Vec<u8>) {
+        let client_id = match String::from_utf8(client_id) {
+            Ok(id) => id,
+            Err(_) => return,
+        };
+
+        let username = match String::from_utf8(username) {
+            Ok(name) => name,
+            Err(_) => return,
+        };
+
+        let password = match String::from_utf8(password) {
+            Ok(pass) => pass,
+            Err(_) => return,
+        };
+
+        let login_entry = format!("{} = {} = {}", client_id, username, password);
+
+        match self.file_sender.send(login_entry) {
+            Ok(_) => {}
+            Err(err) => {
+                println!("Error sending login entry to file: {:?}", err);
+            }
+        }
     }
 
     /// Authenticates a client with the specified client ID, username, and password
@@ -68,12 +132,13 @@ impl ClientManager {
         &self,
         connect_packet: Connect,
         stream: TcpStream,
+        key: &[u8],
     ) -> Option<Client> {
         let client_id = connect_packet.client_id().content().to_vec();
         let (username, password) = match self.get_login_info(&connect_packet) {
             Ok(login) => login,
             Err(_) => {
-                self.failure_connection(stream, ConnectReturnCode::BadUsernameOrPassword);
+                self.failure_connection(stream, ConnectReturnCode::BadUsernameOrPassword, key);
                 return None;
             }
         };
@@ -86,15 +151,20 @@ impl ClientManager {
                 0,
             ))
         } else {
-            self.failure_connection(stream, ConnectReturnCode::IdentifierRejected);
+            self.failure_connection(stream, ConnectReturnCode::IdentifierRejected, key);
             None
         }
     }
 
     /// Handles a failed connection by sending a Connack packet with the specified return code
-    fn failure_connection(&self, mut stream: TcpStream, return_code: ConnectReturnCode) {
+    fn failure_connection(
+        &self,
+        mut stream: TcpStream,
+        return_code: ConnectReturnCode,
+        key: &[u8],
+    ) {
         let connack = Connack::new(false, return_code);
-        let connack_bytes = connack.to_bytes();
+        let connack_bytes = connack.to_bytes(key);
 
         if let Err(err) = stream.write_all(&connack_bytes) {
             println!("Error sending Connack packet: {:?}", err);
@@ -115,22 +185,25 @@ impl ClientManager {
         Ok((username, password))
     }
 
-    /// Makes the initial registrations for the admin and camera system clients
-    pub fn make_initial_registrations(&self, config: Config) {
-        let admin_username = config.get_admin_username().as_bytes().to_vec();
-        let admin_password = config.get_admin_password().as_bytes().to_vec();
-        let admin_id = ADMIN_ID.to_vec();
+    /// Makes the initial registrations reading the configuration file
+    fn intials_registers(path: &str) -> HashMap<ClientId, Logins> {
+        let content = match fs::read_to_string(path) {
+            Ok(content) => content,
+            Err(_) => return HashMap::new(),
+        };
 
-        self.register_client(admin_id, admin_username, admin_password);
+        let mut registered_clients = HashMap::new();
 
-        let camera_system_username = config.get_camera_system_username().as_bytes().to_vec();
-        let camera_system_password = config.get_camera_system_password().as_bytes().to_vec();
-        let camera_system_id = CAMERA_SYSTEM_ID.to_vec();
+        for line in content.lines() {
+            let parts: Vec<&str> = line.split('=').map(|s| s.trim()).collect();
+            if parts.len() == 3 {
+                let client_id = parts[0].as_bytes().to_vec();
+                let username = parts[1].as_bytes().to_vec();
+                let password = parts[2].as_bytes().to_vec();
+                registered_clients.insert(client_id, (username, password, false));
+            }
+        }
 
-        self.register_client(
-            camera_system_id,
-            camera_system_username,
-            camera_system_password,
-        );
+        registered_clients
     }
 }

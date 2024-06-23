@@ -23,7 +23,7 @@ impl Pingreq {
     }
 
     /// Converts the Pingreq into a vector of bytes.
-    pub fn to_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(&self, _key: &[u8]) -> Vec<u8> {
         // Fixed Header
         let mut packet_bytes = vec![PINGREQ_PACKET_TYPE << 4 | RESERVED_FIXED_HEADER_FLAGS];
 
@@ -39,11 +39,16 @@ impl Pingreq {
 mod tests {
     use super::*;
 
+    const KEY: &[u8; 32] = &[0; 32];
+
     #[test]
     fn test_pingreq_to_bytes() {
         let pingreq = Pingreq::new();
+        let bytes = pingreq.to_bytes(KEY);
+
         let expected_bytes: Vec<u8> = vec![0b1100_0000, 0x00];
-        assert_eq!(pingreq.to_bytes(), expected_bytes);
+
+        assert_eq!(bytes, expected_bytes);
     }
 
     #[test]

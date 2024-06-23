@@ -1,7 +1,7 @@
 use std::fmt::{self, Display, Formatter};
 
 use super::{PUBACK_PACKET_TYPE, RESERVED_FIXED_HEADER_FLAGS};
-use crate::{Error, FixedHeader, Read, RemainingLength};
+use crate::{encrypt, Error, FixedHeader, Read, RemainingLength};
 
 const PACKAGE_IDENTIFIER_LENGTH: usize = 2;
 
@@ -35,7 +35,7 @@ impl Puback {
     }
 
     /// Converts the Puback into a vector of bytes.
-    pub fn to_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(&self, key: &[u8]) -> Vec<u8> {
         // Variable Header
         let mut variable_header_bytes = vec![];
 
@@ -52,10 +52,12 @@ impl Puback {
         fixed_header_bytes.extend(remaining_length_bytes);
 
         // Packet
+        let encrypted_bytes = encrypt(variable_header_bytes, key);
+
         let mut packet_bytes = vec![];
 
         packet_bytes.extend(fixed_header_bytes);
-        packet_bytes.extend(variable_header_bytes);
+        packet_bytes.extend(encrypted_bytes);
 
         packet_bytes
     }
@@ -82,13 +84,23 @@ impl Display for Puback {
 
 #[cfg(test)]
 mod tests {
+    use crate::encryptation::encryping_tool::decrypt;
+
     use super::*;
+
+    const KEY: &[u8; 32] = &[0; 32];
 
     #[test]
     fn test_puback_to_bytes() {
         let puback = Puback::new(Some(42));
+        let encrypted_bytes = puback.to_bytes(KEY);
+        let fixed_header = encrypted_bytes[0..2].to_vec();
+        let decrypted_bytes = decrypt(&encrypted_bytes[2..], KEY).unwrap();
+        let puback_bytes = [&fixed_header[..], &decrypted_bytes[..]].concat();
+
         let expected_bytes: Vec<u8> = vec![0b0100_0000, 0x02, 0x00, 0x2A];
-        assert_eq!(puback.to_bytes(), expected_bytes);
+
+        assert_eq!(puback_bytes, expected_bytes);
     }
 
     #[test]

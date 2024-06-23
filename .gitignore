@@ -19,5 +19,6 @@ project/target/
 /target
 project/.rustc_info.json
 
-# Log file
-log.txt
+# Runtime files
+server.log
+Login.toml

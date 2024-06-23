@@ -1,7 +1,9 @@
 //! MQTT Server that uses the mqtt library to handle multiple clients concurrently.
 //! It recieves messages from the clients and sends them to the corresponding client.
 
-use error::Error;
+use config::Config;
+use error::{ServerError, ServerResult};
+use server::Server;
 use std::env;
 use std::path::Path;
 
@@ -15,25 +17,21 @@ mod task_handler;
 
 static SERVER_ARGS: usize = 2;
 
-pub fn main() -> Result<(), Error> {
-    let argv = env::args().collect::<Vec<String>>();
+fn main() -> ServerResult<()> {
+    let argv: Vec<String> = env::args().collect();
     if argv.len() != SERVER_ARGS {
         let app_name = &argv[0];
-        println!("Usage:\n{:?} <toml-file>", app_name);
-        return Err(Error::new("Cantidad de argumentos inválido".to_string()));
-    }
-
-    let path = Path::new(&argv[1]);
-
-    let config = config::Config::from_file(path)?;
-
-    let server = server::Server::new(config);
-    if let Err(err) = server.server_run() {
-        return Err(Error::new(format!(
-            "Error al ejecutar el servidor: {:?}",
-            err
+        return Err(ServerError::ArgumentError(format!(
+            "Usage: {} <toml-file>",
+            app_name
         )));
     }
 
-    Ok(())
+    let config_path = Path::new(&argv[1]);
+
+    let config = Config::from_file(config_path)?;
+
+    let server = Server::new(config)?;
+
+    server.server_run()
 }

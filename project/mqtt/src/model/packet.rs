@@ -1,8 +1,8 @@
 use std::io::{Cursor, Read};
 
 use crate::{
-    errors::error::Error, Connack, Connect, Disconnect, FixedHeader, Pingreq, Pingresp, Puback,
-    Publish, Suback, Subscribe, Unsuback, Unsubscribe,
+    decrypt, Connack, Connect, Disconnect, Error, FixedHeader, Pingreq, Pingresp, Puback, Publish,
+    Suback, Subscribe, Unsuback, Unsubscribe,
 };
 
 use super::packets::*;
@@ -25,16 +25,16 @@ pub enum Packet {
 
 impl Packet {
     /// Converts a byte stream into an MQTT packet.
-    pub fn from_bytes(stream: &mut dyn Read) -> Result<Self, Error> {
+    pub fn from_bytes(stream: &mut dyn Read, key: &[u8]) -> Result<Self, Error> {
         let fixed_header = FixedHeader::from_bytes(stream)?;
 
         let packet_type = fixed_header.first_byte() >> 4;
+        let remaining_length = fixed_header.remaining_length_encrypted();
 
-        let remaining_length_value = fixed_header.remaining_length().value();
+        let encrypted_content = &mut vec![0; remaining_length];
+        stream.read_exact(encrypted_content)?;
 
-        let content = &mut vec![0; remaining_length_value];
-        stream.read_exact(content)?;
-
+        let content = decrypt(encrypted_content, key).unwrap();
         let stream = &mut Cursor::new(content);
 
         let packet = match packet_type {
@@ -102,53 +102,42 @@ impl Packet {
     }
 
     /// Converts the MQTT packet into a byte vector.
-    pub fn to_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(&self, key: &[u8]) -> Vec<u8> {
         let mut packet_bytes = vec![];
 
         match self {
             Packet::Connect(connect_packet) => {
-                packet_bytes.push(CONNECT_PACKET_TYPE);
-                packet_bytes.extend(connect_packet.to_bytes());
+                packet_bytes.extend(connect_packet.to_bytes(key));
             }
             Packet::Connack(connack_packet) => {
-                packet_bytes.push(CONNACK_PACKET_TYPE);
-                packet_bytes.extend(connack_packet.to_bytes());
+                packet_bytes.extend(connack_packet.to_bytes(key));
             }
             Packet::Publish(publish_packet) => {
-                packet_bytes.push(PUBLISH_PACKET_TYPE);
-                packet_bytes.extend(publish_packet.to_bytes());
+                packet_bytes.extend(publish_packet.to_bytes(key));
             }
             Packet::Subscribe(subscribe_packet) => {
-                packet_bytes.push(SUBSCRIBE_PACKET_TYPE);
-                packet_bytes.extend(subscribe_packet.to_bytes());
+                packet_bytes.extend(subscribe_packet.to_bytes(key));
             }
             Packet::Suback(suback_packet) => {
-                packet_bytes.push(SUBACK_PACKET_TYPE);
-                packet_bytes.extend(suback_packet.to_bytes());
+                packet_bytes.extend(suback_packet.to_bytes(key));
             }
             Packet::Puback(puback_packet) => {
-                packet_bytes.push(PUBACK_PACKET_TYPE);
-                packet_bytes.extend(puback_packet.to_bytes());
+                packet_bytes.extend(puback_packet.to_bytes(key));
             }
             Packet::Disconnect(disconnect_packet) => {
-                packet_bytes.push(DISCONNECT_PACKET_TYPE);
-                packet_bytes.extend(disconnect_packet.to_bytes());
+                packet_bytes.extend(disconnect_packet.to_bytes(key));
             }
             Packet::Pingreq(pingreq_packet) => {
-                packet_bytes.push(PINGREQ_PACKET_TYPE);
-                packet_bytes.extend(pingreq_packet.to_bytes());
+                packet_bytes.extend(pingreq_packet.to_bytes(key));
             }
             Packet::Pingresp(pingresp_packet) => {
-                packet_bytes.push(PINGRESP_PACKET_TYPE);
-                packet_bytes.extend(pingresp_packet.to_bytes());
+                packet_bytes.extend(pingresp_packet.to_bytes(key));
             }
             Packet::Unsubscribe(unsubscribe_packet) => {
-                packet_bytes.push(UNSUBSCRIBE_PACKET_TYPE);
-                packet_bytes.extend(unsubscribe_packet.to_bytes());
+                packet_bytes.extend(unsubscribe_packet.to_bytes(key));
             }
             Packet::Unsuback(unsuback_packet) => {
-                packet_bytes.push(UNSUBACK_PACKET_TYPE);
-                packet_bytes.extend(unsuback_packet.to_bytes());
+                packet_bytes.extend(unsuback_packet.to_bytes(key));
             }
         }
         packet_bytes

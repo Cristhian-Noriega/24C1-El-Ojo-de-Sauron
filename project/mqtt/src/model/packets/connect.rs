@@ -1,7 +1,7 @@
 use super::{CONNECT_PACKET_TYPE, RESERVED_FIXED_HEADER_FLAGS};
 use crate::{
-    EncodedString, Error, FixedHeader, Login, QoS, Read, RemainingLength, Will, PROTOCOL_LEVEL,
-    PROTOCOL_NAME,
+    encrypt, EncodedString, Error, FixedHeader, Login, QoS, Read, RemainingLength, Will,
+    PROTOCOL_LEVEL, PROTOCOL_NAME,
 };
 
 /// Represents a MQTT CONNECT packet used to initialize a connection with the server.
@@ -124,7 +124,7 @@ impl Connect {
     }
 
     /// Converts the Connect into a vector of bytes.
-    pub fn to_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(&self, key: &[u8]) -> Vec<u8> {
         // Payload
         let mut payload_bytes = vec![];
 
@@ -175,11 +175,13 @@ impl Connect {
         fixed_header_bytes.extend(remaining_length_bytes);
 
         // Packet
+        let data_bytes = [&variable_header_bytes[..], &payload_bytes[..]].concat();
+        let encrypted_bytes = encrypt(data_bytes, key);
+
         let mut packet_bytes = vec![];
 
         packet_bytes.extend(fixed_header_bytes);
-        packet_bytes.extend(variable_header_bytes);
-        packet_bytes.extend(payload_bytes);
+        packet_bytes.extend(encrypted_bytes);
 
         packet_bytes
     }
@@ -213,7 +215,9 @@ impl Connect {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{FixedHeader, TopicName};
+    use crate::{encryptation::encryping_tool::decrypt, FixedHeader, TopicName};
+
+    const KEY: &[u8; 32] = &[0; 32];
 
     #[allow(dead_code)]
     fn fixed_header_bytes(remaining_length: RemainingLength) -> Vec<u8> {
@@ -253,7 +257,10 @@ mod test {
         let client_id = EncodedString::new(b"a".to_vec());
 
         let connect = Connect::new(clean_session, keep_alive, client_id, None, None);
-        let connect_bytes = connect.to_bytes();
+        let connect_encrypted_bytes = connect.to_bytes(KEY);
+        let fixed_header_bytes = connect_encrypted_bytes[0..2].to_vec();
+        let decrypted_bytes = decrypt(&connect_encrypted_bytes[2..], KEY).unwrap();
+        let connect_bytes = [fixed_header_bytes, decrypted_bytes].concat();
 
         let expected_header_bytes = header_bytes(RemainingLength::new(13), 0b0000_0000, 10);
         let expected_payload_bytes = EncodedString::new(b"a".to_vec()).to_bytes();
@@ -279,7 +286,10 @@ mod test {
 
         let connect = Connect::new(clean_session, keep_alive, client_id, Some(will), None);
 
-        let connect_bytes = connect.to_bytes();
+        let connect_encrypted_bytes = connect.to_bytes(KEY);
+        let fixed_header_bytes = connect_encrypted_bytes[0..2].to_vec();
+        let decrypted_bytes = decrypt(&connect_encrypted_bytes[2..], KEY).unwrap();
+        let connect_bytes = [fixed_header_bytes, decrypted_bytes].concat();
 
         let expected_header_bytes = header_bytes(RemainingLength::new(39), 0b0010_1100, 10);
         let expected_client_id_bytes = EncodedString::new(b"a".to_vec()).to_bytes();
@@ -305,7 +315,10 @@ mod test {
 
         let connect = Connect::new(clean_session, keep_alive, client_id, None, Some(login));
 
-        let connect_bytes = connect.to_bytes();
+        let connect_encrypted_bytes = connect.to_bytes(KEY);
+        let fixed_header_bytes = connect_encrypted_bytes[0..2].to_vec();
+        let decrypted_bytes = decrypt(&connect_encrypted_bytes[2..], KEY).unwrap();
+        let connect_bytes = [fixed_header_bytes, decrypted_bytes].concat();
 
         let expected_header_bytes = header_bytes(RemainingLength::new(33), 0b1100_0000, 10);
         let expected_client_id_bytes = EncodedString::new(b"a".to_vec()).to_bytes();

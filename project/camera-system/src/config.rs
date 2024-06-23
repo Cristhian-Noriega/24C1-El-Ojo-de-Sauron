@@ -12,8 +12,11 @@ pub struct Position {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Config {
     address: String,
+    id: String,
     username: String,
     password: String,
+    key: String,
+    active_range: f64,
     cameras: Vec<Position>,
 }
 
@@ -35,6 +38,11 @@ impl Config {
         &self.address
     }
 
+    /// Returns the id of the camera system
+    pub fn get_id(&self) -> &str {
+        &self.id
+    }
+
     /// Returns the username of the camera system
     pub fn get_username(&self) -> &str {
         &self.username
@@ -43,6 +51,16 @@ impl Config {
     /// Returns the password of the camera system
     pub fn get_password(&self) -> &str {
         &self.password
+    }
+
+    /// Returns the key of the camera system
+    pub fn get_key(&self) -> &[u8; 32] {
+        self.key.as_bytes().try_into().unwrap()
+    }
+
+    /// Returns the active range of the cameras
+    pub fn get_active_range(&self) -> f64 {
+        self.active_range
     }
 
     /// Returns the cameras of the camera system

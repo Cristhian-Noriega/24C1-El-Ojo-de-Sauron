@@ -1,5 +1,5 @@
 use super::{DEFAULT_VARIABLE_HEADER_LENGTH, PUBLISH_PACKET_TYPE};
-use crate::{Error, FixedHeader, QoS, Read, RemainingLength, TopicName};
+use crate::{encrypt, Error, FixedHeader, QoS, Read, RemainingLength, TopicName};
 
 /// Represents a PUBLISH packet of MQTT. The client uses it to publish a message to a topic.
 #[derive(Debug, Clone)]
@@ -78,12 +78,11 @@ impl Publish {
     }
 
     /// Converts the Publish into a vector of bytes.
-    pub fn to_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(&self, key: &[u8]) -> Vec<u8> {
         // Payload
         let payload_bytes = &self.message;
 
         // Variable Header
-
         let mut variable_header_bytes = vec![];
 
         variable_header_bytes.extend(self.topic.to_bytes());
@@ -93,7 +92,6 @@ impl Publish {
         }
 
         // Fixed Header
-
         let fixed_header_flags = (if self.dup { 1 } else { 0 } << 3)
             | (self.qos.to_byte() << 1)
             | (if self.retain { 1 } else { 0 });
@@ -103,13 +101,19 @@ impl Publish {
         let remaining_length_value =
             variable_header_bytes.len() as u32 + payload_bytes.len() as u32;
         let remaining_length_bytes = RemainingLength::new(remaining_length_value).to_bytes();
+
         fixed_header_bytes.extend(remaining_length_bytes);
+
+        let mut data_bytes = vec![];
+        data_bytes.extend(variable_header_bytes);
+        data_bytes.extend(payload_bytes);
+
+        let encrypted_bytes = encrypt(data_bytes, key);
 
         let mut packet_bytes = vec![];
 
         packet_bytes.extend(fixed_header_bytes);
-        packet_bytes.extend(variable_header_bytes);
-        packet_bytes.extend(payload_bytes);
+        packet_bytes.extend(encrypted_bytes);
 
         packet_bytes
     }
@@ -151,6 +155,8 @@ mod tests {
     use crate::EncodedString;
     use std::io::Cursor;
 
+    const KEY: &[u8; 32] = &[0; 32];
+
     #[allow(dead_code)]
     fn from_slice(bytes: &[u8]) -> impl Read {
         let encoded_string = EncodedString::new(bytes.to_vec());
@@ -159,9 +165,8 @@ mod tests {
 
     #[test]
     fn test_from_bytes() {
-        let mut stream = std::io::Cursor::new(vec![
-            0b0011_0000, 6_u8, 0x00, 0x03, b'a', b'/', b'b', b'c'
-        ]);
+        let mut stream =
+            std::io::Cursor::new(vec![0b0011_0000, 6_u8, 0x00, 0x03, b'a', b'/', b'b', b'c']);
 
         let fixed_header = FixedHeader::from_bytes(&mut stream).unwrap();
         let publish = Publish::from_bytes(fixed_header, &mut stream).unwrap();
@@ -179,17 +184,15 @@ mod tests {
         let bytes = &mut from_slice(b"a/b");
         let topic_name = TopicName::from_bytes(bytes).unwrap();
 
-        let publish = Publish::new(
-            false,
-            QoS::AtMost,
-            false,
-            topic_name,
-            None,
-            vec![b'c'],
-        );
+        let publish = Publish::new(false, QoS::AtMost, false, topic_name, None, vec![b'c']);
 
-        let bytes = publish.to_bytes();
+        let encrypted_bytes = publish.to_bytes(KEY);
+        let fixed_header = encrypted_bytes[0..2].to_vec();
+        let decrypted_bytes = crate::decrypt(&encrypted_bytes[2..], KEY).unwrap();
+        let bytes = [&fixed_header[..], &decrypted_bytes[..]].concat();
 
-        assert_eq!(bytes, vec![0b0011_0000, 6_u8, 0x00, 0x03, b'a', b'/', b'b', b'c']);
+        let expected_bytes = vec![0b0011_0000, 6_u8, 0x00, 0x03, b'a', b'/', b'b', b'c'];
+
+        assert_eq!(bytes, expected_bytes);
     }
 }

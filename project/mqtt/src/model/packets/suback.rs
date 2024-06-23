@@ -1,5 +1,5 @@
 use super::{DEFAULT_VARIABLE_HEADER_LENGTH, RESERVED_FIXED_HEADER_FLAGS, SUBACK_PACKET_TYPE};
-use crate::{Error, FixedHeader, Read, RemainingLength, SubackReturnCode};
+use crate::{encrypt, Error, FixedHeader, Read, RemainingLength, SubackReturnCode};
 
 /// Represents a SUBACK packet of MQTT. The server uses it to confirm the subscription to one or more topics.
 #[derive(Debug)]
@@ -48,9 +48,8 @@ impl Suback {
         Ok(Suback::new(packet_identifier, return_codes))
     }
 
-
     /// Converts the Suback into a vector of bytes.
-    pub fn to_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(&self, key: &[u8]) -> Vec<u8> {
         // Variable Header
         let mut variable_header_bytes = self.packet_identifier.to_be_bytes().to_vec();
 
@@ -66,10 +65,12 @@ impl Suback {
         let remaining_length_bytes = RemainingLength::new(remaining_length_value).to_bytes();
         fixed_header_bytes.extend(remaining_length_bytes);
 
+        let encrypted_bytes = encrypt(variable_header_bytes, key);
+
         let mut packet_bytes = vec![];
 
         packet_bytes.extend(fixed_header_bytes);
-        packet_bytes.extend(variable_header_bytes);
+        packet_bytes.extend(encrypted_bytes);
 
         packet_bytes
     }
@@ -87,7 +88,11 @@ impl Suback {
 
 #[cfg(test)]
 mod tests {
+    use crate::encryptation::encryping_tool::decrypt;
+
     use super::*;
+
+    const KEY: &[u8; 32] = &[0; 32];
 
     #[test]
     fn test_suback_to_bytes() {
@@ -100,30 +105,19 @@ mod tests {
             ],
         );
 
-        let expected_bytes: Vec<u8> = vec![
-            144_u8,
-            5_u8,
-            0_u8,
-            42_u8,
-            0x00_u8,
-            0x01_u8,
-            0x02_u8
-        ];
+        let expected_bytes: Vec<u8> = vec![144_u8, 5_u8, 0_u8, 42_u8, 0x00_u8, 0x01_u8, 0x02_u8];
 
-        let bytes = suback.to_bytes();
+        let encrypted_bytes = suback.to_bytes(KEY);
+        let fixed_header_bytes = &encrypted_bytes[0..2];
+        let decrypted_bytes = decrypt(&encrypted_bytes[2..], KEY).unwrap();
+        let suback_bytes = [fixed_header_bytes, &decrypted_bytes[..]].concat();
 
-        assert_eq!(bytes, expected_bytes);
+        assert_eq!(suback_bytes, expected_bytes);
     }
 
     #[test]
     fn test_suback_from_bytes() {
-        let bytes: Vec<u8> = vec![
-            0_u8,
-            42_u8,
-            0x00_u8,
-            0x01_u8,
-            0x02_u8
-        ];
+        let bytes: Vec<u8> = vec![0_u8, 42_u8, 0x00_u8, 0x01_u8, 0x02_u8];
 
         let mut stream = &bytes[..];
 
@@ -137,5 +131,4 @@ mod tests {
         assert_eq!(return_codes[1], SubackReturnCode::SuccessMaximumQoS1);
         assert_eq!(return_codes[2], SubackReturnCode::SuccessMaximumQoS2);
     }
-
 }
