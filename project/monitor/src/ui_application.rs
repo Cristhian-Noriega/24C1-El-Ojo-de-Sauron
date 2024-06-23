@@ -178,11 +178,11 @@ fn handle_right_clicks(
                         display_new_incident(ui, new_incident_registration, sender);
                         *layout = Layout::NewIncident;
 
-                        right_click_menu.open = false; 
+                        right_click_menu.open = false;
                     }
                     if ui.button("Cancel").clicked() {
                         println!("Menu closed");
-                        right_click_menu.open = false; 
+                        right_click_menu.open = false;
                     }
                 });
             });
@@ -716,7 +716,7 @@ fn update_places(
             charging_station_coordenates.1,
         ),
         label: "   Drone Central".to_string(),
-        symbol: '🖧', 
+        symbol: '🖧',
         style: Style {
             label_font: FontId::proportional(10.0),
             label_color: Color32::BLACK,

@@ -36,7 +36,7 @@ impl DroneStatus {
             "3" => DroneStatus::Travelling,
             "4" => DroneStatus::Travelling,
             "5" => DroneStatus::Recharging,
-            _ => panic!("Invalid drone status"),
+            _ => DroneStatus::Free,
         }
     }
 }

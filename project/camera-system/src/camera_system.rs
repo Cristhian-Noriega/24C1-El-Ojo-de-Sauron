@@ -78,12 +78,7 @@ mod tests {
     #[test]
     fn test_add_camera() {
         let mut camera_system = CameraSystem::new();
-        let camera = Camera::new(
-            1_u8,
-            1.5,
-            1.5,
-            3.0,
-        );
+        let camera = Camera::new(1_u8, 1.5, 1.5, 3.0);
         camera_system.add_camera(camera);
         let camera_data = camera_system.cameras_data();
         assert_eq!(camera_data, "1;1.5;1.5;0");
@@ -92,12 +87,7 @@ mod tests {
     #[test]
     fn test_new_incident() {
         let mut camera_system = CameraSystem::new();
-        let camera = Camera::new(
-            1_u8,
-            1.5,
-            1.5,
-            3.0,
-        );
+        let camera = Camera::new(1_u8, 1.5, 1.5, 3.0);
         camera_system.add_camera(camera);
         let camera_data1 = camera_system.cameras_data();
         let incident = Incident::new(
@@ -117,12 +107,7 @@ mod tests {
     #[test]
     fn test_close_incident() {
         let mut camera_system = CameraSystem::new();
-        let camera = Camera::new(
-            1_u8,
-            1.5,
-            1.5,
-            3.0,
-        );
+        let camera = Camera::new(1_u8, 1.5, 1.5, 3.0);
         camera_system.add_camera(camera);
         let camera_data1 = camera_system.cameras_data();
         let incident = Incident::new(
