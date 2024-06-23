@@ -12,8 +12,8 @@ mod client;
 mod config;
 mod drone;
 mod monitor;
-mod ui_application;
 mod right_click_menu;
+mod ui_application;
 
 const CLIENT_ARGS: usize = 2;
 

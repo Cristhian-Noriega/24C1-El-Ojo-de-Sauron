@@ -1,7 +1,7 @@
 #![allow(clippy::too_many_arguments)]
 
 use crate::{
-    camera::Camera,
+    camera::{Camera, CameraStatus},
     channels_tasks::{
         DroneRegistration, IncidentEdit, IncidentRegistration, MonitorAction, UIAction,
     },
@@ -14,6 +14,7 @@ use eframe::egui::{Color32, FontId, Stroke};
 use eframe::egui;
 use egui::{Context, Response, Ui};
 use egui_extras::{Column, TableBuilder};
+
 use std::sync::mpsc::{Receiver, Sender};
 use walkers::{
     extras::{Place, Places, Style},
@@ -23,6 +24,9 @@ use walkers::{
 
 pub const DEFAULT_LONGITUDE: f64 = -58.372170426210836;
 pub const DEFAULT_LATITUDE: f64 = -34.60840997593428;
+
+const CHARGING_STATION_LONGITUDE: f64 = -58.3703;
+const CHARGING_STATION_LATITUDE: f64 = -34.6082;
 
 /// Represents the layout of the UI
 #[derive(PartialEq)]
@@ -53,6 +57,8 @@ pub struct UIApplication {
     drones: Vec<Drone>,
     incidents: Vec<Incident>,
     cameras: Vec<Camera>,
+    charging_station_coordenates: (f64, f64),
+
     right_click_menu: RightClickMenu,
 }
 
@@ -63,80 +69,6 @@ impl UIApplication {
         sender: Sender<UIAction>,
         receiver: Receiver<MonitorAction>,
     ) -> Self {
-        // let drone1 = Drone {
-        //     id: "1".to_string(),
-        //     status: DroneStatus::Free,
-        //     battery: 100,
-        //     x_coordinate: DEFAULT_LONGITUDE - 0.0001,
-        //     y_coordinate: DEFAULT_LATITUDE + 0.0001,
-        //     incident: None,
-        // };
-        // let drone2 = Drone {
-        //     id: "2".to_string(),
-        //     status: DroneStatus::AttendingIncident,
-        //     battery: 100,
-        //     x_coordinate: DEFAULT_LONGITUDE - 0.0005,
-        //     y_coordinate: DEFAULT_LATITUDE + 0.0006,
-        //     incident: None,
-        // };
-        // let drone3 = Drone {
-        //     id: "3".to_string(),
-        //     status: DroneStatus::Travelling,
-        //     battery: 100,
-        //     x_coordinate: DEFAULT_LONGITUDE - 0.0010,
-        //     y_coordinate: DEFAULT_LATITUDE + 0.0033,
-        //     incident: None,
-        // };
-        // let drone4 = Drone {
-        //     id: "4".to_string(),
-        //     status: DroneStatus::Recharging,
-        //     battery: 100,
-        //     x_coordinate: DEFAULT_LONGITUDE - 0.0098,
-        //     y_coordinate: DEFAULT_LATITUDE + 0.0039,
-        //     incident: None,
-        // };
-
-        // let incident1 = Incident {
-        //     uuid: "1".to_string(),
-        //     name: "Incident 1".to_string(),
-        //     description: "Description 1".to_string(),
-        //     x_coordinate: DEFAULT_LONGITUDE - 0.0039,
-        //     y_coordinate: DEFAULT_LATITUDE + 0.0098,
-        //     status: IncidentStatus::Resolvable,
-        // };
-
-        // let incident2 = Incident {
-        //     uuid: "2".to_string(),
-        //     name: "Incident 2".to_string(),
-        //     description: "Description 2".to_string(),
-        //     x_coordinate: DEFAULT_LONGITUDE - 0.0001,
-        //     y_coordinate: DEFAULT_LATITUDE + 0.0065,
-        //     status: IncidentStatus::Resolvable,
-        // };
-
-        // let incident3 = Incident {
-        //     uuid: "3".to_string(),
-        //     name: "Incident 3".to_string(),
-        //     description: "Description 3".to_string(),
-        //     x_coordinate: DEFAULT_LONGITUDE - 0.00044,
-        //     y_coordinate: DEFAULT_LATITUDE + 0.00031,
-        //     status: IncidentStatus::Resolvable,
-        // };
-
-        // let camera1 = Camera {
-        //     id: "1".to_string(),
-        //     x_coordinate: DEFAULT_LONGITUDE - 0.00021,
-        //     y_coordinate: DEFAULT_LATITUDE + 0.00081,
-        //     state: "Active".to_string(),
-        // };
-
-        // let camera2 = Camera {
-        //     id: "2".to_string(),
-        //     x_coordinate: DEFAULT_LONGITUDE - 0.00012,
-        //     y_coordinate: DEFAULT_LATITUDE + 0.000716,
-        //     state: "Active".to_string(),
-        // };
-
         Self {
             new_incident_registration: IncidentRegistration {
                 name: String::new(),
@@ -167,7 +99,9 @@ impl UIApplication {
             drones: vec![],
             incidents: vec![],
             cameras: vec![],
-            right_click_menu: RightClickMenu::new(),
+            charging_station_coordenates: (CHARGING_STATION_LONGITUDE, CHARGING_STATION_LATITUDE),
+
+            right_click_menu: RightClickMenu::default(),
         }
     }
 }
@@ -267,6 +201,7 @@ fn display_incident_map(
     incidents: &Vec<Incident>,
     drones: &Vec<Drone>,
     cameras: &Vec<Camera>,
+    charging_station_coordenates: &(f64, f64),
     tiles: &mut Tiles,
     map_memory: &mut MapMemory,
     right_click_menu: &mut RightClickMenu,
@@ -278,7 +213,7 @@ fn display_incident_map(
 
     let map = Map::new(Some(tiles), map_memory, position);
 
-    let places_plugin = update_places(incidents, drones, cameras);
+    let places_plugin = update_places(incidents, drones, cameras, charging_station_coordenates);
     let map_with_plugin = map.with_plugin(places_plugin);
 
     let response = ui.add(map_with_plugin);
@@ -300,35 +235,40 @@ fn display_new_incident(
     new_incident: &mut IncidentRegistration,
     sender: &Sender<UIAction>,
 ) {
-    ui.horizontal(|ui| {
-        ui.label("Name:");
-        ui.add_space(38.0);
-        ui.text_edit_singleline(&mut new_incident.name);
-    });
-    ui.add_space(5.0);
-    ui.horizontal(|ui| {
-        ui.label("Description:");
-        ui.add_space(8.0);
-        ui.text_edit_multiline(&mut new_incident.description);
-    });
-    ui.add_space(5.0);
-    ui.horizontal(|ui| {
-        ui.label("Coordenates:");
-        ui.text_edit_singleline(&mut new_incident.x);
-        ui.text_edit_singleline(&mut new_incident.y);
-    });
+    egui::Frame::group(ui.style()).show(ui, |ui| {
+        ui.label("New Incident Registration:");
+        ui.add_space(10.0);
+        ui.horizontal(|ui| {
+            ui.label("Name:");
+            ui.add_space(39.0);
+            ui.add(egui::TextEdit::singleline(&mut new_incident.name).desired_width(400.0));
+        });
+        ui.add_space(5.0);
+        ui.horizontal(|ui| {
+            ui.label("Description:");
+            ui.add_space(8.0);
+            ui.add(egui::TextEdit::multiline(&mut new_incident.description).desired_width(400.0));
+        });
+        ui.add_space(5.0);
+        ui.horizontal(|ui| {
+            ui.label("Coordenates:");
+            ui.add(egui::TextEdit::singleline(&mut new_incident.x).desired_width(193.0));
+            ui.add(egui::TextEdit::singleline(&mut new_incident.y).desired_width(192.0));
+        });
 
-    ui.add_space(20.0);
-    ui.vertical_centered(|ui| {
-        if ui.button("Send").clicked() {
-            sender
-                .send(UIAction::RegistrateIncident(new_incident.clone()))
-                .unwrap();
-            new_incident.name.clear();
-            new_incident.description.clear();
-            new_incident.x.clear();
-            new_incident.y.clear();
-        }
+        ui.add_space(10.0);
+        ui.horizontal(|ui| {
+            ui.add_space(444.0);
+            if ui.button("Create").clicked() {
+                sender
+                    .send(UIAction::RegistrateIncident(new_incident.clone()))
+                    .unwrap();
+                new_incident.name.clear();
+                new_incident.description.clear();
+                new_incident.x.clear();
+                new_incident.y.clear();
+            }
+        });
     });
 }
 
@@ -338,35 +278,38 @@ fn display_edit_incident(
     edit_incident: &mut IncidentEdit,
     sender: &Sender<UIAction>,
 ) {
-    ui.horizontal(|ui| {
-        ui.label("UUID:");
-        ui.add_space(70.0);
-        ui.text_edit_singleline(&mut edit_incident.uuid);
-    });
-    ui.add_space(5.0);
-    ui.horizontal(|ui| {
-        ui.label("New name:");
-        ui.add_space(40.0);
-        ui.text_edit_singleline(&mut edit_incident.name);
-    });
-    ui.add_space(5.0);
-    ui.horizontal(|ui| {
-        ui.label("New description:");
-        ui.add_space(8.0);
-        ui.text_edit_multiline(&mut edit_incident.description);
-    });
-    ui.add_space(5.0);
-
-    ui.add_space(5.0);
-    ui.vertical_centered(|ui| {
-        if ui.button("Edit").clicked() {
-            sender
-                .send(UIAction::EditIncident(edit_incident.clone()))
-                .unwrap();
-            edit_incident.uuid.clear();
-            edit_incident.name.clear();
-            edit_incident.description.clear();
-        }
+    egui::Frame::group(ui.style()).show(ui, |ui| {
+        ui.label("Incident Modifications:");
+        ui.add_space(10.0);
+        ui.horizontal(|ui| {
+            ui.label("UUID:");
+            ui.add_space(70.0);
+            ui.text_edit_singleline(&mut edit_incident.uuid);
+        });
+        ui.add_space(5.0);
+        ui.horizontal(|ui| {
+            ui.label("New name:");
+            ui.add_space(40.0);
+            ui.text_edit_singleline(&mut edit_incident.name);
+        });
+        ui.add_space(5.0);
+        ui.horizontal(|ui| {
+            ui.label("New description:");
+            ui.add_space(8.0);
+            ui.text_edit_multiline(&mut edit_incident.description);
+        });
+        ui.add_space(10.0);
+        ui.horizontal(|ui| {
+            ui.add_space(368.0);
+            if ui.button("Edit").clicked() {
+                sender
+                    .send(UIAction::EditIncident(edit_incident.clone()))
+                    .unwrap();
+                edit_incident.uuid.clear();
+                edit_incident.name.clear();
+                edit_incident.description.clear();
+            }
+        });
     });
 }
 
@@ -381,7 +324,12 @@ fn display_incident_list(
     TableBuilder::new(ui)
         .striped(true)
         .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
-        .columns(Column::remainder(), 6)
+        .column(Column::initial(50.0))
+        .column(Column::remainder())
+        .column(Column::remainder())
+        .column(Column::remainder())
+        .column(Column::initial(75.0))
+        .column(Column::remainder())
         .header(10.0, |mut header| {
             header.col(|ui| {
                 ui.heading("UUID");
@@ -396,7 +344,7 @@ fn display_incident_list(
                 ui.heading("Coordinates");
             });
             header.col(|ui| {
-                ui.heading("State");
+                ui.heading("Status");
             });
             header.col(|ui| {
                 ui.heading("Actions");
@@ -424,14 +372,6 @@ fn display_incident_list(
                         ui.label(incident.status.clone().meaning());
                     });
                     row.col(|ui| {
-                        // if incident status == Solvable -> show resolve button
-                        // // otherwise show it disabled
-                        // if ui.button("Resolve").clicked() {
-                        //     sender
-                        //         .send(UIAction::ResolveIncident(incident.clone()))
-                        //         .unwrap();
-                        // }
-
                         if incident.status == IncidentStatus::Resolvable {
                             if ui.button("Resolve").clicked() {
                                 sender
@@ -488,7 +428,7 @@ fn display_new_drone(
 
         ui.add_space(10.0);
         ui.horizontal(|ui| {
-            ui.add_space(263.0);
+            ui.add_space(376.0);
             if ui.button("Register").clicked() {
                 sender
                     .send(UIAction::RegistrateDrone(drone_registration.clone()))
@@ -581,7 +521,7 @@ fn display_camera_list(ui: &mut egui::Ui, cameras: &[Camera]) {
                             ui.label(position);
                         });
                         row.col(|ui| {
-                            ui.label(camera.state.clone());
+                            ui.label(camera.status.to_str().clone());
                         });
                     });
                 }
@@ -590,40 +530,36 @@ fn display_camera_list(ui: &mut egui::Ui, cameras: &[Camera]) {
 }
 
 /// Displays the header of the UI
-fn display_header(
-    ui: &mut egui::Ui,
-    current_layout: &mut Layout,
-    // sender: &Sender<UIAction>,
-    // conection_status: bool,
-) {
+fn display_header(ui: &mut egui::Ui, current_layout: &mut Layout) {
     ui.horizontal(|ui| {
-        ui.image(egui::include_image!("images/logo.png"));
-        ui.heading(egui::RichText::new("Monitor").size(30.0));
+        ui.heading(egui::RichText::new("Monitoring Aplication").size(30.0));
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            ui.image(egui::include_image!("images/logo.png"));
+        });
     });
     ui.add_space(15.0);
     ui.horizontal(|ui| {
-        // if ui.button("Connect").clicked() {
-        //     sender.send(UIAction::Connect).unwrap();
-        // }
-        // ui.add_space(500.0);
-
-        // if conection_status {
         ui.label(egui::RichText::new("Connected").color(egui::Color32::GREEN));
-        // } else {
-        //     ui.label(egui::RichText::new("Disconnected").color(egui::Color32::RED));
-        // }
     });
 
     ui.add_space(20.0);
 
-    ui.horizontal(|ui| {
-        ui.selectable_value(current_layout, Layout::IncidentMap, "Map");
-        ui.selectable_value(current_layout, Layout::IncidentList, "Incident List");
-        ui.selectable_value(current_layout, Layout::NewIncident, "Create incident");
-        ui.selectable_value(current_layout, Layout::EditIncident, "Edit incident");
-        ui.selectable_value(current_layout, Layout::DroneList, "Drone List");
-        ui.selectable_value(current_layout, Layout::NewDrone, "Register Drone");
-        ui.selectable_value(current_layout, Layout::CameraList, "Camera List");
+    egui::Frame::group(ui.style()).show(ui, |ui| {
+        ui.horizontal_wrapped(|ui| {
+            ui.selectable_value(current_layout, Layout::IncidentMap, "Map");
+            ui.label("|");
+            ui.selectable_value(current_layout, Layout::IncidentList, "Incident List");
+            ui.label("|");
+            ui.selectable_value(current_layout, Layout::NewIncident, "Create incident");
+            ui.label("|");
+            ui.selectable_value(current_layout, Layout::EditIncident, "Edit incident");
+            ui.label("|");
+            ui.selectable_value(current_layout, Layout::DroneList, "Drone List");
+            ui.label("|");
+            ui.selectable_value(current_layout, Layout::NewDrone, "Register Drone");
+            ui.label("|");
+            ui.selectable_value(current_layout, Layout::CameraList, "Camera List");
+        });
     });
 
     ui.add_space(20.0);
@@ -633,12 +569,6 @@ impl eframe::App for UIApplication {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         loop {
             match self.receiver.try_recv() {
-                // Ok(MonitorAction::Disconnect) => {
-                //     self.conection_status = false;
-                // }
-                // Ok(MonitorAction::Connect) => {
-                //     self.conection_status = true;
-                // }
                 Ok(MonitorAction::Drone(drone)) => {
                     update_drones(&mut self.drones, drone);
                 }
@@ -653,12 +583,7 @@ impl eframe::App for UIApplication {
         }
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            display_header(
-                ui,
-                &mut self.current_layout,
-                // &self.sender,
-                // self.connection_status,
-            );
+            display_header(ui, &mut self.current_layout);
 
             match self.current_layout {
                 Layout::IncidentMap => display_incident_map(
@@ -666,6 +591,7 @@ impl eframe::App for UIApplication {
                     &self.incidents,
                     &self.drones,
                     &self.cameras,
+                    &self.charging_station_coordenates,
                     &mut self.tiles,
                     &mut self.map_memory,
                     &mut self.right_click_menu,
@@ -697,68 +623,114 @@ impl eframe::App for UIApplication {
 }
 
 /// Updates the places in the map
-fn update_places(incidents: &Vec<Incident>, drones: &Vec<Drone>, cameras: &Vec<Camera>) -> Places {
+fn update_places(
+    incidents: &Vec<Incident>,
+    drones: &Vec<Drone>,
+    cameras: &Vec<Camera>,
+    charging_station_coordenates: &(f64, f64),
+) -> Places {
     let mut places = vec![];
+
+    let mut activity_cordenates = vec![];
 
     for incident in incidents {
         let place = Place {
             position: Position::from_lon_lat(incident.x_coordinate, incident.y_coordinate),
-            label: incident.name.clone(),
-            symbol: '⚠', // 💥⌖
+            label: format!("  {}", incident.name.clone()),
+            symbol: '⚠',
             style: Style {
-                label_font: FontId::proportional(20.0),
+                label_font: FontId::proportional(13.0),
                 label_color: Color32::BLACK,
-                label_background: Color32::TRANSPARENT, // Red background
-                symbol_font: FontId::monospace(25.0),
-                symbol_color: Color32::RED,              // White symbol
-                symbol_background: Color32::TRANSPARENT, // Red background
-                symbol_stroke: Stroke::new(2.0, Color32::TRANSPARENT), // Black border
+                label_background: Color32::TRANSPARENT,
+                symbol_font: FontId::monospace(30.0),
+                symbol_color: Color32::RED,
+                symbol_background: Color32::TRANSPARENT,
+                symbol_stroke: Stroke::new(2.0, Color32::TRANSPARENT),
             },
         };
         places.push(place);
+        activity_cordenates.push((incident.x_coordinate, incident.y_coordinate));
     }
 
     for drone in drones {
         let color = match drone.status {
-            DroneStatus::Free => Color32::BLACK,              // MARINE GREEN
-            DroneStatus::AttendingIncident => Color32::BLACK, // CORAL RED
-            DroneStatus::Travelling => Color32::BLACK,        // SHARK GREY
-            DroneStatus::Recharging => Color32::BLACK,        // Coral orange
+            DroneStatus::Free => Color32::BLACK,
+            DroneStatus::AttendingIncident => Color32::from_rgb(220, 20, 60),
+            DroneStatus::Travelling => Color32::from_rgb(255, 79, 0),
+            DroneStatus::Recharging => Color32::GREEN,
         };
+
+        if activity_cordenates.contains(&(drone.x_coordinate, drone.y_coordinate)) {
+            let overlapping_activity = places
+                .iter_mut()
+                .find(|place| {
+                    place.position == Position::from_lon_lat(drone.x_coordinate, drone.y_coordinate)
+                })
+                .unwrap();
+            overlapping_activity.label =
+                format!("{}, ❇{}", overlapping_activity.label, drone.id.clone());
+            continue;
+        }
+
         let place = Place {
             position: Position::from_lon_lat(drone.x_coordinate, drone.y_coordinate),
-            label: drone.id.clone(),
-            symbol: '🚁', // ❇ 🛰  ✈  🚨🌀  👁 🕵
+            label: format!("  {}", drone.id.clone()),
+            symbol: '❇',
+            style: Style {
+                label_font: FontId::proportional(15.0),
+                label_color: Color32::BLACK,
+                label_background: Color32::TRANSPARENT,
+                symbol_font: FontId::monospace(32.0),
+                symbol_color: color,
+                symbol_background: Color32::TRANSPARENT,
+                symbol_stroke: Stroke::new(2.0, Color32::TRANSPARENT),
+            },
+        };
+        places.push(place);
+        activity_cordenates.push((drone.x_coordinate, drone.y_coordinate));
+    }
+
+    for camera in cameras {
+        let color = match camera.status {
+            CameraStatus::Inactive => Color32::BLACK,
+            CameraStatus::Active => Color32::RED,
+        };
+
+        let place = Place {
+            position: Position::from_lon_lat(camera.x_coordinate, camera.y_coordinate),
+            label: format!(" {}", camera.id.clone()),
+            symbol: '📹',
             style: Style {
                 label_font: FontId::proportional(14.0),
                 label_color: Color32::BLACK,
-                label_background: Color32::TRANSPARENT, // Blue background
-                symbol_font: FontId::monospace(25.0),
-                symbol_color: color,                     // White symbol
-                symbol_background: Color32::TRANSPARENT, // Orange background
-                symbol_stroke: Stroke::new(2.0, Color32::TRANSPARENT), // Black border
+                label_background: Color32::TRANSPARENT,
+                symbol_font: FontId::monospace(28.0),
+                symbol_color: color,
+                symbol_background: Color32::TRANSPARENT,
+                symbol_stroke: Stroke::new(2.0, Color32::TRANSPARENT),
             },
         };
         places.push(place);
     }
 
-    for camera in cameras {
-        let place = Place {
-            position: Position::from_lon_lat(camera.x_coordinate, camera.y_coordinate),
-            label: camera.id.clone(),
-            symbol: '📷', // 📷 📸 📹🎥
-            style: Style {
-                label_font: FontId::proportional(14.0),
-                label_color: Color32::BLACK,
-                label_background: Color32::TRANSPARENT, // Orange background
-                symbol_font: FontId::monospace(25.0),
-                symbol_color: Color32::BLACK,            // Electric blue
-                symbol_background: Color32::TRANSPARENT, // Orange background
-                symbol_stroke: Stroke::new(2.0, Color32::TRANSPARENT), // Black border
-            },
-        };
-        places.push(place);
-    }
+    let charging_station_place = Place {
+        position: Position::from_lon_lat(
+            charging_station_coordenates.0,
+            charging_station_coordenates.1,
+        ),
+        label: "   Drone Central".to_string(),
+        symbol: '🖧', // 🔋🔌🖥🖧
+        style: Style {
+            label_font: FontId::proportional(10.0),
+            label_color: Color32::BLACK,
+            label_background: Color32::TRANSPARENT,
+            symbol_font: FontId::monospace(35.0),
+            symbol_color: Color32::BLACK,
+            symbol_background: Color32::TRANSPARENT,
+            symbol_stroke: Stroke::new(2.0, Color32::TRANSPARENT),
+        },
+    };
+    places.push(charging_station_place);
 
     Places::new(places)
 }

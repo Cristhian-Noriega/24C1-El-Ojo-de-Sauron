@@ -1,9 +1,9 @@
-use monitor::monitor::Monitor;
+use camera_system::camera::Camera;
+use camera_system::camera_system::CameraSystem;
 use common::incident::{Incident, IncidentStatus};
 use drone::drone::Drone;
 use drone::drone_status::{DroneStatus, TravelLocation};
-use camera_system::camera_system::CameraSystem;
-use camera_system::camera::Camera;
+use monitor::monitor::Monitor;
 
 #[test]
 fn test_new_incident() {
@@ -27,18 +27,16 @@ fn test_new_incident() {
     drone.set_incident(Some(incident.clone()));
     assert_eq!(drone.incident().unwrap(), incident);
     drone.set_status(DroneStatus::Travelling(TravelLocation::Incident));
-    assert_eq!(drone.status(), DroneStatus::Travelling(TravelLocation::Incident));
+    assert_eq!(
+        drone.status(),
+        DroneStatus::Travelling(TravelLocation::Incident)
+    );
     drone.travel_to(2.0, 2.0);
     assert_eq!(drone.data(), "1.7071067811865475;1.7071067811865475;4;99");
 
     // Camara
     let mut camera_system = CameraSystem::new();
-    let camera = Camera::new(
-        1_u8,
-        1.5,
-        1.5,
-        3.0,
-    );
+    let camera = Camera::new(1_u8, 1.5, 1.5, 3.0);
     camera_system.add_camera(camera);
     let camera_data1 = camera_system.cameras_data();
     camera_system.new_incident(incident.clone());
@@ -77,19 +75,13 @@ fn test_new_incident_gets_attended() {
 
     // Camara
     let mut camera_system = CameraSystem::new();
-    let camera = Camera::new(
-        1_u8,
-        1.5,
-        1.5,
-        5.0,
-    );
+    let camera = Camera::new(1_u8, 1.5, 1.5, 5.0);
     camera_system.add_camera(camera);
     let camera_data1 = camera_system.cameras_data();
     camera_system.new_incident(incident.clone());
     let camera_data2 = camera_system.cameras_data();
     assert_eq!(camera_data1, "1;1.5;1.5;0");
     assert_eq!(camera_data2, "1;1.5;1.5;1");
-
 
     // Drones keeps travelling
     drone.travel_to(incident.x_coordinate, incident.y_coordinate);
@@ -109,5 +101,8 @@ fn test_new_incident_gets_attended() {
 
     monitor.attend_incident(incident.uuid.clone());
     monitor.attend_incident(incident.uuid.clone());
-    assert_eq!(monitor.get_incident(&incident.uuid).unwrap().status, IncidentStatus::InProgress);
+    assert_eq!(
+        monitor.get_incident(&incident.uuid).unwrap().status,
+        IncidentStatus::InProgress
+    );
 }
