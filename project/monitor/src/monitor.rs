@@ -44,6 +44,16 @@ impl Monitor {
         None
     }
 
+    /// Changes the name and description of an incident
+    pub fn edit_incident(&mut self, incident_uuid: String, name: String, description: String) -> Option<Incident> {
+        if let Some(incident) = self.incidents.get_mut(&incident_uuid) {
+            incident.name = name;
+            incident.description = description;
+            return Some(incident.clone());
+        }
+        None
+    }
+
     /// Gets the incident by its UUID
     pub fn get_incident(&self, incident_uuid: &str) -> Option<&Incident> {
         self.incidents.get(incident_uuid)
@@ -54,6 +64,14 @@ impl Monitor {
         if let Some(incident) = self.incidents.get_mut(&incident_uuid) {
             incident.status = IncidentStatus::Resolvable;
             self.active_incidents.insert(incident_uuid.clone(), 1);
+        }
+    }
+
+    /// Sets the incident as resolved
+    pub fn set_resolved_incident(&mut self, incident_uuid: String) {
+        if let Some(incident) = self.incidents.get_mut(&incident_uuid) {
+            incident.status = IncidentStatus::Resolved;
+            self.active_incidents.remove(&incident_uuid);
         }
     }
 }

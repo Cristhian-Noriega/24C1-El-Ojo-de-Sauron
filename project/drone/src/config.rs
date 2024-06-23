@@ -8,6 +8,7 @@ pub struct Config {
     id: u8,
     username: String,
     password: String,
+    key: String,
     x_central_position: f64,
     y_central_position: f64,
     x_anchor_position: f64,
@@ -47,6 +48,11 @@ impl Config {
     /// Returns the password of the drone
     pub fn get_password(&self) -> &str {
         &self.password
+    }
+
+    /// Returns the key of the drone
+    pub fn get_key(&self) -> &[u8; 32] {
+        self.key.as_bytes().try_into().unwrap()
     }
 
     /// Returns the x central position of the drone

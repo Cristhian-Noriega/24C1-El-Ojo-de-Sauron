@@ -14,6 +14,7 @@ pub struct Config {
     address: String,
     username: String,
     password: String,
+    key: String,
     cameras: Vec<Position>,
 }
 
@@ -43,6 +44,11 @@ impl Config {
     /// Returns the password of the camera system
     pub fn get_password(&self) -> &str {
         &self.password
+    }
+
+    /// Returns the key of the camera system
+    pub fn get_key(&self) -> &[u8; 32] {
+        self.key.as_bytes().try_into().unwrap()
     }
 
     /// Returns the cameras of the camera system

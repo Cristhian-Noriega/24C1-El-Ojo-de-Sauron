@@ -5,6 +5,7 @@
 //! Using from_bytes and to_bytes you can convert the packets to and from bytes, respectively.
 
 use {
+    encryptation::encryping_tool::{decrypt, encrypt},
     errors::error::Error,
     model::{
         components::{
@@ -29,6 +30,9 @@ pub mod errors;
 
 /// mqtt model
 pub mod model;
+
+/// encryptation for packet
+mod encryptation;
 
 const PROTOCOL_NAME: [u8; 4] = [b'M', b'Q', b'T', b'T'];
 const PROTOCOL_LEVEL: u8 = 0x04;

@@ -1,4 +1,5 @@
 address="127.0.0.1:8080"
+key="12345678901234567890123456789012"
 log_file="log.txt"
 segs_to_disconnect=30
 admin_username="admin"

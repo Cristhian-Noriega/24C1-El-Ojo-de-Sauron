@@ -49,6 +49,7 @@ impl Server {
             client_actions_receiver,
             log_file.clone(),
             client_manager.clone(),
+            *config.get_key(),
         );
 
         task_handler.initialize_task_handler_thread();
@@ -64,6 +65,7 @@ impl Server {
     /// Starts the server
     pub fn server_run(&self) -> ServerResult<()> {
         let address = self.config.get_address();
+        let key = self.config.get_key();
 
         self.log_file
             .info(&format!("Server running on address: {}\n", address));
@@ -73,7 +75,7 @@ impl Server {
             match stream_result {
                 Ok(stream) => {
                     self.log_file.info("New connection received");
-                    self.handle_new_connection(stream)?;
+                    self.handle_new_connection(stream, key)?;
                 }
                 Err(err) => {
                     self.log_file
@@ -86,8 +88,12 @@ impl Server {
     }
 
     /// Handles a new connection by checking if it is a valid packet
-    pub fn handle_new_connection(&self, mut stream: TcpStream) -> ServerResult<()> {
-        match Packet::from_bytes(&mut stream) {
+    pub fn handle_new_connection(
+        &self,
+        mut stream: TcpStream,
+        key: &[u8; 32],
+    ) -> ServerResult<()> {
+        match Packet::from_bytes(&mut stream, key) {
             Ok(packet) => self.handle_incoming_packet(packet, stream)?,
             Err(err) => {
                 self.log_file
@@ -126,7 +132,11 @@ impl Server {
 
         let stream_clone = stream.try_clone()?;
 
-        match client_manager.process_connect_packet(connect_packet, stream_clone) {
+        match client_manager.process_connect_packet(
+            connect_packet,
+            stream_clone,
+            self.config.get_key(),
+        ) {
             Some(new_client) => {
                 self.log_file.info("Client connected successfully");
 
@@ -154,9 +164,11 @@ impl Server {
         client_id: Vec<u8>,
         log_file: Arc<Logger>,
     ) {
+        let key = *self.config.get_key();
+
         thread::spawn(move || {
             loop {
-                let packet = Packet::from_bytes(&mut stream);
+                let packet = Packet::from_bytes(&mut stream, &key);
                 match packet {
                     Ok(packet) => {
                         let handling_result = handle_packet(

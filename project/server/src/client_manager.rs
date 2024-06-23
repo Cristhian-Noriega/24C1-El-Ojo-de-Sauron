@@ -68,12 +68,13 @@ impl ClientManager {
         &self,
         connect_packet: Connect,
         stream: TcpStream,
+        key: &[u8],
     ) -> Option<Client> {
         let client_id = connect_packet.client_id().content().to_vec();
         let (username, password) = match self.get_login_info(&connect_packet) {
             Ok(login) => login,
             Err(_) => {
-                self.failure_connection(stream, ConnectReturnCode::BadUsernameOrPassword);
+                self.failure_connection(stream, ConnectReturnCode::BadUsernameOrPassword, key);
                 return None;
             }
         };
@@ -86,15 +87,20 @@ impl ClientManager {
                 0,
             ))
         } else {
-            self.failure_connection(stream, ConnectReturnCode::IdentifierRejected);
+            self.failure_connection(stream, ConnectReturnCode::IdentifierRejected, key);
             None
         }
     }
 
     /// Handles a failed connection by sending a Connack packet with the specified return code
-    fn failure_connection(&self, mut stream: TcpStream, return_code: ConnectReturnCode) {
+    fn failure_connection(
+        &self,
+        mut stream: TcpStream,
+        return_code: ConnectReturnCode,
+        key: &[u8],
+    ) {
         let connack = Connack::new(false, return_code);
-        let connack_bytes = connack.to_bytes();
+        let connack_bytes = connack.to_bytes(key);
 
         if let Err(err) = stream.write_all(&connack_bytes) {
             println!("Error sending Connack packet: {:?}", err);
