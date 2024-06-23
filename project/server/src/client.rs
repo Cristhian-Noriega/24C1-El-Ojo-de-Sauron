@@ -30,11 +30,8 @@ impl Client {
         }
     }
 
-    /// Subscribes the client to a topic
+    /// Subscribes the client to a topic 
     pub fn add_subscription(&mut self, topic: TopicFilter) {
-        if self.subscriptions.iter().any(|t| t == &topic) {
-            return;
-        }
         let client_id = String::from_utf8(self.id.clone()).unwrap();
         println!(
             "Client with client id {:?} subscribed to {:?}",

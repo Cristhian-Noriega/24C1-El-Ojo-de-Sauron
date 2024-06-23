@@ -237,20 +237,8 @@ mod tests {
 
         client_manager.register_client(client_id.clone(), username.clone(), password.clone());
 
-        assert!(client_manager.authenticate_client(
-            client_id.clone(),
-            username.clone(),
-            password.clone()
-        ));
-        assert!(!client_manager.authenticate_client(
-            client_id.clone(),
-            b"wrong".to_vec(),
-            password.clone()
-        ));
-        assert!(!client_manager.authenticate_client(
-            client_id.clone(),
-            username.clone(),
-            b"wrong".to_vec()
-        ));
+        assert!(client_manager.authenticate_client(client_id.clone(), username.clone(), password.clone()));
+        assert!(!client_manager.authenticate_client(client_id.clone(), b"wrong".to_vec(), password.clone()));
+        assert!(!client_manager.authenticate_client(client_id.clone(), username.clone(), b"wrong".to_vec()));
     }
 }
