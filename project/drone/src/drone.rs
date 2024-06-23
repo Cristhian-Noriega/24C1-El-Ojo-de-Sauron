@@ -22,7 +22,7 @@ pub struct Drone {
     x_anchor: f64,
     y_anchor: f64,
     current_incident: Option<(Incident, usize)>,
-    incident_queue: VecDeque<Incident>,
+    pub incident_queue: VecDeque<Incident>,
     velocity: f64,
     active_range: f64,
 }
@@ -216,6 +216,10 @@ impl Drone {
     pub fn can_handle_new_incident(&self) -> bool {
         self.status == DroneStatus::Free
             || self.status == DroneStatus::Travelling(TravelLocation::Anchor)
+    }
+
+    pub fn is_free(&self) -> bool {
+        self.status == DroneStatus::Free
     }
 }
 
