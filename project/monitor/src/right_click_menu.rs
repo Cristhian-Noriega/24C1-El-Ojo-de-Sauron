@@ -18,8 +18,14 @@ pub struct RightClickMenu {
     pub y_coordenate: f64,
 }
 
+impl Default for RightClickMenu {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RightClickMenu {
-    pub fn default() -> Self {
+    pub fn new() -> Self {
         Self {
             open: false,
             position: Position::from_lon_lat(0.0, 0.0),

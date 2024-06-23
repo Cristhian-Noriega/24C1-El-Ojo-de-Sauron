@@ -13,6 +13,12 @@ pub struct CameraSystem {
     active_incidents: HashMap<String, Incident>,
 }
 
+impl Default for CameraSystem {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CameraSystem {
     /// Creates a new camera system
     pub fn new() -> Self {
@@ -73,7 +79,7 @@ mod tests {
     fn test_add_camera() {
         let mut camera_system = CameraSystem::new();
         let camera = Camera::new(
-            1 as u8,
+            1_u8,
             1.5,
             1.5,
             3.0,
@@ -87,7 +93,7 @@ mod tests {
     fn test_new_incident() {
         let mut camera_system = CameraSystem::new();
         let camera = Camera::new(
-            1 as u8,
+            1_u8,
             1.5,
             1.5,
             3.0,
@@ -112,7 +118,7 @@ mod tests {
     fn test_close_incident() {
         let mut camera_system = CameraSystem::new();
         let camera = Camera::new(
-            1 as u8,
+            1_u8,
             1.5,
             1.5,
             3.0,

@@ -34,7 +34,7 @@ fn test_new_incident() {
     // Camara
     let mut camera_system = CameraSystem::new();
     let camera = Camera::new(
-        1 as u8,
+        1_u8,
         1.5,
         1.5,
         3.0,

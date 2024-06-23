@@ -167,7 +167,7 @@ impl UIApplication {
             drones: vec![],
             incidents: vec![],
             cameras: vec![],
-            right_click_menu: RightClickMenu::default(),
+            right_click_menu: RightClickMenu::new(),
         }
     }
 }

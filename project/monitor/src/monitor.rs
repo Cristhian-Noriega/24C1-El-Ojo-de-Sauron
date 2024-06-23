@@ -9,6 +9,12 @@ pub struct Monitor {
     active_incidents: HashMap<String, usize>,
 }
 
+impl Default for Monitor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Monitor {
     /// Creates a new monitor
     pub fn new() -> Self {

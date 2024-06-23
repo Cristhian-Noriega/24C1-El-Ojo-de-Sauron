@@ -225,7 +225,7 @@ mod tests {
         let logins = registered_clients.get(&client_id).unwrap();
         assert_eq!(logins.0, username);
         assert_eq!(logins.1, password);
-        assert_eq!(logins.2, false);
+        assert!(!logins.2);
     }
 
     #[test]
