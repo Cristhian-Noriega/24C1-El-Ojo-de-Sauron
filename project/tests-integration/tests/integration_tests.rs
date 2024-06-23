@@ -2,6 +2,22 @@ use monitor::monitor::Monitor;
 use common::incident::{Incident, IncidentStatus};
 
 #[test]
+fn test_new_incident() {
+    let mut monitor = Monitor::new();
+    let incident = Incident::new(
+        "incident1".to_string(),
+        "incident1".to_string(),
+        "incident1".to_string(),
+        1.0,
+        1.0,
+        IncidentStatus::Pending,
+    );
+
+    monitor.new_incident(incident.clone());
+    assert_eq!(monitor.get_incident(&incident.uuid).unwrap(), &incident);
+}
+
+#[test]
 fn test_attending_incident_once() {
     let mut monitor = Monitor::new();
     let incident = Incident::new(

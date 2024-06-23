@@ -1,0 +1,12 @@
+[package]
+name = "tests-integration"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[[test]]
+name = "integration_tests"
+
+[dependencies]
+monitor = { path = "../monitor" }
+common = { path = "../common" }
