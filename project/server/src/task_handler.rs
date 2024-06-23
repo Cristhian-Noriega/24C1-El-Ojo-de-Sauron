@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{HashMap, HashSet, VecDeque},
     io::Write,
     sync::{mpsc, Arc, RwLock},
     time::Duration,
@@ -35,8 +35,8 @@ const SEPARATOR: u8 = b';';
 pub struct TaskHandler {
     client_actions_receiver_channel: mpsc::Receiver<Task>,
     clients: RwLock<HashMap<Vec<u8>, Client>>,
-    active_connections: RwLock<HashSet<Vec<u8>>>,
-    //retained_messages: RwLock<HashMap<Vec<u8>, Publish>>,
+    active_connections: HashSet<Vec<u8>>,
+    retained_messages: HashMap<Vec<u8>, VecDeque<Publish>>,
 
     // monitor se subscribe a (drone-data/+) <- es un topic filter
 
@@ -61,8 +61,8 @@ impl TaskHandler {
         TaskHandler {
             client_actions_receiver_channel: receiver_channel,
             clients: RwLock::new(HashMap::new()),
-            active_connections: RwLock::new(HashSet::new()),
-            //retained_messages: RwLock::new(HashMap::new()),
+            active_connections: HashSet::new(),
+            retained_messages: HashMap::new(),
             log_file,
             client_manager,
             key,
@@ -148,7 +148,7 @@ impl TaskHandler {
     }
 
     /// Publish a message to all clients subscribed to the topic of the Publish packet
-    pub fn publish(&self, publish_packet: &Publish, client_id: Vec<u8>) -> ServerResult<()> {
+    pub fn publish(&mut self, publish_packet: &Publish, client_id: Vec<u8>) -> ServerResult<()> {
         let topic_name = publish_packet.topic();
 
         if topic_name.server_reserved() {
@@ -174,8 +174,15 @@ impl TaskHandler {
             .log_successful_publish(&client_id, publish_packet);
 
         for client_id in clients {
-            if let Some(client) = self.clients.read()?.get(&client_id) {
-                client.send_message(publish_packet.clone(), &self.log_file, &self.key);
+            if let Some(client) = self.clients.read().unwrap().get(&client_id) {
+                if self.active_connections.contains(&client_id) {
+                    client.send_message(publish_packet.clone(), &self.log_file, &self.key);
+                } else {
+                    self.retained_messages
+                        .entry(client_id.clone())
+                        .or_default()
+                        .push_back(publish_packet.clone());
+                }
             }
         }
 
@@ -187,6 +194,14 @@ impl TaskHandler {
                 self.puback(publish_packet.package_identifier(), client);
             }
         }
+
+        let clients_retained_messages = self.retained_messages.get(&client_id);
+        let client = clients.get_mut(&client_id).unwrap();
+        if let Some(clients_retained_messages) = clients_retained_messages {
+            self.handle_retained_messages(client, clients_retained_messages);
+            self.retained_messages.get_mut(&client_id).unwrap().clear();
+        }
+
         Ok(())
     }
 
@@ -232,8 +247,14 @@ impl TaskHandler {
         }
     }
 
+    pub fn handle_retained_messages(&self, client: &mut Client, retained_messages: &VecDeque<Publish>) {
+        for message in retained_messages {
+            client.send_message(message.clone(), &self.log_file, &self.key);
+        }
+    }
+
     /// Handle a new client connection
-    pub fn handle_new_client_connection(&self, client: Client) -> ServerResult<()> {
+    pub fn handle_new_client_connection(&mut self, client: Client) -> ServerResult<()> {
         let connack_packet = Connack::new(true, ConnectReturnCode::ConnectionAccepted);
         let connack_packet_vec = connack_packet.to_bytes(&self.key);
         let connack_packet_bytes = connack_packet_vec.as_slice();
@@ -244,6 +265,14 @@ impl TaskHandler {
         if clients.contains_key(&client_id) {
             let message = format!("Client {} reconnected", String::from_utf8_lossy(&client_id));
             self.log_file.info(message.as_str());
+            let old_client = match clients.get_mut(&client_id) {
+                Some(client) => client,
+                None => {
+                    self.log_file.error("Error retreiving the old client for reconnection. Connection will not be accepted.");
+                    return Ok(());
+                }
+            };
+            old_client.stream = client.stream;
         } else {
             clients.entry(client_id.clone()).or_insert(client);
         }
@@ -265,11 +294,9 @@ impl TaskHandler {
             }
         };
 
-        let active_connections = self.active_connections.write()?;
-
         match stream.write_all(connack_packet_bytes) {
             Ok(_) => {
-                drop(active_connections);
+                self.active_connections.insert(client_id.clone());
                 let message = format!(
                     "New client connected! ID: {:?}",
                     String::from_utf8_lossy(&client_id)
@@ -396,25 +423,8 @@ impl TaskHandler {
 
     /// Handle a client disconnection
     pub fn handle_client_disconnected(&mut self, client_id: Vec<u8>) -> ServerResult<()> {
-        let mut active_connections = self.active_connections.write()?;
-        active_connections.remove(&client_id);
+        self.active_connections.remove(&client_id);
         Ok(())
     }
 
-    // TODO: Implement retained messages
-    // pub fn register_puback(&mut self, puback: Puback) {
-    //     let message_id = match puback.packet_identifier() {
-    //         Some(id) => id,
-    //         None => {
-    //             self.log_file
-    //                 .error("Puback packet without packet identifier");
-    //             return;
-    //         }
-    //     };
-    //     let message_id_bytes = message_id.to_be_bytes().to_vec();
-
-    //     let mut retained_messages = self.retained_messages.write().unwrap();
-
-    //     retained_messages.remove(&message_id_bytes);
-    // }
 }
