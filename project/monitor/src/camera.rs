@@ -12,7 +12,7 @@ pub enum CameraStatus {
 }
 
 impl CameraStatus {
-    pub fn to_string(&self) -> String {
+    pub fn to_str(&self) -> String {
         match self {
             CameraStatus::Active => "Active".to_string(),
             CameraStatus::Inactive => "Inactive".to_string(),
