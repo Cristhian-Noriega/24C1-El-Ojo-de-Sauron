@@ -159,7 +159,6 @@ fn handle_publish(
     key: &[u8; 32],
 ) {
     let message = String::from_utf8(publish.message().to_vec()).unwrap();
-    println!("Received message: {}", message);
     let topic_levels = publish.topic().levels();
     if topic_levels.len() == 1 && topic_levels[0] == NEW_INCIDENT {
         let incident = match Incident::from_string(message) {

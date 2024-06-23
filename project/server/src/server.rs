@@ -184,8 +184,8 @@ impl Server {
                     }
                 }
             }
-            log_file.info("Closing connection");
-            disconnect_client(sender_to_task_channel, client_id);
+            log_file.info("Disconnecting client");
+            disconnect_client(sender_to_task_channel, client_id).unwrap_or(false);
         });
     }
 }

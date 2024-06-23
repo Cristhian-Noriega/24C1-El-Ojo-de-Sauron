@@ -1,11 +1,21 @@
+
+use eframe::egui;
+use egui::{Id, Pos2, Response};
+
+use walkers::{
+    MapMemory, Position, Projector,
+};
+
+use crate::ui_application::{DEFAULT_LATITUDE, DEFAULT_LONGITUDE};
+
 #[derive(Clone)]
 pub struct RightClickMenu {
-    open: bool,
-    position: Position,
-    pos_2: Pos2,
-    id: Id,
-    x_coordenate: f64,
-    y_coordenate: f64,
+    pub open: bool,
+    pub position: Position,
+    pub pos_2: Pos2,
+    pub id: Id,
+    pub x_coordenate: f64,
+    pub y_coordenate: f64,
 }
 
 impl RightClickMenu {
@@ -28,13 +38,11 @@ impl RightClickMenu {
 
         let mut click_vec2 = click_location_pixels.to_vec2() - map_response.rect.min.to_vec2();
 
-        click_vec2.x = click_vec2.x - map_response.interact_rect.width() / 2.0;
-        click_vec2.y = click_vec2.y - map_response.interact_rect.height() / 2.0;
+        click_vec2.x -= map_response.interact_rect.width() / 2.0;
+        click_vec2.y -= map_response.interact_rect.height() / 2.0;
 
         // Get the geographic coordinates from the click position
         let map_coordinates = projector.unproject(click_vec2);
-
-        println!("Clicked at map coordinates: {:?}", map_coordinates);
         
         self.open = true;
         self.position = map_coordinates;
