@@ -634,6 +634,9 @@ fn update_places(
     let mut activity_cordenates = vec![];
 
     for incident in incidents {
+        if incident.status == IncidentStatus::Resolved {
+            continue;
+        }
         let place = Place {
             position: Position::from_lon_lat(incident.x_coordinate, incident.y_coordinate),
             label: format!("  {}", incident.name.clone()),
