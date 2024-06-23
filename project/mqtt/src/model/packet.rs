@@ -2,7 +2,7 @@ use std::io::{Cursor, Read};
 
 use crate::{
     decrypt, Connack, Connect, Disconnect, Error, FixedHeader, Pingreq, Pingresp, Puback, Publish,
-    Suback, Subscribe, Unsuback, Unsubscribe, EXTRA_DATA_SIZE,
+    Suback, Subscribe, Unsuback, Unsubscribe,
 };
 
 use super::packets::*;
@@ -29,10 +29,9 @@ impl Packet {
         let fixed_header = FixedHeader::from_bytes(stream)?;
 
         let packet_type = fixed_header.first_byte() >> 4;
+        let remaining_length = fixed_header.remaining_length_encrypted();
 
-        let remaining_length_value = fixed_header.remaining_length().value();
-
-        let encrypted_content = &mut vec![0; remaining_length_value + EXTRA_DATA_SIZE];
+        let encrypted_content = &mut vec![0; remaining_length];
         stream.read_exact(encrypted_content)?;
 
         let content = decrypt(encrypted_content, key).unwrap();
