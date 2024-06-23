@@ -211,7 +211,7 @@ fn start_monitor(
                 None
             }
 
-            Ok(UIAction::ResolveIncident(incident)) => resolve_incident(incident, publish_counter),
+            Ok(UIAction::ResolveIncident(incident)) => resolve_incident(incident, &mut monitor, publish_counter, monitor_sender.clone()),
             Err(_) => None,
         };
 
@@ -402,7 +402,21 @@ fn edit_incident(
 }
 
 /// Resolves an incident
-fn resolve_incident(incident: Incident, package_identifier: u16) -> Option<Publish> {
+fn resolve_incident(incident: Incident, monitor: &mut Monitor, package_identifier: u16, monitor_sender: Sender<MonitorAction>) -> Option<Publish> {
+    let incident_id = incident.id();
+    monitor.set_resolved_incident(incident.id());
+    
+    if let Some(incident) = monitor.get_incident(incident_id.as_str()) {
+        match monitor_sender.send(MonitorAction::Incident(incident.clone())) {
+            Ok(_) => {}
+            Err(_) => {
+                println!("Error sending incident data to UI");
+            }
+        }
+    } else {
+        println!("Unknown incident");
+    }
+
     let topic_name = TopicName::new(
         vec![CLOSE_INCIDENT.to_vec(), incident.uuid.clone().into_bytes()],
         false,

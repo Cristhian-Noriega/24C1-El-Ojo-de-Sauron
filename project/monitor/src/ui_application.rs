@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 use crate::{
     camera::Camera,
     channels_tasks::{DroneRegistration, IncidentRegistration, IncidentEdit, MonitorAction, UIAction},
@@ -79,8 +81,8 @@ impl RightClickMenu {
 
         let mut click_vec2 = click_location_pixels.to_vec2() - map_response.rect.min.to_vec2();
 
-        click_vec2.x = click_vec2.x - map_response.interact_rect.width() / 2.0;
-        click_vec2.y = click_vec2.y - map_response.interact_rect.height() / 2.0;
+        click_vec2.x -= map_response.interact_rect.width() / 2.0;
+        click_vec2.y -= map_response.interact_rect.height() / 2.0;
 
         // Get the geographic coordinates from the click position
         let map_coordinates = projector.unproject(click_vec2);
