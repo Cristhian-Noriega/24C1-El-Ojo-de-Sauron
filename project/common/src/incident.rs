@@ -166,8 +166,7 @@ mod tests {
 
     #[test]
     fn test_incident_from_string() {
-        let incident =
-            Incident::from_string("incident1;incident1;incident1;1.0;1.0;0".to_string()).unwrap();
+        let incident = Incident::from_string("incident1;incident1;incident1;1.0;1.0;0".to_string()).unwrap();
 
         assert_eq!(incident.uuid, "incident1");
         assert_eq!(incident.name, "incident1");
