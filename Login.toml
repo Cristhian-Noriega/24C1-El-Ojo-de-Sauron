@@ -1,6 +1,7 @@
 admin = admin = admin
-camera-system=camera-system=sauron1 = drone1 = sauron
-1 = drone2 = sauron
+camera-system=camera-system=sauron
+1 = drone1 = sauron
+2 = drone2 = sauron
 3 = drone3 = sauron
 4 = drone4 = sauron
 5 = drone5 = sauron
@@ -9,4 +10,3 @@ camera-system=camera-system=sauron1 = drone1 = sauron
 8 = drone8 = sauron
 9 = drone9 = sauron
 10 = drone10 = sauron
-2 = drone2 = sauron

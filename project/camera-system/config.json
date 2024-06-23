@@ -4,7 +4,7 @@
     "username": "camera-system",
     "password": "sauron",
     "key": "12345678901234567890123456789012",
-    "active_range": 0.05,
+    "active_range": 0.005,
     "cameras": [
         {
             "x_coordinate": -58.379397638401485,
