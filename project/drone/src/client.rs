@@ -1,9 +1,5 @@
 use std::{
-    io::{ErrorKind, Read, Write},
-    net::TcpStream,
-    sync::{Arc, Mutex, MutexGuard},
-    thread,
-    time::Duration,
+    io::{ErrorKind, Read, Write}, net::TcpStream, os::unix::process, sync::{Arc, Mutex, MutexGuard}, thread, time::Duration
 };
 
 use mqtt::model::{
@@ -89,6 +85,13 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
         read_incoming_packets(server_stream_cloned, drone_cloned, &key);
     });
 
+    // Thread to handle pending incidents
+    let server_stream_cloned = server_stream.clone();
+    let drone_cloned = drone.clone();
+    let thread_peding_incidents = thread::spawn(move || {
+        handle_pending_incidents(drone_cloned, server_stream_cloned, &key);
+    });
+
     let drone_cloned = drone.clone();
     let thread_discharge_battery = thread::spawn(move || {
         discharge_battery(drone_cloned);
@@ -101,6 +104,7 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
 
     thread_update.join().unwrap();
     thread_read.join().unwrap();
+    thread_peding_incidents.join().unwrap();
     thread_discharge_battery.join().unwrap();
     thread_recharge_battery.join().unwrap();
 
@@ -169,8 +173,17 @@ fn handle_publish(
                 return;
             }
         };
-        handle_new_incident(incident, drone, server_stream, key);
-        return;
+        // handle_new_incident(incident, drone, server_stream, key);
+        // return;
+        let mut locked_drone = match drone.lock() {
+            Ok(drone) => drone,
+            Err(_) => {
+                println!("Mutex was poisoned");
+                return;
+            }
+        };
+        locked_drone.add_incident(incident);
+        drop(locked_drone);
     }
 
     if topic_levels.len() != 2 {
@@ -199,6 +212,7 @@ fn handle_new_incident(
     server_stream: Arc<Mutex<TcpStream>>,
     key: &[u8; 32],
 ) {
+    
     let topic_filter = TopicFilter::new(
         vec![
             TopicLevel::Literal(ATTENDING_INCIDENT.to_vec()),
@@ -247,16 +261,13 @@ fn handle_new_incident(
         return;
     }
 
-    match drone_locked.status() {
-        DroneStatus::Free => (),
-        DroneStatus::Travelling(TravelLocation::Anchor) => (),
-        _ => {
-            println!("Drone is not free");
-            drop(drone_locked);
-            return;
-        }
-    }
+    // if !drone_locked.can_handle_new_incident() {
+    //     println!("Drone cannot handle new incident");
+    //     drop(drone_locked);
+    //     return;
+    // }
 
+    
     drone_locked.set_incident(Some(incident.clone()));
     drop(drone_locked);
 
@@ -296,7 +307,7 @@ fn travel_to_new_incident(
         }
     };
 
-    if drone_locked.check_is_travelling_to_incident() {
+    if !drone_locked.is_travelling_to_incident() {
         println!("Drone is no longer travelling to the incident location");
         drop(drone_locked);
         return;
@@ -520,6 +531,7 @@ fn handle_close_incident(
     }
 
     locked_drone.set_incident(None);
+    locked_drone.remove_current_incident();
     println!("Current incident closed");
     let x = locked_drone.x_anchor_coordinate();
     let y = locked_drone.y_anchor_coordinate();
@@ -567,6 +579,7 @@ fn handle_close_incident(
 
     locked_drone.set_status(DroneStatus::Free);
     drop(locked_drone);
+    //process_incident_queue(drone, server_stream, key);
 }
 
 /// Updates the drone status
@@ -879,3 +892,39 @@ fn recharge_battery(drone: Arc<Mutex<Drone>>) {
         drop(locked_drone);
     }
 }
+
+/// Handles the pending incidents of the drone queue
+pub fn handle_pending_incidents(drone: Arc<Mutex<Drone>>, server_stream: Arc<Mutex<TcpStream>>, key: &[u8; 32]) {
+    loop {
+        let locked_drone = match drone.lock() {
+            Ok(drone) => drone,
+            Err(_) => {
+                println!("Mutex was poisoned");
+                continue;
+            }
+        };
+        if !locked_drone.has_pending_incidents() {
+            drop(locked_drone);
+            thread::sleep(Duration::from_secs(5));
+            continue;
+        }
+
+        if !locked_drone.can_handle_new_incident() {
+            drop(locked_drone);
+            thread::sleep(Duration::from_secs(5));
+            continue;
+        }
+
+        match locked_drone.current_incident() {
+            Some(incident) => {
+                drop(locked_drone);
+                handle_new_incident(incident, drone.clone(), server_stream.clone(), key);
+            }
+            None => {
+                drop(locked_drone);
+            }
+        }
+    }
+}
+
+

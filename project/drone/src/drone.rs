@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use crate::drone_status::{DroneStatus, TravelLocation};
 
 use common::incident::Incident;
@@ -20,6 +22,7 @@ pub struct Drone {
     x_anchor: f64,
     y_anchor: f64,
     current_incident: Option<(Incident, usize)>,
+    incident_queue: VecDeque<Incident>,
     velocity: f64,
     active_range: f64,
 }
@@ -46,6 +49,7 @@ impl Drone {
             x_anchor,
             y_anchor,
             current_incident: None,
+            incident_queue: VecDeque::new(),
             velocity,
             active_range,
         }
@@ -142,9 +146,6 @@ impl Drone {
         distance < self.active_range
     }
 
-    // pub fn battery(&self) -> usize {
-    //     self.battery
-    // }
 
     /// Returns the status of the drone
     pub fn status(&self) -> DroneStatus {
@@ -189,9 +190,38 @@ impl Drone {
     }
 
     /// Returns true if the drone is attending an incident
-    pub fn check_is_travelling_to_incident(&self) -> bool {
-        self.status != DroneStatus::Travelling(TravelLocation::Incident)
+    pub fn is_travelling_to_incident(&self) -> bool {
+        self.status == DroneStatus::Travelling(TravelLocation::Incident)
     }
+
+
+    pub fn add_incident(&mut self, incident: Incident) {
+        self.incident_queue.push_back(incident);
+    }
+
+    pub fn get_next_incident(&mut self) -> Option<Incident> {
+        self.incident_queue.pop_front()
+    }
+
+    pub fn has_pending_incidents(&self) -> bool {
+        !self.incident_queue.is_empty()
+    }
+
+    pub fn current_incident(&self) -> Option<Incident> {
+        self.incident_queue.front().cloned()
+    }
+
+    pub fn remove_current_incident(&mut self) {
+        self.incident_queue.pop_front();
+    }
+
+    pub fn can_handle_new_incident(&self) -> bool {
+        self.status == DroneStatus::Free ||
+        self.status == DroneStatus::Travelling(TravelLocation::Anchor)
+    }
+
+
+
 }
 
 /// Calculates the euclidean distance between two points
