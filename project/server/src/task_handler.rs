@@ -37,6 +37,14 @@ pub struct TaskHandler {
     clients: RwLock<HashMap<Vec<u8>, Client>>,
     active_connections: HashSet<Vec<u8>>,
     retained_messages: HashMap<Vec<u8>, VecDeque<Publish>>,
+
+    // monitor se subscribe a (drone-data/+) <- es un topic filter
+
+    // drone data publica en (drone-data/1) <- esto es un topic name
+
+    // debería guardar que monitor está suscrito a (drone-data/+)
+    // cuando drone data publica en (drone-data/1) recorro todos los subscribes y me fijo si alguno matchea
+    // si matchea, le mando el msg
     log_file: Arc<Logger>,
     client_manager: Arc<RwLock<ClientManager>>,
     key: [u8; 32],
@@ -239,11 +247,7 @@ impl TaskHandler {
         }
     }
 
-    pub fn handle_retained_messages(
-        &self,
-        client: &mut Client,
-        retained_messages: &VecDeque<Publish>,
-    ) {
+    pub fn handle_retained_messages(&self, client: &mut Client, retained_messages: &VecDeque<Publish>) {
         for message in retained_messages {
             client.send_message(message.clone(), &self.log_file, &self.key);
         }

@@ -178,17 +178,11 @@ fn handle_right_clicks(
                         display_new_incident(ui, new_incident_registration, sender);
                         *layout = Layout::NewIncident;
 
-                        right_click_menu.open = false; // Close menu
+                        right_click_menu.open = false; 
                     }
-                    // if ui.button("Register New Drone").clicked() {
-                    //     // Handle Option 2 click
-                    //     println!("New drone at at coordenates: ({}, {})", right_click_menu.x_coordenate, right_click_menu.y_coordenate);
-                    //     right_click_menu.open = false; // Close menu
-                    // }
                     if ui.button("Cancel").clicked() {
-                        // Handle Option 2 click
                         println!("Menu closed");
-                        right_click_menu.open = false; // Close menu
+                        right_click_menu.open = false; 
                     }
                 });
             });

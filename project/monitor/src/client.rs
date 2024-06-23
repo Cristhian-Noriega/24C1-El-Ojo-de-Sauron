@@ -53,7 +53,7 @@ pub fn client_run(config: Config) -> Result<(), String> {
     let cloned_key = *config.get_key();
 
     // monitor start in a thread to avoid blocking the main thread
-    std::thread::spawn(move || {
+    let monitor_thread = std::thread::spawn(move || {
         start_monitor(stream, monitor_sender, ui_receiver, &cloned_key);
     });
 
@@ -64,6 +64,8 @@ pub fn client_run(config: Config) -> Result<(), String> {
             println!("Error starting UI: {:?}", err);
         }
     }
+
+    monitor_thread.join().unwrap();
 
     Ok(())
 }
