@@ -23,7 +23,7 @@ impl DroneStatus {
     pub fn to_str(&self) -> &str {
         match self {
             DroneStatus::Free => "Free",
-            DroneStatus::AttendingIncident => "AttendingIncident",
+            DroneStatus::AttendingIncident => "Attending Incident",
             DroneStatus::Travelling => "Travelling",
             DroneStatus::Recharging => "Charging",
         }

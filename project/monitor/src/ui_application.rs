@@ -376,13 +376,13 @@ fn display_edit_incident(
 ) {
     ui.horizontal(|ui| {
         ui.label("UUID:");
-        ui.add_space(38.0);
+        ui.add_space(70.0);
         ui.text_edit_singleline(&mut edit_incident.uuid);
     });
     ui.add_space(5.0);
     ui.horizontal(|ui| {
         ui.label("New name:");
-        ui.add_space(38.0);
+        ui.add_space(40.0);
         ui.text_edit_singleline(&mut edit_incident.name);
     });
     ui.add_space(5.0);
@@ -393,7 +393,7 @@ fn display_edit_incident(
     });
     ui.add_space(5.0);
 
-    ui.add_space(20.0);
+    ui.add_space(5.0);
     ui.vertical_centered(|ui| {
         if ui.button("Edit").clicked() {
             sender
@@ -448,7 +448,7 @@ fn display_incident_list(ui: &mut egui::Ui, incidents: &[Incident], sender: &Sen
                         ));
                     });
                     row.col(|ui| {
-                        ui.label(incident.status.clone().to_string());
+                        ui.label(incident.status.clone().meaning());
                     });
                     row.col(|ui| {
                         // if incident status == Solvable -> show resolve button
