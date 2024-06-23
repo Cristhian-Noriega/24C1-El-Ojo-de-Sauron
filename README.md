@@ -13,7 +13,14 @@ cargo doc --no-deps --open
 ```
 
 ## Como usar
-Todos los ejecutables requieren de un archivo de configuración.
+Una manera rápida de ejecutar todo el sistema es utilizando el ejecutable run.sh siendo n la cantidad de drones.
+
+```
+chmod +x run.sh
+./run.sh <n>
+```
+
+Si se desea correr cada componente por separado es importante tener en cuenta que por parámetro se deben pasar los archivos de configuración que correspondan.
 
 ### Server
 ```
