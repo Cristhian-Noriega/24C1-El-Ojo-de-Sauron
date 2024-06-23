@@ -4,10 +4,10 @@
     "username": "drone4",
     "password": "sauron",
     "key": "12345678901234567890123456789012",
-    "x_central_position": -58.3703,
-    "y_central_position": -34.6082,
-    "x_anchor_position": -58.3725,
-    "y_anchor_position": -34.6125,
+    "x_central_position": -58.38261960951555,
+    "y_central_position": -34.60328116299881,
+    "x_anchor_position": -58.376737988993256,
+    "y_anchor_position": -34.60223357018774,
     "velocity": 0.0001,
     "active_range": 0.01
 }
