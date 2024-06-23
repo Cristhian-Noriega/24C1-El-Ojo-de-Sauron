@@ -1,5 +1,9 @@
 use std::{
-    io::{ErrorKind, Read, Write}, net::TcpStream, os::unix::process, sync::{Arc, Mutex, MutexGuard}, thread, time::Duration
+    io::{ErrorKind, Read, Write},
+    net::TcpStream,
+    sync::{Arc, Mutex, MutexGuard},
+    thread,
+    time::Duration,
 };
 
 use mqtt::model::{
@@ -212,7 +216,6 @@ fn handle_new_incident(
     server_stream: Arc<Mutex<TcpStream>>,
     key: &[u8; 32],
 ) {
-    
     let topic_filter = TopicFilter::new(
         vec![
             TopicLevel::Literal(ATTENDING_INCIDENT.to_vec()),
@@ -257,6 +260,7 @@ fn handle_new_incident(
 
     if !drone_locked.is_within_range(incident.x_coordinate, incident.y_coordinate) {
         println!("Drone is not within range of the incident");
+        drone_locked.remove_current_incident();
         drop(drone_locked);
         return;
     }
@@ -267,7 +271,6 @@ fn handle_new_incident(
     //     return;
     // }
 
-    
     drone_locked.set_incident(Some(incident.clone()));
     drop(drone_locked);
 
@@ -894,7 +897,11 @@ fn recharge_battery(drone: Arc<Mutex<Drone>>) {
 }
 
 /// Handles the pending incidents of the drone queue
-pub fn handle_pending_incidents(drone: Arc<Mutex<Drone>>, server_stream: Arc<Mutex<TcpStream>>, key: &[u8; 32]) {
+pub fn handle_pending_incidents(
+    drone: Arc<Mutex<Drone>>,
+    server_stream: Arc<Mutex<TcpStream>>,
+    key: &[u8; 32],
+) {
     loop {
         let locked_drone = match drone.lock() {
             Ok(drone) => drone,
@@ -926,5 +933,3 @@ pub fn handle_pending_incidents(drone: Arc<Mutex<Drone>>, server_stream: Arc<Mut
         }
     }
 }
-
-

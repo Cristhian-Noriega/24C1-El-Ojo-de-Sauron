@@ -146,7 +146,6 @@ impl Drone {
         distance < self.active_range
     }
 
-
     /// Returns the status of the drone
     pub fn status(&self) -> DroneStatus {
         self.status.clone()
@@ -194,14 +193,13 @@ impl Drone {
         self.status == DroneStatus::Travelling(TravelLocation::Incident)
     }
 
-
     pub fn add_incident(&mut self, incident: Incident) {
         self.incident_queue.push_back(incident);
     }
 
-    pub fn get_next_incident(&mut self) -> Option<Incident> {
-        self.incident_queue.pop_front()
-    }
+    // pub fn get_next_incident(&mut self) -> Option<Incident> {
+    //     self.incident_queue.pop_front()
+    // }
 
     pub fn has_pending_incidents(&self) -> bool {
         !self.incident_queue.is_empty()
@@ -216,12 +214,9 @@ impl Drone {
     }
 
     pub fn can_handle_new_incident(&self) -> bool {
-        self.status == DroneStatus::Free ||
-        self.status == DroneStatus::Travelling(TravelLocation::Anchor)
+        self.status == DroneStatus::Free
+            || self.status == DroneStatus::Travelling(TravelLocation::Anchor)
     }
-
-
-
 }
 
 /// Calculates the euclidean distance between two points
