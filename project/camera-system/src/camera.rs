@@ -77,3 +77,71 @@ impl Camera {
 fn euclidean_distance(x1: f64, y1: f64, x2: f64, y2: f64) -> f64 {
     ((x1 - x2).powi(2) + (y1 - y2).powi(2)).sqrt()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use common::incident::IncidentStatus;
+
+    #[test]
+    fn test_new_camera() {
+        let camera = Camera::new(1, 1.5, 1.5, 3.0);
+        assert_eq!(camera.id, 1);
+        assert_eq!(camera.x_coordinate, 1.5);
+        assert_eq!(camera.y_coordinate, 1.5);
+        assert_eq!(camera.active_range, 3.0);
+        assert_eq!(camera.status, CameraStatus::Sleep);
+        assert_eq!(camera.active_incidents, 0);
+    }
+
+    #[test]
+    fn test_data() {
+        let camera = Camera::new(1, 1.5, 1.5, 3.0);
+        assert_eq!(camera.data(), "1;1.5;1.5;0");
+    }
+
+    #[test]
+    fn test_follow_incident() {
+        let mut camera = Camera::new(1, 1.5, 1.5, 3.0);
+        camera.follow_incident();
+        assert_eq!(camera.active_incidents, 1);
+        assert_eq!(camera.status, CameraStatus::Active);
+    }
+
+    #[test]
+    fn test_unfollow_incident() {
+        let mut camera = Camera::new(1, 1.5, 1.5, 3.0);
+        camera.follow_incident();
+        camera.unfollow_incident();
+        assert_eq!(camera.active_incidents, 0);
+        assert_eq!(camera.status, CameraStatus::Sleep);
+    }
+
+    #[test]
+    fn test_is_near() {
+        let camera = Camera::new(1, 1.5, 1.5, 3.0);
+        let incident = Incident::new(
+            "incident1".to_string(),
+            "incident1".to_string(),
+            "incident1".to_string(),
+            1.0,
+            1.0,
+            IncidentStatus::Pending,
+        );
+        assert!(camera.is_near(&incident));
+    }
+
+    #[test]
+    fn test_is_not_near() {
+        let camera = Camera::new(1, 1.5, 1.5, 3.0);
+        let incident = Incident::new(
+            "incident1".to_string(),
+            "incident1".to_string(),
+            "incident1".to_string(),
+            10.0,
+            10.0,
+            IncidentStatus::Pending,
+        );
+        assert!(!camera.is_near(&incident));
+    }
+}

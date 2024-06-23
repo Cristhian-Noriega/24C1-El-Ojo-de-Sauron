@@ -1,10 +1,10 @@
 #![allow(clippy::too_many_arguments)]
 
 use crate::{
+    camera::{Camera, CameraStatus},
     channels_tasks::{
         DroneRegistration, IncidentEdit, IncidentRegistration, MonitorAction, UIAction,
     },
-    camera::{Camera, CameraStatus},
     drone::{Drone, DroneStatus},
     right_click_menu::RightClickMenu,
 };
@@ -324,8 +324,8 @@ fn display_incident_list(
     TableBuilder::new(ui)
         .striped(true)
         .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
-        .column(Column::initial(50.0)) 
-        .column(Column::remainder())   
+        .column(Column::initial(50.0))
+        .column(Column::remainder())
         .column(Column::remainder())
         .column(Column::remainder())
         .column(Column::initial(75.0))
@@ -530,10 +530,7 @@ fn display_camera_list(ui: &mut egui::Ui, cameras: &[Camera]) {
 }
 
 /// Displays the header of the UI
-fn display_header(
-    ui: &mut egui::Ui,
-    current_layout: &mut Layout,
-) {
+fn display_header(ui: &mut egui::Ui, current_layout: &mut Layout) {
     ui.horizontal(|ui| {
         ui.heading(egui::RichText::new("Monitoring Aplication").size(30.0));
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -562,7 +559,6 @@ fn display_header(
             ui.selectable_value(current_layout, Layout::NewDrone, "Register Drone");
             ui.label("|");
             ui.selectable_value(current_layout, Layout::CameraList, "Camera List");
-
         });
     });
 
@@ -587,10 +583,7 @@ impl eframe::App for UIApplication {
         }
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            display_header(
-                ui,
-                &mut self.current_layout,
-            );
+            display_header(ui, &mut self.current_layout);
 
             match self.current_layout {
                 Layout::IncidentMap => display_incident_map(
@@ -630,43 +623,52 @@ impl eframe::App for UIApplication {
 }
 
 /// Updates the places in the map
-fn update_places(incidents: &Vec<Incident>, drones: &Vec<Drone>, cameras: &Vec<Camera>, charging_station_coordenates: &(f64, f64)) -> Places {
+fn update_places(
+    incidents: &Vec<Incident>,
+    drones: &Vec<Drone>,
+    cameras: &Vec<Camera>,
+    charging_station_coordenates: &(f64, f64),
+) -> Places {
     let mut places = vec![];
-    
+
     let mut activity_cordenates = vec![];
 
     for incident in incidents {
         let place = Place {
             position: Position::from_lon_lat(incident.x_coordinate, incident.y_coordinate),
-            label: format!("  {}",incident.name.clone()),
-            symbol: '⚠', 
+            label: format!("  {}", incident.name.clone()),
+            symbol: '⚠',
             style: Style {
                 label_font: FontId::proportional(13.0),
                 label_color: Color32::BLACK,
-                label_background: Color32::TRANSPARENT, 
+                label_background: Color32::TRANSPARENT,
                 symbol_font: FontId::monospace(30.0),
-                symbol_color: Color32::RED,              
-                symbol_background: Color32::TRANSPARENT, 
-                symbol_stroke: Stroke::new(2.0, Color32::TRANSPARENT), 
+                symbol_color: Color32::RED,
+                symbol_background: Color32::TRANSPARENT,
+                symbol_stroke: Stroke::new(2.0, Color32::TRANSPARENT),
             },
         };
         places.push(place);
         activity_cordenates.push((incident.x_coordinate, incident.y_coordinate));
     }
-    
+
     for drone in drones {
         let color = match drone.status {
             DroneStatus::Free => Color32::BLACK,
-            DroneStatus::AttendingIncident => Color32::from_rgb(220, 20, 60), 
-            DroneStatus::Travelling => Color32::from_rgb (255, 79,0),        
-            DroneStatus::Recharging => Color32::GREEN,        
+            DroneStatus::AttendingIncident => Color32::from_rgb(220, 20, 60),
+            DroneStatus::Travelling => Color32::from_rgb(255, 79, 0),
+            DroneStatus::Recharging => Color32::GREEN,
         };
 
         if activity_cordenates.contains(&(drone.x_coordinate, drone.y_coordinate)) {
-            let overlapping_activity = places.iter_mut().find(|place| {
-                place.position == Position::from_lon_lat(drone.x_coordinate, drone.y_coordinate)
-            }).unwrap();
-            overlapping_activity.label = format!("{}, ❇{}", overlapping_activity.label, drone.id.clone());
+            let overlapping_activity = places
+                .iter_mut()
+                .find(|place| {
+                    place.position == Position::from_lon_lat(drone.x_coordinate, drone.y_coordinate)
+                })
+                .unwrap();
+            overlapping_activity.label =
+                format!("{}, ❇{}", overlapping_activity.label, drone.id.clone());
             continue;
         }
 
@@ -677,10 +679,10 @@ fn update_places(incidents: &Vec<Incident>, drones: &Vec<Drone>, cameras: &Vec<C
             style: Style {
                 label_font: FontId::proportional(15.0),
                 label_color: Color32::BLACK,
-                label_background: Color32::TRANSPARENT, 
+                label_background: Color32::TRANSPARENT,
                 symbol_font: FontId::monospace(32.0),
-                symbol_color: color,                     
-                symbol_background: Color32::TRANSPARENT, 
+                symbol_color: color,
+                symbol_background: Color32::TRANSPARENT,
                 symbol_stroke: Stroke::new(2.0, Color32::TRANSPARENT),
             },
         };
@@ -690,21 +692,21 @@ fn update_places(incidents: &Vec<Incident>, drones: &Vec<Drone>, cameras: &Vec<C
 
     for camera in cameras {
         let color = match camera.status {
-            CameraStatus::Inactive => Color32::BLACK,      
+            CameraStatus::Inactive => Color32::BLACK,
             CameraStatus::Active => Color32::RED,
         };
 
         let place = Place {
             position: Position::from_lon_lat(camera.x_coordinate, camera.y_coordinate),
             label: format!(" {}", camera.id.clone()),
-            symbol: '📹', 
+            symbol: '📹',
             style: Style {
                 label_font: FontId::proportional(14.0),
                 label_color: Color32::BLACK,
-                label_background: Color32::TRANSPARENT, 
+                label_background: Color32::TRANSPARENT,
                 symbol_font: FontId::monospace(28.0),
-                symbol_color: color,            
-                symbol_background: Color32::TRANSPARENT, 
+                symbol_color: color,
+                symbol_background: Color32::TRANSPARENT,
                 symbol_stroke: Stroke::new(2.0, Color32::TRANSPARENT),
             },
         };
@@ -712,17 +714,20 @@ fn update_places(incidents: &Vec<Incident>, drones: &Vec<Drone>, cameras: &Vec<C
     }
 
     let charging_station_place = Place {
-        position: Position::from_lon_lat(charging_station_coordenates.0, charging_station_coordenates.1),
+        position: Position::from_lon_lat(
+            charging_station_coordenates.0,
+            charging_station_coordenates.1,
+        ),
         label: "   Drone Central".to_string(),
         symbol: '🖧', // 🔋🔌🖥🖧
         style: Style {
             label_font: FontId::proportional(10.0),
             label_color: Color32::BLACK,
-            label_background: Color32::TRANSPARENT, 
+            label_background: Color32::TRANSPARENT,
             symbol_font: FontId::monospace(35.0),
-            symbol_color: Color32::BLACK,            
-            symbol_background: Color32::TRANSPARENT, 
-            symbol_stroke: Stroke::new(2.0, Color32::TRANSPARENT), 
+            symbol_color: Color32::BLACK,
+            symbol_background: Color32::TRANSPARENT,
+            symbol_stroke: Stroke::new(2.0, Color32::TRANSPARENT),
         },
     };
     places.push(charging_station_place);

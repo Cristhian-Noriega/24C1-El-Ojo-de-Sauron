@@ -30,7 +30,7 @@ impl Client {
         }
     }
 
-    /// Subscribes the client to a topic 
+    /// Subscribes the client to a topic
     pub fn add_subscription(&mut self, topic: TopicFilter) {
         if self.subscriptions.iter().any(|t| t == &topic) {
             return;

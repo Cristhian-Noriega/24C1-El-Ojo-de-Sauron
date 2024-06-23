@@ -239,7 +239,11 @@ impl TaskHandler {
         }
     }
 
-    pub fn handle_retained_messages(&self, client: &mut Client, retained_messages: &VecDeque<Publish>) {
+    pub fn handle_retained_messages(
+        &self,
+        client: &mut Client,
+        retained_messages: &VecDeque<Publish>,
+    ) {
         for message in retained_messages {
             client.send_message(message.clone(), &self.log_file, &self.key);
         }
@@ -419,4 +423,20 @@ impl TaskHandler {
         Ok(())
     }
 
+    // TODO: Implement retained messages
+    // pub fn register_puback(&mut self, puback: Puback) {
+    //     let message_id = match puback.packet_identifier() {
+    //         Some(id) => id,
+    //         None => {
+    //             self.log_file
+    //                 .error("Puback packet without packet identifier");
+    //             return;
+    //         }
+    //     };
+    //     let message_id_bytes = message_id.to_be_bytes().to_vec();
+
+    //     let mut retained_messages = self.retained_messages.write().unwrap();
+
+    //     retained_messages.remove(&message_id_bytes);
+    // }
 }

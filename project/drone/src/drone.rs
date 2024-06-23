@@ -198,3 +198,37 @@ impl Drone {
 fn euclidean_distance(x1: f64, y1: f64, x2: f64, y2: f64) -> f64 {
     ((x1 - x2).powi(2) + (y1 - y2).powi(2)).sqrt()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_drone_data() {
+        let drone = Drone::new(1, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0);
+        assert_eq!(drone.data(), "1;1;0;100");
+    }
+
+    #[test]
+    fn test_travelling_to_central_drone_data() {
+        let mut drone = Drone::new(1, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0);
+
+        drone.set_status(DroneStatus::Travelling(TravelLocation::Central));
+        assert_eq!(drone.data(), "1;1;2;100");
+    }
+
+    #[test]
+    fn test_attending_incident_drone_data() {
+        let mut drone = Drone::new(1, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0);
+
+        drone.set_status(DroneStatus::AttendingIncident);
+        assert_eq!(drone.data(), "1;1;1;100");
+    }
+
+    #[test]
+    fn test_drone_travel_to() {
+        let mut drone = Drone::new(1, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0);
+        drone.travel_to(3.0, 3.0);
+        assert_eq!(drone.data(), "1.7071067811865475;1.7071067811865475;0;99");
+    }
+}

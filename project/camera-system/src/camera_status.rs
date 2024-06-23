@@ -1,5 +1,5 @@
 /// The different statuses a camera can have.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum CameraStatus {
     Active,
     Sleep,

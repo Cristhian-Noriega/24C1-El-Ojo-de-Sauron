@@ -140,3 +140,75 @@ impl fmt::Display for Incident {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new_incident() {
+        let incident = Incident::new(
+            "incident1".to_string(),
+            "incident1".to_string(),
+            "incident1".to_string(),
+            1.0,
+            1.0,
+            IncidentStatus::Pending,
+        );
+
+        assert_eq!(incident.uuid, "incident1");
+        assert_eq!(incident.name, "incident1");
+        assert_eq!(incident.description, "incident1");
+        assert_eq!(incident.x_coordinate, 1.0);
+        assert_eq!(incident.y_coordinate, 1.0);
+        assert_eq!(incident.status, IncidentStatus::Pending);
+    }
+
+    #[test]
+    fn test_incident_from_string() {
+        let incident =
+            Incident::from_string("incident1;incident1;incident1;1.0;1.0;0".to_string()).unwrap();
+
+        assert_eq!(incident.uuid, "incident1");
+        assert_eq!(incident.name, "incident1");
+        assert_eq!(incident.description, "incident1");
+        assert_eq!(incident.x_coordinate, 1.0);
+        assert_eq!(incident.y_coordinate, 1.0);
+        assert_eq!(incident.status, IncidentStatus::Pending);
+    }
+
+    #[test]
+    fn test_incident_from_string_invalid() {
+        let incident = Incident::from_string("incident1;incident1;incident1;1.0;1.0".to_string());
+
+        assert!(incident.is_err());
+    }
+
+    #[test]
+    fn test_incident_display() {
+        let incident = Incident::new(
+            "incident1".to_string(),
+            "incident1".to_string(),
+            "incident1".to_string(),
+            1.0,
+            1.0,
+            IncidentStatus::Pending,
+        );
+
+        assert_eq!(incident.to_string(), "incident1;incident1;incident1;1;1;0");
+    }
+
+    #[test]
+    fn test_incident_status_from_string() {
+        let status = IncidentStatus::from_string("0".to_string());
+
+        assert_eq!(status, IncidentStatus::Pending);
+    }
+
+    #[test]
+    fn test_incident_status_meaning() {
+        let status = IncidentStatus::Pending;
+
+        assert_eq!(status.meaning(), "Pending");
+    }
+}
