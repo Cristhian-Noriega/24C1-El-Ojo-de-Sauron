@@ -8,4 +8,5 @@ members = [
     "camera-system", 
     "monitor",
     "common",
+    "tests-integration"
 ]
