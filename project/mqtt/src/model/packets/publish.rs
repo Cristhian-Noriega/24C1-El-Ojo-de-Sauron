@@ -83,7 +83,6 @@ impl Publish {
         let payload_bytes = &self.message;
 
         // Variable Header
-
         let mut variable_header_bytes = vec![];
 
         variable_header_bytes.extend(self.topic.to_bytes());
@@ -93,7 +92,6 @@ impl Publish {
         }
 
         // Fixed Header
-
         let fixed_header_flags = (if self.dup { 1 } else { 0 } << 3)
             | (self.qos.to_byte() << 1)
             | (if self.retain { 1 } else { 0 });
@@ -103,6 +101,7 @@ impl Publish {
         let remaining_length_value =
             variable_header_bytes.len() as u32 + payload_bytes.len() as u32;
         let remaining_length_bytes = RemainingLength::new(remaining_length_value).to_bytes();
+
         fixed_header_bytes.extend(remaining_length_bytes);
 
         let mut data_bytes = vec![];

@@ -40,8 +40,7 @@ impl Server {
         let (client_actions_sender, client_actions_receiver) = mpsc::channel();
 
         let log_file = Arc::new(Logger::new(config.get_log_file()));
-        let client_manager = ClientManager::new();
-        client_manager.make_initial_registrations(config.clone());
+        let client_manager = ClientManager::new(config.get_login_file());
         let client_manager = Arc::new(RwLock::new(client_manager));
 
         let task_handler = TaskHandler::new(
@@ -161,16 +160,14 @@ impl Server {
                 let packet = Packet::from_bytes(&mut stream, &key);
                 match packet {
                     Ok(packet) => {
-                        let handling_result = handle_packet(
+                        if !handle_packet(
                             packet,
                             client_id.clone(),
                             sender_to_task_channel.clone(),
                             log_file.clone(),
-                        );
-
-                        if !handling_result {
+                        ) {
                             break;
-                        };
+                        }
                     }
                     Err(err) => {
                         log_file.error(&format!("Connection Error: {:?}", err));

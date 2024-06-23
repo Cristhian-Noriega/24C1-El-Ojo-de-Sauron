@@ -6,10 +6,8 @@ pub struct Config {
     address: String,
     key: [u8; 32],
     log_file: String,
+    login_file: String,
     segs_to_disconnect: u32,
-    admin_password: String,
-    camera_system_username: String,
-    camera_system_password: String,
 }
 
 impl Config {
@@ -21,10 +19,8 @@ impl Config {
             address: String::new(),
             key: [0; 32],
             log_file: String::new(),
+            login_file: String::new(),
             segs_to_disconnect: 0,
-            admin_password: String::new(),
-            camera_system_username: String::new(),
-            camera_system_password: String::new(),
         };
 
         for line in content.lines() {
@@ -47,6 +43,7 @@ impl Config {
                         config.key = key;
                     }
                     "log_file" => config.log_file = parts[1].trim_matches('"').to_string(),
+                    "login_file" => config.login_file = parts[1].trim_matches('"').to_string(),
                     "segs_to_disconnect" => {
                         config.segs_to_disconnect = parts[1].parse().map_err(|_| {
                             io::Error::new(
@@ -54,18 +51,6 @@ impl Config {
                                 "Invalid segs_to_disconnect value",
                             )
                         })?
-                    }
-                    "admin_username" => {
-                        config.admin_password = parts[1].trim_matches('"').to_string()
-                    }
-                    "admin_password" => {
-                        config.admin_password = parts[1].trim_matches('"').to_string()
-                    }
-                    "camera_system_username" => {
-                        config.camera_system_username = parts[1].trim_matches('"').to_string()
-                    }
-                    "camera_system_password" => {
-                        config.camera_system_password = parts[1].trim_matches('"').to_string()
                     }
                     _ => {}
                 }
@@ -85,32 +70,17 @@ impl Config {
         &self.log_file
     }
 
+    /// Returns the login file of the server
+    pub fn get_login_file(&self) -> &str {
+        &self.login_file
+    }
+
     // pub fn get_segs_to_disconnect(&self) -> u32 {
     //     self.segs_to_disconnect
     // }
 
-    /// Returns the key of the server
+    /// Returns the key of the encryption
     pub fn get_key(&self) -> &[u8; 32] {
         &self.key
-    }
-
-    /// Returns the admin username of the server
-    pub fn get_admin_username(&self) -> &str {
-        &self.admin_password
-    }
-
-    /// Returns the admin password of the server
-    pub fn get_admin_password(&self) -> &str {
-        &self.admin_password
-    }
-
-    /// Returns the camera system username of the server
-    pub fn get_camera_system_username(&self) -> &str {
-        &self.camera_system_username
-    }
-
-    /// Returns the camera system password of the server
-    pub fn get_camera_system_password(&self) -> &str {
-        &self.camera_system_password
     }
 }

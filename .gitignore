@@ -20,4 +20,4 @@ project/target/
 project/.rustc_info.json
 
 # Log file
-log.txt
+server.log

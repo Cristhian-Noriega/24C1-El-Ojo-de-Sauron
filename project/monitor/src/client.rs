@@ -18,7 +18,9 @@ use mqtt::model::{
 
 use crate::{
     camera::Camera,
-    channels_tasks::{DroneRegistration, IncidentEdit, IncidentRegistration, MonitorAction, UIAction},
+    channels_tasks::{
+        DroneRegistration, IncidentEdit, IncidentRegistration, MonitorAction, UIAction,
+    },
     config::Config,
     drone::Drone,
     monitor::Monitor,
@@ -72,13 +74,14 @@ pub fn client_run(config: Config) -> Result<(), String> {
 fn connect_to_server(config: Config) -> std::io::Result<TcpStream> {
     let address = config.get_address();
     let key = config.get_key();
+    let client_id = config.get_id();
     let username = config.get_username();
     let password = config.get_password();
 
     println!("\nConnecting to address: {:?}", address);
     let mut to_server_stream = TcpStream::connect(address)?;
 
-    let client_id_bytes: Vec<u8> = b"admin".to_vec();
+    let client_id_bytes = client_id.as_bytes().to_vec();
     let client_id = EncodedString::new(client_id_bytes);
     let will = None;
 
@@ -207,11 +210,7 @@ fn start_monitor(
             ),
 
             Ok(UIAction::EditIncident(incident_edit)) => {
-                edit_incident(
-                    incident_edit,
-                    &mut monitor,
-                    monitor_sender.clone(),
-                );
+                edit_incident(incident_edit, &mut monitor, monitor_sender.clone());
                 None
             }
 
@@ -392,8 +391,11 @@ fn edit_incident(
     monitor: &mut Monitor,
     monitor_sender: Sender<MonitorAction>,
 ) {
-
-    if let Some(incident) = monitor.edit_incident(incident_registration.uuid, incident_registration.name.clone(), incident_registration.description.clone()) {
+    if let Some(incident) = monitor.edit_incident(
+        incident_registration.uuid,
+        incident_registration.name.clone(),
+        incident_registration.description.clone(),
+    ) {
         match monitor_sender.send(MonitorAction::Incident(incident)) {
             Ok(_) => {}
             Err(_) => {
