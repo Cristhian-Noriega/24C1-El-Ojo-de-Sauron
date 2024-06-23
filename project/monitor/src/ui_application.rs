@@ -364,6 +364,10 @@ fn display_new_incident(
             sender
                 .send(UIAction::RegistrateIncident(new_incident.clone()))
                 .unwrap();
+            new_incident.name.clear();
+            new_incident.description.clear();
+            new_incident.x.clear();
+            new_incident.y.clear();
         }
     });
 }
@@ -399,6 +403,9 @@ fn display_edit_incident(
             sender
                 .send(UIAction::EditIncident(edit_incident.clone()))
                 .unwrap();
+            edit_incident.uuid.clear();
+            edit_incident.name.clear();
+            edit_incident.description.clear();
         }
     });
 }
@@ -518,6 +525,9 @@ fn display_new_drone(
                 sender
                     .send(UIAction::RegistrateDrone(drone_registration.clone()))
                     .unwrap();
+                drone_registration.id.clear();
+                drone_registration.username.clear();
+                drone_registration.password.clear();
             }
         });
     });
