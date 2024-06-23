@@ -66,4 +66,12 @@ impl Monitor {
             self.active_incidents.insert(incident_uuid.clone(), 1);
         }
     }
+
+    /// Sets the incident as resolved
+    pub fn set_resolved_incident(&mut self, incident_uuid: String) {
+        if let Some(incident) = self.incidents.get_mut(&incident_uuid) {
+            incident.status = IncidentStatus::Resolved;
+            self.active_incidents.remove(&incident_uuid);
+        }
+    }
 }
