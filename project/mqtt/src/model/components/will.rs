@@ -79,6 +79,12 @@ mod tests {
 
         let bytes = will.to_bytes();
 
-        assert_eq!(bytes, vec![0, 15, b'h', b'o', b'm', b'e', b'/', b'l', b'i', b'v', b'i', b'n', b'g', b'r', b'o', b'o', b'm', 0, 7, b'm', b'e', b's', b's', b'a', b'g', b'e']);
+        assert_eq!(
+            bytes,
+            vec![
+                0, 15, b'h', b'o', b'm', b'e', b'/', b'l', b'i', b'v', b'i', b'n', b'g', b'r',
+                b'o', b'o', b'm', 0, 7, b'm', b'e', b's', b's', b'a', b'g', b'e'
+            ]
+        );
     }
 }

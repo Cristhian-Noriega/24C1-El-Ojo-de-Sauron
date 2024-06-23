@@ -18,7 +18,9 @@ use mqtt::model::{
 
 use crate::{
     camera::Camera,
-    channels_tasks::{DroneRegistration, IncidentEdit, IncidentRegistration, MonitorAction, UIAction},
+    channels_tasks::{
+        DroneRegistration, IncidentEdit, IncidentRegistration, MonitorAction, UIAction,
+    },
     config::Config,
     drone::{Drone, DroneStatus},
     monitor::Monitor,
@@ -207,15 +209,16 @@ fn start_monitor(
             ),
 
             Ok(UIAction::EditIncident(incident_edit)) => {
-                edit_incident(
-                    incident_edit,
-                    &mut monitor,
-                    monitor_sender.clone(),
-                );
+                edit_incident(incident_edit, &mut monitor, monitor_sender.clone());
                 None
             }
 
-            Ok(UIAction::ResolveIncident(incident)) => resolve_incident(incident, &mut monitor, publish_counter, monitor_sender.clone()),
+            Ok(UIAction::ResolveIncident(incident)) => resolve_incident(
+                incident,
+                &mut monitor,
+                publish_counter,
+                monitor_sender.clone(),
+            ),
             Err(_) => None,
         };
 
@@ -392,8 +395,11 @@ fn edit_incident(
     monitor: &mut Monitor,
     monitor_sender: Sender<MonitorAction>,
 ) {
-
-    if let Some(incident) = monitor.edit_incident(incident_registration.uuid, incident_registration.name.clone(), incident_registration.description.clone()) {
+    if let Some(incident) = monitor.edit_incident(
+        incident_registration.uuid,
+        incident_registration.name.clone(),
+        incident_registration.description.clone(),
+    ) {
         match monitor_sender.send(MonitorAction::Incident(incident)) {
             Ok(_) => {}
             Err(_) => {
@@ -406,10 +412,15 @@ fn edit_incident(
 }
 
 /// Resolves an incident
-fn resolve_incident(incident: Incident, monitor: &mut Monitor, package_identifier: u16, monitor_sender: Sender<MonitorAction>) -> Option<Publish> {
+fn resolve_incident(
+    incident: Incident,
+    monitor: &mut Monitor,
+    package_identifier: u16,
+    monitor_sender: Sender<MonitorAction>,
+) -> Option<Publish> {
     let incident_id = incident.id();
     monitor.set_resolved_incident(incident.id());
-    
+
     if let Some(incident) = monitor.get_incident(incident_id.as_str()) {
         match monitor_sender.send(MonitorAction::Incident(incident.clone())) {
             Ok(_) => {}

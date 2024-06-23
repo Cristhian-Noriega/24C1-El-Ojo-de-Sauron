@@ -45,7 +45,10 @@ mod tests {
     #[test]
     fn test_connect_return_code_to_byte() {
         assert_eq!(ConnectReturnCode::ConnectionAccepted.to_byte(), 0x00);
-        assert_eq!(ConnectReturnCode::UnacceptableProtocolVersion.to_byte(), 0x01);
+        assert_eq!(
+            ConnectReturnCode::UnacceptableProtocolVersion.to_byte(),
+            0x01
+        );
         assert_eq!(ConnectReturnCode::IdentifierRejected.to_byte(), 0x02);
         assert_eq!(ConnectReturnCode::ServerUnavailable.to_byte(), 0x03);
         assert_eq!(ConnectReturnCode::BadUsernameOrPassword.to_byte(), 0x04);
