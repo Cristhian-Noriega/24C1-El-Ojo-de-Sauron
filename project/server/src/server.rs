@@ -22,6 +22,9 @@ use super::{
 };
 
 /// Represents the MQTT server that will be handling all messages
+/// The server has a configuration, a channel to send messages to clients, a log file, and a client manager
+/// The server will be listening for incoming connections and handling them
+/// It creates a new client for each connection and a new thread for each client
 pub struct Server {
     /// Configuration of the server
     config: Config,
