@@ -47,6 +47,7 @@ pub struct TaskHandler {
     // si matchea, le mando el msg
     log_file: Arc<Logger>,
     client_manager: Arc<RwLock<ClientManager>>,
+    key: [u8; 32],
 }
 
 impl TaskHandler {
@@ -55,6 +56,7 @@ impl TaskHandler {
         receiver_channel: mpsc::Receiver<Task>,
         log_file: Arc<Logger>,
         client_manager: Arc<RwLock<ClientManager>>,
+        key: [u8; 32],
     ) -> Self {
         TaskHandler {
             client_actions_receiver_channel: receiver_channel,
@@ -63,6 +65,7 @@ impl TaskHandler {
             //retained_messages: RwLock::new(HashMap::new()),
             log_file,
             client_manager,
+            key,
         }
     }
 
@@ -166,7 +169,7 @@ impl TaskHandler {
 
         for client_id in clients {
             if let Some(client) = self.clients.read().unwrap().get(&client_id) {
-                client.send_message(publish_packet.clone(), &self.log_file);
+                client.send_message(publish_packet.clone(), &self.log_file, &self.key);
             }
         }
 
@@ -225,7 +228,7 @@ impl TaskHandler {
     /// Handle a new client connection
     pub fn handle_new_client_connection(&self, client: Client) {
         let connack_packet = Connack::new(true, ConnectReturnCode::ConnectionAccepted);
-        let connack_packet_vec = connack_packet.to_bytes();
+        let connack_packet_vec = connack_packet.to_bytes(&self.key);
         let connack_packet_bytes = connack_packet_vec.as_slice();
 
         let client_id = client.id.clone();
@@ -278,7 +281,7 @@ impl TaskHandler {
             package_identifier,
             vec![SubackReturnCode::SuccessMaximumQoS0],
         );
-        let suback_packet_vec = suback_packet.to_bytes();
+        let suback_packet_vec = suback_packet.to_bytes(&self.key);
         let suback_packet_bytes = suback_packet_vec.as_slice();
 
         let mut stream = match client.stream.lock() {
@@ -298,7 +301,7 @@ impl TaskHandler {
     /// Send a puback packet to a client
     pub fn puback(&self, package_identifier: Option<u16>, client: &mut Client) {
         let puback_packet = Puback::new(package_identifier);
-        let puback_packet_vec = puback_packet.to_bytes();
+        let puback_packet_vec = puback_packet.to_bytes(&self.key);
         let puback_packet_bytes = puback_packet_vec.as_slice();
 
         let mut stream = match client.stream.lock() {
@@ -318,7 +321,7 @@ impl TaskHandler {
     /// Send an unsuback packet to a client
     pub fn unsuback(&self, package_identifier: u16, client: &mut Client) {
         let unsuback_packet = Unsuback::new(package_identifier);
-        let unsuback_packet_vec = unsuback_packet.to_bytes();
+        let unsuback_packet_vec = unsuback_packet.to_bytes(&self.key);
         let unsuback_packet_bytes = unsuback_packet_vec.as_slice();
 
         let mut stream = match client.stream.lock() {
@@ -344,7 +347,7 @@ impl TaskHandler {
 
         let client = clients.get(&client_id).unwrap();
         let pingresp_packet = Pingresp::new();
-        let pingresp_packet_vec = pingresp_packet.to_bytes();
+        let pingresp_packet_vec = pingresp_packet.to_bytes(&self.key);
         let pingresp_packet_bytes = pingresp_packet_vec.as_slice();
 
         let mut stream = match client.stream.lock() {

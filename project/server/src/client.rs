@@ -59,12 +59,17 @@ impl Client {
     }
 
     /// Sends a message to the client
-    pub fn send_message(&self, publish_packet: Publish, logfile: &Arc<crate::logfile::Logger>) {
+    pub fn send_message(
+        &self,
+        publish_packet: Publish,
+        logfile: &Arc<crate::logfile::Logger>,
+        key: &[u8],
+    ) {
         let message_str = std::str::from_utf8(publish_packet.message()).unwrap();
         let client_id_str = std::str::from_utf8(&self.id).unwrap();
 
         let mut stream = self.stream.lock().unwrap();
-        match stream.write_all(publish_packet.to_bytes().as_slice()) {
+        match stream.write_all(publish_packet.to_bytes(key).as_slice()) {
             Ok(_) => {
                 logfile.log_sent_message(message_str, client_id_str);
             }

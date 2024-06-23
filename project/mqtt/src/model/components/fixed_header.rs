@@ -1,4 +1,4 @@
-use crate::{Error, Read, RemainingLength};
+use crate::{encryptation::EXTRA_DATA_SIZE, model::packets::*, Error, Read, RemainingLength};
 
 /// Represents the fixed header of an MQTT packet.
 pub struct FixedHeader {
@@ -44,6 +44,21 @@ impl FixedHeader {
     /// Returns the remaining length of the fixed header.
     pub fn remaining_length(&self) -> &RemainingLength {
         &self.remaining_length
+    }
+
+    /// Return the remaining length of the fixed header considering encrypted data.
+    pub fn remaining_length_encrypted(&self) -> usize {
+        match self.first_byte >> 4 {
+            CONNECT_PACKET_TYPE
+            | CONNACK_PACKET_TYPE
+            | SUBSCRIBE_PACKET_TYPE
+            | SUBACK_PACKET_TYPE
+            | PUBLISH_PACKET_TYPE
+            | PUBACK_PACKET_TYPE
+            | UNSUBSCRIBE_PACKET_TYPE
+            | UNSUBACK_PACKET_TYPE => self.remaining_length.value() + EXTRA_DATA_SIZE,
+            _ => self.remaining_length.value(),
+        }
     }
 }
 

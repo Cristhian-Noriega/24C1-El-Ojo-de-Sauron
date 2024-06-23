@@ -33,11 +33,7 @@ pub fn client_run(config: Config) -> Result<(), String> {
 
     // Connect to the server
 
-    let address = config.get_address();
-    let username = config.get_username();
-    let password = config.get_password();
-
-    let mut stream = match connect_to_server(address, username, password) {
+    let mut stream = match connect_to_server(config.clone()) {
         Ok(stream) => stream,
         Err(e) => {
             return Err(format!("Error connecting to server: {:?}", e));
@@ -45,16 +41,18 @@ pub fn client_run(config: Config) -> Result<(), String> {
     };
 
     // Subscribe to the topics
-    match subscribe_to_topics(&mut stream) {
+    match subscribe_to_topics(&mut stream, config.get_key()) {
         Ok(_) => {}
         Err(e) => {
             return Err(format!("Error subscribing to topics: {:?}", e));
         }
     }
 
+    let cloned_key = *config.get_key();
+
     // monitor start in a thread to avoid blocking the main thread
     let monitor_thread = std::thread::spawn(move || {
-        start_monitor(stream, monitor_sender, ui_receiver);
+        start_monitor(stream, monitor_sender, ui_receiver, &cloned_key);
     });
 
     // start the ui in the main thread
@@ -71,7 +69,12 @@ pub fn client_run(config: Config) -> Result<(), String> {
 }
 
 /// Connects to the server
-fn connect_to_server(address: &str, username: &str, password: &str) -> std::io::Result<TcpStream> {
+fn connect_to_server(config: Config) -> std::io::Result<TcpStream> {
+    let address = config.get_address();
+    let key = config.get_key();
+    let username = config.get_username();
+    let password = config.get_password();
+
     println!("\nConnecting to address: {:?}", address);
     let mut to_server_stream = TcpStream::connect(address)?;
 
@@ -85,9 +88,9 @@ fn connect_to_server(address: &str, username: &str, password: &str) -> std::io::
 
     let connect = Connect::new(false, 0, client_id, will, login);
 
-    let _ = to_server_stream.write(connect.to_bytes().as_slice());
+    let _ = to_server_stream.write(connect.to_bytes(key).as_slice());
 
-    match Packet::from_bytes(&mut to_server_stream) {
+    match Packet::from_bytes(&mut to_server_stream, key) {
         Ok(Packet::Connack(connack)) => match connack.connect_return_code() {
             ConnectReturnCode::ConnectionAccepted => Ok(to_server_stream),
             _ => Err(std::io::Error::new(
@@ -139,6 +142,7 @@ fn start_monitor(
     stream: TcpStream,
     monitor_sender: Sender<MonitorAction>,
     ui_reciver: Receiver<UIAction>,
+    key: &[u8; 32],
 ) {
     let mut monitor = Monitor::new();
     let mut unacknowledged_publish = HashMap::new();
@@ -154,7 +158,7 @@ fn start_monitor(
     }
 
     loop {
-        match Packet::from_bytes(&mut stream) {
+        match Packet::from_bytes(&mut stream, key) {
             Ok(Packet::Puback(puback)) => {
                 let packet_id = puback.packet_identifier();
 
@@ -216,7 +220,7 @@ fn start_monitor(
         };
 
         if let Some(publish) = publish {
-            match stream.write(publish.to_bytes().as_slice()) {
+            match stream.write(publish.to_bytes(key).as_slice()) {
                 Ok(_) => {
                     unacknowledged_publish.insert(publish.package_identifier(), publish.clone());
                 }
@@ -424,7 +428,7 @@ fn resolve_incident(incident: Incident, package_identifier: u16) -> Option<Publi
 }
 
 /// Subscribes to the topics that the monitor need to work properly
-fn subscribe_to_topics(stream: &mut TcpStream) -> std::io::Result<()> {
+fn subscribe_to_topics(stream: &mut TcpStream, key: &[u8; 32]) -> std::io::Result<()> {
     let mut topic_filters = vec![];
 
     let topics = vec![
@@ -451,7 +455,7 @@ fn subscribe_to_topics(stream: &mut TcpStream) -> std::io::Result<()> {
 
     let subscribe = Subscribe::new(1, topic_filters);
 
-    match stream.write(subscribe.to_bytes().as_slice()) {
+    match stream.write(subscribe.to_bytes(key).as_slice()) {
         Ok(_) => {}
         Err(_) => {
             return Err(std::io::Error::new(
@@ -461,7 +465,7 @@ fn subscribe_to_topics(stream: &mut TcpStream) -> std::io::Result<()> {
         }
     }
 
-    match Packet::from_bytes(stream) {
+    match Packet::from_bytes(stream, key) {
         Ok(Packet::Suback(_)) => Ok(()),
         _ => Err(std::io::Error::new(
             ErrorKind::Other,

@@ -2,6 +2,7 @@
     "address": "127.0.0.1:8080",
     "username": "camera-system",
     "password": "sauron",
+    "key": "12345678901234567890123456789012",
     "cameras": [
         {
             "x_coordinate": -58.3815,

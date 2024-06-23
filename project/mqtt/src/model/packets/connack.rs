@@ -1,7 +1,7 @@
 use std::fmt::{Display, Formatter};
 
 use super::{CONNACK_PACKET_TYPE, DEFAULT_VARIABLE_HEADER_LENGTH, RESERVED_FIXED_HEADER_FLAGS};
-use crate::{ConnectReturnCode, Error, FixedHeader, Read, RemainingLength};
+use crate::{encrypt, ConnectReturnCode, Error, FixedHeader, Read, RemainingLength};
 
 /// Represents a CONNECT packet of MQTT that is used to accept a connection from a client.
 #[derive(Debug)]
@@ -44,7 +44,7 @@ impl Connack {
     }
 
     /// Converts the Connack into a vector of bytes.
-    pub fn to_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(&self, key: &[u8]) -> Vec<u8> {
         // Variable Header
         let mut variable_header_bytes = vec![];
 
@@ -63,11 +63,13 @@ impl Connack {
         let remaining_length_bytes = RemainingLength::new(remaining_length_value).to_bytes();
         fixed_header_bytes.extend(remaining_length_bytes);
 
+        let encrypted_bytes = encrypt(variable_header_bytes, key);
+
         // Packet
         let mut packet_bytes = vec![];
 
         packet_bytes.extend(fixed_header_bytes);
-        packet_bytes.extend(variable_header_bytes);
+        packet_bytes.extend(encrypted_bytes);
 
         packet_bytes
     }
@@ -97,7 +99,9 @@ impl Display for Connack {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::FixedHeader;
+    use crate::{encryptation::encryping_tool::decrypt, ConnectReturnCode};
+
+    const KEY: &[u8; 32] = &[0; 32];
 
     #[allow(dead_code)]
     fn fixed_header_bytes() -> Vec<u8> {
@@ -132,7 +136,10 @@ mod test {
         let connect_return_code = ConnectReturnCode::ConnectionAccepted;
 
         let connack = Connack::new(session_present, connect_return_code);
-        let connack_bytes = connack.to_bytes();
+        let connack_encrypted_bytes = connack.to_bytes(KEY);
+        let fixed_header_bytes = connack_encrypted_bytes[0..2].to_vec();
+        let decrypted_bytes = decrypt(&connack_encrypted_bytes[2..], KEY).unwrap();
+        let connack_bytes = [fixed_header_bytes, decrypted_bytes].concat();
 
         let connect_return_code = ConnectReturnCode::ConnectionAccepted;
         let expected_bytes = header_bytes(session_present, connect_return_code);
