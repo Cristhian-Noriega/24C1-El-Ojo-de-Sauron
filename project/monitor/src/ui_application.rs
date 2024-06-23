@@ -719,7 +719,7 @@ fn update_places(
             charging_station_coordenates.1,
         ),
         label: "   Drone Central".to_string(),
-        symbol: '🖧', // 🔋🔌🖥🖧
+        symbol: '🖧', 
         style: Style {
             label_font: FontId::proportional(10.0),
             label_color: Color32::BLACK,
