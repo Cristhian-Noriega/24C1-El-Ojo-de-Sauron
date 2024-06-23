@@ -88,11 +88,7 @@ impl Server {
     }
 
     /// Handles a new connection by checking if it is a valid packet
-    pub fn handle_new_connection(
-        &self,
-        mut stream: TcpStream,
-        key: &[u8; 32],
-    ) -> ServerResult<()> {
+    pub fn handle_new_connection(&self, mut stream: TcpStream, key: &[u8; 32]) -> ServerResult<()> {
         match Packet::from_bytes(&mut stream, key) {
             Ok(packet) => self.handle_incoming_packet(packet, stream)?,
             Err(err) => {
