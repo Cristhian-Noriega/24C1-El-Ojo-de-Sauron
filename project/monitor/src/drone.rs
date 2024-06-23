@@ -1,5 +1,6 @@
 use common::incident::Incident;
 
+/// Represents a drone in the monitor
 #[derive(Debug, PartialEq, Clone)]
 pub struct Drone {
     pub id: String,
@@ -41,6 +42,7 @@ impl DroneStatus {
 }
 
 impl Drone {
+    /// Creates a new drone
     pub fn new(
         id: String,
         status: DroneStatus,

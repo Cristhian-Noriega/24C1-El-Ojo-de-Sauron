@@ -8,11 +8,12 @@ use std::{
 
 use mqtt::model::{
     components::{
-        encoded_string::EncodedString, qos::QoS, topic_filter::TopicFilter,
+        encoded_string::EncodedString, login::Login, qos::QoS, topic_filter::TopicFilter,
         topic_level::TopicLevel, topic_name::TopicName,
     },
     packet::Packet,
     packets::{connect::Connect, publish::Publish, subscribe::Subscribe, unsubscribe::Unsubscribe},
+    return_codes::connect_return_code::ConnectReturnCode,
 };
 
 use crate::{
@@ -39,15 +40,16 @@ const BATTERY_RECHARGE_INTERVAL: u64 = 1;
 
 const DRONE_ATTENDING_DURATION: u64 = 10;
 
-//let server_stream = connect_to_server(address, client_id)?;
-// let server_stream = Arc::new(Mutex::new(server_stream));
-
-// let drone = Arc::new(Mutex::new(Drone::new(client_id.to_string())));
-
+/// Runs the client with the specified configuration
 pub fn client_run(config: Config) -> std::io::Result<()> {
     let address = config.get_address().to_owned();
 
-    let server_stream = connect_to_server(&address, config.get_id())?;
+    let server_stream = connect_to_server(
+        &address,
+        config.get_id(),
+        config.get_username(),
+        config.get_password(),
+    )?;
     let server_stream = Arc::new(Mutex::new(server_stream));
 
     let drone = Arc::new(Mutex::new(Drone::new(
@@ -103,6 +105,7 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
     Ok(())
 }
 
+/// Reads incoming packets from the server
 fn read_incoming_packets(stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<Drone>>) {
     loop {
         let mut buffer = [0; 1024];
@@ -146,6 +149,7 @@ fn read_incoming_packets(stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<Drone>>
     }
 }
 
+/// Handles the incoming publish packet
 fn handle_publish(
     publish: Publish,
     drone: Arc<Mutex<Drone>>,
@@ -185,6 +189,7 @@ fn handle_publish(
     }
 }
 
+/// Handles a new incident
 fn handle_new_incident(
     incident: Incident,
     drone: Arc<Mutex<Drone>>,
@@ -261,6 +266,7 @@ fn handle_new_incident(
     });
 }
 
+/// Starts the travel to the new incident
 fn travel_to_new_incident(
     drone: Arc<Mutex<Drone>>,
     server_stream: Arc<Mutex<TcpStream>>,
@@ -332,6 +338,7 @@ fn travel_to_new_incident(
     drop(locked_stream);
 }
 
+/// Handles the attending incident
 fn handle_attending_incident(
     uuid: String,
     drone: Arc<Mutex<Drone>>,
@@ -352,12 +359,12 @@ fn handle_attending_incident(
     }
 
     drone_locked.increment_attending_counter();
-    
+
     println!(
         "A VER CUANTOS DRON COUNT? : {}",
         drone_locked.attending_counter()
     );
-    
+
     if drone_locked.attending_counter() < 2 {
         drop(drone_locked);
         return;
@@ -430,10 +437,14 @@ fn handle_attending_incident(
     drop(drone_locked);
 }
 
+/// Simulates the incident resolution
 fn simulate_incident_resolution(uuid: String, server_stream: Arc<Mutex<TcpStream>>) {
     let duration_incident = Duration::from_secs(DRONE_ATTENDING_DURATION);
-    
-    println!("Incident will be resolved in {} seconds", DRONE_ATTENDING_DURATION);
+
+    println!(
+        "Incident will be resolved in {} seconds",
+        DRONE_ATTENDING_DURATION
+    );
 
     thread::sleep(duration_incident);
 
@@ -466,6 +477,7 @@ fn simulate_incident_resolution(uuid: String, server_stream: Arc<Mutex<TcpStream
     drop(locked_stream);
 }
 
+/// Handles the closing of an incident
 fn handle_close_incident(
     closing_incident_uuid: String,
     drone: Arc<Mutex<Drone>>,
@@ -542,6 +554,7 @@ fn handle_close_incident(
     drop(locked_drone);
 }
 
+/// Updates the drone status
 fn update_drone_status(server_stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<Drone>>) {
     loop {
         let drone = match drone.lock() {
@@ -568,7 +581,7 @@ fn update_drone_status(server_stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<Dr
         };
 
         match publish(topic_name, message, &mut stream, QoS::AtMost) {
-            Ok(_) => {},
+            Ok(_) => {}
             Err(e) => eprintln!("Error: {:?}", e),
         }
 
@@ -578,32 +591,43 @@ fn update_drone_status(server_stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<Dr
     }
 }
 
-fn connect_to_server(address: &str, id: u8) -> std::io::Result<TcpStream> {
+/// Connects to the server with the specified address
+fn connect_to_server(
+    address: &str,
+    id: u8,
+    username: &str,
+    password: &str,
+) -> std::io::Result<TcpStream> {
+    
     println!("\nConnecting to address: {:?}", address);
     let mut to_server_stream = TcpStream::connect(address)?;
 
     let client_id_bytes: Vec<u8> = id.to_string().into_bytes();
-    //let client_id_bytes: Vec<u8> = b"drone".to_vec();
+
     let client_id = EncodedString::new(client_id_bytes);
     let will = None;
-    let login = None; // TODO: Add login
+
+    let username = EncodedString::from_string(&username.to_string());
+    let password = Some(EncodedString::from_string(&password.to_string()));
+
+    let login = Some(Login::new(username, password));
     let connect = Connect::new(false, 0, client_id, will, login);
 
     let _ = to_server_stream.write(connect.to_bytes().as_slice());
 
     match Packet::from_bytes(&mut to_server_stream) {
-        Ok(Packet::Connack(connack)) => {
-            println!(
-                "Received Connack packet with return code: {:?} and sessionPresent: {:?}\n",
-                connack.connect_return_code(),
-                connack.session_present()
-            );
-            Ok(to_server_stream)
-        }
+        Ok(Packet::Connack(connack)) => match connack.connect_return_code() {
+            ConnectReturnCode::ConnectionAccepted => Ok(to_server_stream),
+            _ => Err(std::io::Error::new(
+                ErrorKind::Other,
+                format!("Connection refused: {:?}", connack.connect_return_code()),
+            )),
+        },
         _ => Err(std::io::Error::new(ErrorKind::Other, "No connack recibed")),
     }
 }
 
+/// Subscribes to the specified topic filter
 fn subscribe(
     filter: TopicFilter,
     server_stream: &mut MutexGuard<TcpStream>,
@@ -627,6 +651,7 @@ fn subscribe(
     }
 }
 
+/// Unsubscribes from the specified topic filter
 fn unsubscribe(
     filter: TopicFilter,
     server_stream: &mut MutexGuard<TcpStream>,
@@ -650,6 +675,7 @@ fn unsubscribe(
     }
 }
 
+/// Publishes the specified message to the server
 fn publish(
     topic_name: TopicName,
     message: Vec<u8>,
@@ -693,6 +719,7 @@ fn publish(
     }
 }
 
+/// Travels to the specified location
 fn travel(drone: Arc<Mutex<Drone>>, x: f64, y: f64, travel_location: TravelLocation) {
     println!("Traveling to ({}, {})", x, y);
     let mut locked_drone = match drone.lock() {
@@ -728,6 +755,7 @@ fn travel(drone: Arc<Mutex<Drone>>, x: f64, y: f64, travel_location: TravelLocat
     }
 }
 
+/// Discharges the battery of the drone
 fn discharge_battery(drone: Arc<Mutex<Drone>>) {
     loop {
         let mut locked_drone = match drone.lock() {
@@ -745,6 +773,7 @@ fn discharge_battery(drone: Arc<Mutex<Drone>>) {
     }
 }
 
+/// Recharges the battery of the drone
 fn recharge_battery(drone: Arc<Mutex<Drone>>) {
     loop {
         let locked_drone = match drone.lock() {

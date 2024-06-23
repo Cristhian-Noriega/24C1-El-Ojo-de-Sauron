@@ -1,6 +1,7 @@
 use super::{DEFAULT_VARIABLE_HEADER_LENGTH, RESERVED_FIXED_HEADER_FLAGS, SUBACK_PACKET_TYPE};
 use crate::{Error, FixedHeader, Read, RemainingLength, SubackReturnCode};
 
+/// Represents a SUBACK packet of MQTT. The server uses it to confirm the subscription to one or more topics.
 #[derive(Debug)]
 pub struct Suback {
     packet_identifier: u16,
@@ -15,6 +16,7 @@ impl Suback {
         }
     }
 
+    /// Converts a stream of bytes into a Suback.
     pub fn from_bytes(fixed_header: FixedHeader, stream: &mut dyn Read) -> Result<Self, Error> {
         // Fixed Header
         let fixed_header_flags = fixed_header.first_byte() & 0b0000_1111;
@@ -46,6 +48,8 @@ impl Suback {
         Ok(Suback::new(packet_identifier, return_codes))
     }
 
+
+    /// Converts the Suback into a vector of bytes.
     pub fn to_bytes(&self) -> Vec<u8> {
         // Variable Header
         let mut variable_header_bytes = self.packet_identifier.to_be_bytes().to_vec();
@@ -70,10 +74,12 @@ impl Suback {
         packet_bytes
     }
 
+    /// Returns the packet identifier.
     pub fn packet_identifier(&self) -> u16 {
         self.packet_identifier
     }
 
+    /// Returns the Suback return codes.
     pub fn suback_return_codes(&self) -> &Vec<SubackReturnCode> {
         &self.suback_return_codes
     }

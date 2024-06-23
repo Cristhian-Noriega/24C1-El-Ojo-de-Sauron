@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 #![allow(unused_variables)]
 
 use std::fmt;
@@ -9,36 +8,28 @@ use std::sync::{Arc, Mutex};
 
 use mqtt::model::components::topic_filter::TopicFilter;
 use mqtt::model::components::topic_name::TopicName;
+use mqtt::model::packets::publish::Publish;
 
-use crate::task_handler::Message;
-
-// represents the state of the client in the server
+/// Represents the state of the client in the server
 #[derive(Debug)]
 pub struct Client {
     pub id: Vec<u8>,
-    pub password: String,
     pub subscriptions: Vec<TopicFilter>,
     pub alive: AtomicBool,
     pub stream: Arc<Mutex<TcpStream>>, // ARC MUTEX TCP STREAM
 }
 
 impl Client {
-    pub fn new(
-        id: Vec<u8>,
-        password: String,
-        stream: TcpStream,
-        clean_session: bool,
-        keep_alive: u16,
-    ) -> Client {
+    pub fn new(id: Vec<u8>, stream: TcpStream, clean_session: bool, keep_alive: u16) -> Client {
         Client {
             id,
-            password,
             subscriptions: Vec::new(),
             alive: AtomicBool::new(true),
             stream: Arc::new(Mutex::new(stream)),
         }
     }
 
+    /// Subscribes the client to a topic
     pub fn add_subscription(&mut self, topic: TopicFilter) {
         let client_id = String::from_utf8(self.id.clone()).unwrap();
         println!(
@@ -49,6 +40,7 @@ impl Client {
         self.subscriptions.push(topic);
     }
 
+    /// Unsubscribes the client from a topic
     pub fn remove_subscription(&mut self, topic: &TopicFilter) {
         let client_id = String::from_utf8(self.id.clone()).unwrap();
         println!(
@@ -59,23 +51,30 @@ impl Client {
         self.subscriptions.retain(|t| t != topic);
     }
 
+    /// Checks if the client is subscribed to a topic
     pub fn is_subscribed(&self, topic: &TopicName) -> bool {
         self.subscriptions
             .iter()
             .any(|t| t.match_topic_name(topic.clone()))
     }
 
-    pub fn send_message(&self, message: Message, logfile: &Arc<crate::logfile::Logger>) {
-        let message_str = std::str::from_utf8(message.packet().message()).unwrap();
+    /// Sends a message to the client
+    pub fn send_message(&self, publish_packet: Publish, logfile: &Arc<crate::logfile::Logger>) {
+        let message_str = std::str::from_utf8(publish_packet.message()).unwrap();
         let client_id_str = std::str::from_utf8(&self.id).unwrap();
 
         let mut stream = self.stream.lock().unwrap();
-        match stream.write_all(message.packet().to_bytes().as_slice()) {
+        match stream.write_all(publish_packet.to_bytes().as_slice()) {
             Ok(_) => {
                 logfile.log_sent_message(message_str, client_id_str);
             }
             Err(e) => logfile.log_sending_message_error(message_str, client_id_str),
         }
+    }
+
+    /// Gets the id of the client
+    pub fn id(&self) -> Vec<u8> {
+        self.id.clone()
     }
 }
 
@@ -91,9 +90,8 @@ impl fmt::Display for Client {
 
         write!(
             f,
-            "Client ID: {}\nPassword: {}\nSubscriptions: {}\nAlive: {}",
+            "Client ID: {}\nSubscriptions: {}\nAlive: {}",
             id,
-            self.password,
             subscriptions,
             self.alive.load(Ordering::Relaxed)
         )

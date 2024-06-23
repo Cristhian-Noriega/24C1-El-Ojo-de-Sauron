@@ -1,3 +1,4 @@
+/// Represents the status of a drone
 #[derive(Debug, Clone, PartialEq)]
 pub enum DroneStatus {
     Free,
@@ -6,6 +7,7 @@ pub enum DroneStatus {
     Recharging,
 }
 
+/// Represents the location of the drone when travelling
 #[derive(Debug, Clone, PartialEq, Copy)]
 pub enum TravelLocation {
     Central,

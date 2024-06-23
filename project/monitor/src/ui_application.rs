@@ -1,6 +1,6 @@
 use crate::{
     camera::Camera,
-    channels_tasks::{DroneRegistration, IncidentRegistration, MonitorAction, UIAction},
+    channels_tasks::{DroneRegistration, IncidentRegistration, IncidentEdit, MonitorAction, UIAction},
     drone::{Drone, DroneStatus},
 };
 use common::incident::{Incident, IncidentStatus};
@@ -17,19 +17,23 @@ use walkers::{
 const DEFAULT_LONGITUDE: f64 = -58.372170426210836;
 const DEFAULT_LATITUDE: f64 = -34.60840997593428;
 
+/// Represents the layout of the UI
 #[derive(PartialEq)]
 enum Layout {
     IncidentMap,
     IncidentList,
     NewIncident,
+    EditIncident,
     DroneList,
     NewDrone,
     CameraList,
 }
 
+/// Represents the UI application
 pub struct UIApplication {
     new_incident_registration: IncidentRegistration,
     new_drone_registration: DroneRegistration,
+    new_incident_edit: IncidentEdit,
 
     //connection_status: bool,
     current_layout: Layout,
@@ -94,6 +98,7 @@ impl RightClickMenu {
 }
 
 impl UIApplication {
+    /// Creates a new UI application
     pub fn new(
         egui_ctx: Context,
         sender: Sender<UIAction>,
@@ -185,7 +190,14 @@ impl UIApplication {
 
             new_drone_registration: DroneRegistration {
                 id: String::new(),
+                username: String::new(),
                 password: String::new(),
+            },
+
+            new_incident_edit: IncidentEdit {
+                uuid: String::new(),
+                name: String::new(),
+                description: String::new(),
             },
 
             //connection_status: false,
@@ -195,14 +207,15 @@ impl UIApplication {
 
             sender,
             receiver,
-            drones: vec![drone1, drone2, drone3, drone4],
-            incidents: vec![incident1, incident2, incident3],
-            cameras: vec![camera1, camera2],
+            drones: vec![],
+            incidents: vec![],
+            cameras: vec![],
             right_click_menu: RightClickMenu::default(),
         }
     }
 }
 
+/// Updates the drones in the UI
 fn update_drones(drones: &mut Vec<Drone>, drone: Drone) {
     for d in drones.iter_mut() {
         if d.id == drone.id {
@@ -214,6 +227,7 @@ fn update_drones(drones: &mut Vec<Drone>, drone: Drone) {
     drones.push(drone);
 }
 
+/// Updates the incidents in the UI
 fn update_incidents(incidents: &mut Vec<Incident>, incident: Incident) {
     for i in incidents.iter_mut() {
         if i.uuid == incident.uuid {
@@ -225,6 +239,7 @@ fn update_incidents(incidents: &mut Vec<Incident>, incident: Incident) {
     incidents.push(incident);
 }
 
+/// Updates the cameras in the UI
 fn update_cameras(cameras: &mut Vec<Camera>, camera: Camera) {
     for c in cameras.iter_mut() {
         if c.id == camera.id {
@@ -236,6 +251,7 @@ fn update_cameras(cameras: &mut Vec<Camera>, camera: Camera) {
     cameras.push(camera);
 }
 
+/// Handles the right clicks in the map to open the incident registration menu with coordenates selected
 fn handle_right_clicks
 (
     ui: &mut Ui, 
@@ -290,6 +306,7 @@ fn handle_right_clicks
     }
 }
 
+/// Displays the incident map
 fn display_incident_map(
     ui: &mut egui::Ui,
     incidents: &Vec<Incident>,
@@ -315,6 +332,7 @@ fn display_incident_map(
     handle_right_clicks(ui, response, right_click_menu, map_memory, new_incident_registration, sender, layout);
 }
 
+/// Displays the form to create a new incident
 fn display_new_incident(
     ui: &mut egui::Ui,
     new_incident: &mut IncidentRegistration,
@@ -348,7 +366,43 @@ fn display_new_incident(
     });
 }
 
-fn display_incident_list(ui: &mut egui::Ui, incidents: &[Incident], sender: &Sender<UIAction>) {
+/// Displays the form to edit a incident
+fn display_edit_incident(
+    ui: &mut egui::Ui,
+    edit_incident: &mut IncidentEdit,
+    sender: &Sender<UIAction>,
+) {
+    ui.horizontal(|ui| {
+        ui.label("UUID:");
+        ui.add_space(38.0);
+        ui.text_edit_singleline(&mut edit_incident.uuid);
+    });
+    ui.add_space(5.0);
+    ui.horizontal(|ui| {
+        ui.label("New name:");
+        ui.add_space(38.0);
+        ui.text_edit_singleline(&mut edit_incident.name);
+    });
+    ui.add_space(5.0);
+    ui.horizontal(|ui| {
+        ui.label("New description:");
+        ui.add_space(8.0);
+        ui.text_edit_multiline(&mut edit_incident.description);
+    });
+    ui.add_space(5.0);
+
+    ui.add_space(20.0);
+    ui.vertical_centered(|ui| {
+        if ui.button("Edit").clicked() {
+            sender
+                .send(UIAction::EditIncident(edit_incident.clone()))
+                .unwrap();
+        }
+    });
+}
+
+/// Displays the incident list
+fn display_incident_list(ui: &mut egui::Ui, incidents: &[Incident], sender: &Sender<UIAction>, new_incident_edit: &mut IncidentEdit, current_layout: &mut Layout) {
     TableBuilder::new(ui)
         .striped(true)
         .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
@@ -409,8 +463,11 @@ fn display_incident_list(ui: &mut egui::Ui, incidents: &[Incident], sender: &Sen
                                     .send(UIAction::ResolveIncident(incident.clone()))
                                     .unwrap();
                             }
-                        } else {
-                            ui.label("Resolve");
+                        } else if ui.button("Edit").clicked() {
+                            new_incident_edit.uuid.clone_from(&incident.uuid);
+                            new_incident_edit.name.clone_from(&incident.name);
+                            new_incident_edit.description.clone_from(&incident.description);
+                            *current_layout = Layout::EditIncident;
                         }
                     });
                 });
@@ -418,6 +475,7 @@ fn display_incident_list(ui: &mut egui::Ui, incidents: &[Incident], sender: &Sen
         });
 }
 
+/// Displays the form to register a new drone
 fn display_new_drone(
     ui: &mut egui::Ui,
     drone_registration: &mut DroneRegistration,
@@ -435,6 +493,15 @@ fn display_new_drone(
 
         ui.add_space(10.0);
         ui.horizontal(|ui| {
+            ui.label("Username:");
+            ui.add_space(17.0);
+            ui.add(
+                egui::TextEdit::singleline(&mut drone_registration.username).desired_width(340.0),
+            );
+        });
+
+        ui.add_space(10.0);
+        ui.horizontal(|ui| {
             ui.label("Password:");
             ui.add_space(20.0);
             ui.add(
@@ -444,19 +511,6 @@ fn display_new_drone(
 
         ui.add_space(10.0);
         ui.horizontal(|ui| {
-            // ui.label("Anchor Point Coordinates:");
-
-            // ui.add_space(10.0);
-            // ui.label("x:");
-            // ui.add(
-            //     egui::TextEdit::singleline(&mut drone_registration.anchor_x).desired_width(100.0),
-            // );
-
-            // ui.add_space(10.0);
-            // ui.label("y:");
-            // ui.add(
-            //     egui::TextEdit::singleline(&mut drone_registration.anchor_y).desired_width(100.0),
-            // );
             ui.add_space(263.0);
             if ui.button("Register").clicked() {
                 sender
@@ -469,6 +523,7 @@ fn display_new_drone(
     ui.add_space(20.0);
 }
 
+/// Displays the drone list
 fn display_drone_list(ui: &mut egui::Ui, drones: &[Drone]) {
     egui::Frame::group(ui.style()).show(ui, |ui| {
         ui.label("Active Drones:");
@@ -514,6 +569,7 @@ fn display_drone_list(ui: &mut egui::Ui, drones: &[Drone]) {
     });
 }
 
+/// Displays the camera list
 fn display_camera_list(ui: &mut egui::Ui, cameras: &[Camera]) {
     egui::Frame::group(ui.style()).show(ui, |ui| {
         ui.label("Camera List");
@@ -553,6 +609,7 @@ fn display_camera_list(ui: &mut egui::Ui, cameras: &[Camera]) {
     });
 }
 
+/// Displays the header of the UI
 fn display_header(
     ui: &mut egui::Ui,
     current_layout: &mut Layout,
@@ -583,6 +640,7 @@ fn display_header(
         ui.selectable_value(current_layout, Layout::IncidentMap, "Map");
         ui.selectable_value(current_layout, Layout::IncidentList, "Incident List");
         ui.selectable_value(current_layout, Layout::NewIncident, "Create incident");
+        ui.selectable_value(current_layout, Layout::EditIncident, "Edit incident");
         ui.selectable_value(current_layout, Layout::DroneList, "Drone List");
         ui.selectable_value(current_layout, Layout::NewDrone, "Register Drone");
         ui.selectable_value(current_layout, Layout::CameraList, "Camera List");
@@ -638,7 +696,10 @@ impl eframe::App for UIApplication {
                 Layout::NewIncident => {
                     display_new_incident(ui, &mut self.new_incident_registration, &self.sender)
                 }
-                Layout::IncidentList => display_incident_list(ui, &self.incidents, &self.sender),
+                Layout::EditIncident => {
+                    display_edit_incident(ui, &mut self.new_incident_edit, &self.sender)
+                }
+                Layout::IncidentList => display_incident_list(ui, &self.incidents, &self.sender, &mut self.new_incident_edit, &mut self.current_layout),
                 Layout::DroneList => display_drone_list(ui, &self.drones),
                 Layout::NewDrone => {
                     display_new_drone(ui, &mut self.new_drone_registration, &self.sender)
@@ -649,6 +710,7 @@ impl eframe::App for UIApplication {
     }
 }
 
+/// Updates the places in the map
 fn update_places(incidents: &Vec<Incident>, drones: &Vec<Drone>, cameras: &Vec<Camera>) -> Places {
     let mut places = vec![];
 

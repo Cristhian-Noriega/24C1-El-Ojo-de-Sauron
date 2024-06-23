@@ -1,3 +1,4 @@
+/// The different statuses a camera can have.
 #[derive(Clone, Copy, Debug)]
 pub enum CameraStatus {
     Active,
