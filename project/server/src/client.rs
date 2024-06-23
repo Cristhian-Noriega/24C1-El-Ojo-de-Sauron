@@ -11,6 +11,7 @@ use mqtt::model::components::topic_name::TopicName;
 use mqtt::model::packets::publish::Publish;
 
 /// Represents the state of the client in the server
+/// The client is identified by its id and has a list of subscriptions of topics
 #[derive(Debug)]
 pub struct Client {
     pub id: Vec<u8>,
@@ -29,7 +30,7 @@ impl Client {
         }
     }
 
-    /// Subscribes the client to a topic
+    /// Subscribes the client to a topic 
     pub fn add_subscription(&mut self, topic: TopicFilter) {
         let client_id = String::from_utf8(self.id.clone()).unwrap();
         println!(

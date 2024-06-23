@@ -2,25 +2,25 @@ use common::incident::Incident;
 
 use crate::camera_status::CameraStatus;
 
-const ACTIVE_RANGE: f64 = 10.0;
-
 /// Represents a camera in the camera system
 #[derive(Clone, Copy, Debug)]
 pub struct Camera {
     id: u8,
     x_coordinate: f64,
     y_coordinate: f64,
+    active_range: f64,
     status: CameraStatus,
     active_incidents: usize,
 }
 
 impl Camera {
     /// Creates a new camera
-    pub fn new(id: u8, x_coordinate: f64, y_coordinate: f64) -> Self {
+    pub fn new(id: u8, x_coordinate: f64, y_coordinate: f64, active_range: f64) -> Self {
         Camera {
             id,
             x_coordinate,
             y_coordinate,
+            active_range,
             status: CameraStatus::Sleep,
             active_incidents: 0,
         }
@@ -69,7 +69,7 @@ impl Camera {
             incident.y_coordinate,
         );
 
-        distance < ACTIVE_RANGE
+        distance < self.active_range
     }
 }
 

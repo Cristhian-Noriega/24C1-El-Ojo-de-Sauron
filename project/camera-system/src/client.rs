@@ -24,26 +24,23 @@ const CAMERA_DATA: &[u8] = b"camera-data";
 
 /// Runs the client
 pub fn client_run(config: Config) -> std::io::Result<()> {
-    let address = config.get_address().to_owned();
-    let username = config.get_username().to_owned();
-    let password = config.get_password().to_owned();
-    let key = config.get_key().to_owned();
+    let key = config.get_key();
+    let active_range = config.get_active_range();
 
-    let mut server_stream = connect_to_server(&address, &username, &password, &key)?;
-
+    let mut server_stream = connect_to_server(&config.clone())?;
     let mut camera_system = CameraSystem::new();
 
-    // TODO: camaras reales
     for (i, camera) in config.get_cameras().iter().enumerate() {
         let camara = Camera::new(
             i as u8,
             camera.x_coordinate.to_owned(),
             camera.y_coordinate.to_owned(),
+            active_range,
         );
         camera_system.add_camera(camara);
     }
 
-    publish_camera_state(&mut camera_system, &mut server_stream, &key)?;
+    publish_camera_state(&mut camera_system, &mut server_stream, key)?;
 
     let new_incident = TopicFilter::new(vec![TopicLevel::Literal(NEW_INCIDENT.to_vec())], false);
     let close_incident = TopicFilter::new(
@@ -54,10 +51,10 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
         false,
     );
     let topics = vec![new_incident, close_incident];
-    subscribe(topics, &mut server_stream, &key)?;
+    subscribe(topics, &mut server_stream, key)?;
 
     loop {
-        let incoming_publish = match Packet::from_bytes(&mut server_stream, &key) {
+        let incoming_publish = match Packet::from_bytes(&mut server_stream, key) {
             Ok(Packet::Publish(publish)) => publish,
             _ => {
                 return Err(std::io::Error::new(
@@ -74,14 +71,14 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
                 incoming_publish,
                 &mut camera_system,
                 &mut server_stream,
-                &key,
+                key,
             )?;
         } else if topic_levels.len() == 2 && topic_levels[0] == CLOSE_INCIDENT {
             handle_close_incident(
                 incoming_publish,
                 &mut camera_system,
                 &mut server_stream,
-                &key,
+                key,
             )?;
         }
     }
@@ -101,13 +98,7 @@ fn subscribe(
 
     let packet_id = 1;
 
-    // let topics_filters = vec![(filter, qos)];
-
     let subscribe_packet = Subscribe::new(packet_id, topics_filters);
-    println!(
-        "Subscribe packet: {:?}",
-        subscribe_packet.to_bytes(key).as_slice()
-    );
     let _ = server_stream.write(subscribe_packet.to_bytes(key).as_slice());
 
     match Packet::from_bytes(server_stream, key) {
@@ -153,16 +144,17 @@ fn publish(
 }
 
 /// Connects to the server
-fn connect_to_server(
-    address: &str,
-    username: &str,
-    password: &str,
-    key: &[u8; 32],
-) -> std::io::Result<TcpStream> {
+fn connect_to_server(config: &Config) -> std::io::Result<TcpStream> {
+    let address = config.get_address().to_owned();
+    let id = config.get_id().to_owned();
+    let username = config.get_username().to_owned();
+    let password = config.get_password().to_owned();
+    let key = config.get_key().to_owned();
+
     println!("\nConnecting to address: {:?}", address);
     let mut to_server_stream = TcpStream::connect(address)?;
 
-    let client_id_bytes: Vec<u8> = b"camera-system".to_vec();
+    let client_id_bytes: Vec<u8> = id.as_bytes().to_vec();
     let client_id = EncodedString::new(client_id_bytes);
     let will = None;
 
@@ -172,9 +164,9 @@ fn connect_to_server(
 
     let connect = Connect::new(false, 0, client_id, will, login);
 
-    let _ = to_server_stream.write(connect.to_bytes(key).as_slice());
+    let _ = to_server_stream.write(connect.to_bytes(&key).as_slice());
 
-    match Packet::from_bytes(&mut to_server_stream, key) {
+    match Packet::from_bytes(&mut to_server_stream, &key) {
         Ok(Packet::Connack(connack)) => match connack.connect_return_code() {
             ConnectReturnCode::ConnectionAccepted => Ok(to_server_stream),
             _ => Err(std::io::Error::new(
@@ -197,11 +189,6 @@ fn publish_camera_state(
 
     publish(topic_name, cameras_data, server_stream, key)
 }
-
-// new-incident
-//      activar las camaras correspondientes
-//      publicar el estado actualizado de la camaras
-//      subscribe to close-incident/uuid
 
 /// Handles a new incident
 fn handle_new_incident(
@@ -228,11 +215,6 @@ fn handle_new_incident(
     publish_camera_state(camera_system, server_stream, key)?;
     Ok(())
 }
-
-// close-incident/uuid
-//      pasar a Sleep las camaras correspondientes
-//      publicar el estado actualizado de las camaras
-//      unsubscribe from close-incident/uuid
 
 /// Handles the closing of an incident
 fn handle_close_incident(

@@ -7,6 +7,7 @@ use std::{fs, path::Path};
 pub struct Config {
     address: String,
     key: [u8; 32],
+    id: String,
     username: String,
     password: String,
 }
@@ -19,6 +20,7 @@ impl Config {
         let mut config = Config {
             address: String::new(),
             key: [0; 32],
+            id: String::new(),
             username: String::new(),
             password: String::new(),
         };
@@ -42,6 +44,7 @@ impl Config {
                         }
                         config.key = key;
                     }
+                    "id" => config.id = parts[1].trim_matches('"').to_string(),
                     "username" => config.username = parts[1].trim_matches('"').to_string(),
                     "password" => config.password = parts[1].trim_matches('"').to_string(),
                     _ => {}
@@ -60,6 +63,11 @@ impl Config {
     /// Returns the key of the encryption
     pub fn get_key(&self) -> &[u8; 32] {
         &self.key
+    }
+
+    /// Returns the client id of the server
+    pub fn get_id(&self) -> &str {
+        &self.id
     }
 
     /// Returns the username of the monitor

@@ -74,13 +74,14 @@ pub fn client_run(config: Config) -> Result<(), String> {
 fn connect_to_server(config: Config) -> std::io::Result<TcpStream> {
     let address = config.get_address();
     let key = config.get_key();
+    let client_id = config.get_id();
     let username = config.get_username();
     let password = config.get_password();
 
     println!("\nConnecting to address: {:?}", address);
     let mut to_server_stream = TcpStream::connect(address)?;
 
-    let client_id_bytes: Vec<u8> = b"admin".to_vec();
+    let client_id_bytes = client_id.as_bytes().to_vec();
     let client_id = EncodedString::new(client_id_bytes);
     let will = None;
 
