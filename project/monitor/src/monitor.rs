@@ -45,7 +45,12 @@ impl Monitor {
     }
 
     /// Changes the name and description of an incident
-    pub fn edit_incident(&mut self, incident_uuid: String, name: String, description: String) -> Option<Incident> {
+    pub fn edit_incident(
+        &mut self,
+        incident_uuid: String,
+        name: String,
+        description: String,
+    ) -> Option<Incident> {
         if let Some(incident) = self.incidents.get_mut(&incident_uuid) {
             incident.name = name;
             incident.description = description;

@@ -1,6 +1,8 @@
 use crate::{
     camera::Camera,
-    channels_tasks::{DroneRegistration, IncidentRegistration, IncidentEdit, MonitorAction, UIAction},
+    channels_tasks::{
+        DroneRegistration, IncidentEdit, IncidentRegistration, MonitorAction, UIAction,
+    },
     drone::Drone,
 };
 use common::incident::{Incident, IncidentStatus};
@@ -217,7 +219,13 @@ fn display_edit_incident(
 }
 
 /// Displays the incident list
-fn display_incident_list(ui: &mut egui::Ui, incidents: &[Incident], sender: &Sender<UIAction>, new_incident_edit: &mut IncidentEdit, current_layout: &mut Layout) {
+fn display_incident_list(
+    ui: &mut egui::Ui,
+    incidents: &[Incident],
+    sender: &Sender<UIAction>,
+    new_incident_edit: &mut IncidentEdit,
+    current_layout: &mut Layout,
+) {
     TableBuilder::new(ui)
         .striped(true)
         .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
@@ -281,7 +289,9 @@ fn display_incident_list(ui: &mut egui::Ui, incidents: &[Incident], sender: &Sen
                         } else if ui.button("Edit").clicked() {
                             new_incident_edit.uuid.clone_from(&incident.uuid);
                             new_incident_edit.name.clone_from(&incident.name);
-                            new_incident_edit.description.clone_from(&incident.description);
+                            new_incident_edit
+                                .description
+                                .clone_from(&incident.description);
                             *current_layout = Layout::EditIncident;
                         }
                     });
@@ -510,7 +520,13 @@ impl eframe::App for UIApplication {
                 Layout::EditIncident => {
                     display_edit_incident(ui, &mut self.new_incident_edit, &self.sender)
                 }
-                Layout::IncidentList => display_incident_list(ui, &self.incidents, &self.sender, &mut self.new_incident_edit, &mut self.current_layout),
+                Layout::IncidentList => display_incident_list(
+                    ui,
+                    &self.incidents,
+                    &self.sender,
+                    &mut self.new_incident_edit,
+                    &mut self.current_layout,
+                ),
                 Layout::DroneList => display_drone_list(ui, &self.drones),
                 Layout::NewDrone => {
                     display_new_drone(ui, &mut self.new_drone_registration, &self.sender)
