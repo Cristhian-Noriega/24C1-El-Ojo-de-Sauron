@@ -1,5 +1,3 @@
-// #![allow(unused_variables)]
-
 use std::{
     net::{TcpListener, TcpStream},
     sync::{
@@ -18,6 +16,7 @@ use crate::{client::Client, client_manager::ClientManager};
 
 use super::{
     config::Config,
+    error::{ServerError, ServerResult},
     logfile::Logger,
     task_handler::{Task, TaskHandler},
 };
@@ -36,7 +35,9 @@ pub struct Server {
 
 impl Server {
     /// Creates a new server with the specified configuration
-    pub fn new(config: Config) -> Self {
+    /// Set up the client manager and the task handler thread
+    /// Returns a ServerResult with the server if successful
+    pub fn new(config: Config) -> ServerResult<Self> {
         let (client_actions_sender, client_actions_receiver) = mpsc::channel();
 
         let log_file = Arc::new(Logger::new(config.get_log_file()));
@@ -52,16 +53,16 @@ impl Server {
 
         task_handler.initialize_task_handler_thread();
 
-        Server {
+        Ok(Server {
             config,
             client_actions_sender,
             log_file,
             client_manager,
-        }
+        })
     }
 
     /// Starts the server
-    pub fn server_run(&self) -> std::io::Result<()> {
+    pub fn server_run(&self) -> ServerResult<()> {
         let address = self.config.get_address();
         let key = self.config.get_key();
 
@@ -86,41 +87,45 @@ impl Server {
     }
 
     /// Handles a new connection by checking if it is a valid packet
-    pub fn handle_new_connection(
-        &self,
-        mut stream: TcpStream,
-        key: &[u8; 32],
-    ) -> std::io::Result<()> {
+    pub fn handle_new_connection(&self, mut stream: TcpStream, key: &[u8; 32]) -> ServerResult<()> {
         match Packet::from_bytes(&mut stream, key) {
-            Ok(packet) => self.handle_incoming_packet(packet, stream),
+            Ok(packet) => self.handle_incoming_packet(packet, stream)?,
             Err(err) => {
                 self.log_file
                     .error(&format!("Error reading packet: {:?}", err));
-                return Ok(());
             }
         }
         Ok(())
     }
 
     /// Handles an incoming packet from a connection. If it is a Connect packet, it will create a new client. Otherwise, it will log an error.
-    pub fn handle_incoming_packet(&self, packet: Packet, stream: TcpStream) {
+    pub fn handle_incoming_packet(&self, packet: Packet, stream: TcpStream) -> ServerResult<()> {
         match packet {
             Packet::Connect(connect_packet) => self.connect_new_client(connect_packet, stream),
-            _ => self.log_file.error("Received an unsupported packet type"),
+            _ => {
+                self.log_file.error("Received an unsupported packet type");
+                Err(ServerError::UnsupportedPacket)
+            }
         }
     }
 
     /// Establishes a new connection with a client by creating a new client and a new thread for it
-    pub fn connect_new_client(&self, connect_packet: Connect, stream: TcpStream) {
+    pub fn connect_new_client(
+        &self,
+        connect_packet: Connect,
+        stream: TcpStream,
+    ) -> ServerResult<()> {
         let message = format!(
             "Received Connect Packet from client with ID: {}",
             connect_packet.client_id()
         );
         self.log_file.info(&message);
 
-        let client_manager = self.client_manager.read().unwrap();
+        let client_manager = self.client_manager.read().map_err(|_| {
+            ServerError::ClientConnection("Failed to acquire read lock".to_string())
+        })?;
 
-        let stream_clone = stream.try_clone().unwrap();
+        let stream_clone = stream.try_clone()?;
 
         match client_manager.process_connect_packet(
             connect_packet,
@@ -131,7 +136,7 @@ impl Server {
                 self.log_file.info("Client connected successfully");
 
                 let client_id = new_client.id();
-                handle_connect(self.client_actions_sender.clone(), new_client);
+                handle_connect(self.client_actions_sender.clone(), new_client)?;
                 self.create_new_client_thread(
                     self.client_actions_sender.clone(),
                     stream,
@@ -142,7 +147,8 @@ impl Server {
             None => {
                 self.log_file.error("Error connecting client");
             }
-        };
+        }
+        Ok(())
     }
 
     /// Creates a new thread for a client
@@ -197,28 +203,29 @@ pub fn handle_packet(
     match packet {
         Packet::Publish(publish_packet) => {
             log_message("Publish");
-            handle_publish(publish_packet, sender_to_task_channel, client_id)
+            handle_publish(publish_packet, sender_to_task_channel, client_id).unwrap_or(false)
         }
         Packet::Subscribe(subscribe_packet) => {
             log_message("Subscribe");
-            handle_subscribe(subscribe_packet, sender_to_task_channel, client_id)
+            handle_subscribe(subscribe_packet, sender_to_task_channel, client_id).unwrap_or(false)
         }
         Packet::Unsubscribe(unsubscribe_packet) => {
             log_message("Unsubscribe");
             handle_unsubscribe(unsubscribe_packet, sender_to_task_channel, client_id)
+                .unwrap_or(false)
         }
         Packet::Pingreq(_) => {
             log_message("Pingreq");
-            handle_pingreq(sender_to_task_channel, client_id)
+            handle_pingreq(sender_to_task_channel, client_id).unwrap_or(false)
         }
         Packet::Disconnect(_) => {
             log_message("Disconnect");
-            disconnect_client(sender_to_task_channel, client_id)
+            disconnect_client(sender_to_task_channel, client_id).unwrap_or(false)
         }
         _ => {
             log_file.error("Unsupported packet type");
             log_file.info("Disconnecting client");
-            disconnect_client(sender_to_task_channel, client_id);
+            disconnect_client(sender_to_task_channel, client_id).unwrap_or(false);
             false
         }
     }
@@ -228,11 +235,9 @@ pub fn handle_packet(
 pub fn handle_connect(
     sender_to_topics_channel: std::sync::mpsc::Sender<Task>,
     client: Client,
-) -> bool {
-    sender_to_topics_channel
-        .send(Task::ConnectClient(client))
-        .unwrap();
-    true
+) -> ServerResult<bool> {
+    sender_to_topics_channel.send(Task::ConnectClient(client))?;
+    Ok(true)
 }
 
 /// Handles a PUBLISH packet
@@ -240,11 +245,9 @@ pub fn handle_publish(
     publish_packet: Publish,
     sender_to_topics_channel: std::sync::mpsc::Sender<Task>,
     client_id: Vec<u8>,
-) -> bool {
-    sender_to_topics_channel
-        .send(Task::Publish(publish_packet, client_id))
-        .unwrap();
-    true
+) -> ServerResult<bool> {
+    sender_to_topics_channel.send(Task::Publish(publish_packet, client_id))?;
+    Ok(true)
 }
 
 /// Handles a SUBSCRIBE packet
@@ -252,12 +255,10 @@ pub fn handle_subscribe(
     subscribe_packet: Subscribe,
     sender_to_task_channel: std::sync::mpsc::Sender<Task>,
     client_id: Vec<u8>,
-) -> bool {
-    sender_to_task_channel
-        .send(Task::SubscribeClient(subscribe_packet, client_id))
-        .unwrap();
+) -> ServerResult<bool> {
+    sender_to_task_channel.send(Task::SubscribeClient(subscribe_packet, client_id))?;
 
-    true
+    Ok(true)
 }
 
 /// Handles an UNSUBSCRIBE packet
@@ -265,32 +266,26 @@ pub fn handle_unsubscribe(
     unsubscribe_packet: Unsubscribe,
     sender_to_task_channel: std::sync::mpsc::Sender<Task>,
     client_id: Vec<u8>,
-) -> bool {
-    sender_to_task_channel
-        .send(Task::UnsubscribeClient(unsubscribe_packet, client_id))
-        .unwrap();
+) -> ServerResult<bool> {
+    sender_to_task_channel.send(Task::UnsubscribeClient(unsubscribe_packet, client_id))?;
 
-    true
+    Ok(true)
 }
 
 /// Handles a PINGREQ packet
 pub fn handle_pingreq(
     sender_to_task_channel: std::sync::mpsc::Sender<Task>,
     client_id: Vec<u8>,
-) -> bool {
-    sender_to_task_channel
-        .send(Task::RespondPing(client_id))
-        .unwrap();
-    true
+) -> ServerResult<bool> {
+    sender_to_task_channel.send(Task::RespondPing(client_id))?;
+    Ok(true)
 }
 
 /// Handles a DISCONNECT packet
 pub fn disconnect_client(
     sender_to_task_channel: std::sync::mpsc::Sender<Task>,
     client_id: Vec<u8>,
-) -> bool {
-    sender_to_task_channel
-        .send(Task::DisconnectClient(client_id))
-        .unwrap();
-    false
+) -> ServerResult<bool> {
+    sender_to_task_channel.send(Task::DisconnectClient(client_id))?;
+    Ok(false)
 }

@@ -2,8 +2,9 @@
 
 use crate::{
     camera::Camera,
-
-    channels_tasks::{DroneRegistration, IncidentRegistration, IncidentEdit, MonitorAction, UIAction},
+    channels_tasks::{
+        DroneRegistration, IncidentEdit, IncidentRegistration, MonitorAction, UIAction,
+    },
     drone::{Drone, DroneStatus},
 };
 use common::incident::{Incident, IncidentStatus};
@@ -14,7 +15,9 @@ use egui::{Context, Id, Pos2, Response, Ui};
 use egui_extras::{Column, TableBuilder};
 use std::sync::mpsc::{Receiver, Sender};
 use walkers::{
-    extras::{Place, Places, Style}, sources::OpenStreetMap, Map, MapMemory, Position, Projector, Tiles
+    extras::{Place, Places, Style},
+    sources::OpenStreetMap,
+    Map, MapMemory, Position, Projector, Tiles,
 };
 
 const DEFAULT_LONGITUDE: f64 = -58.372170426210836;
@@ -74,10 +77,15 @@ impl RightClickMenu {
         }
     }
 
-    fn update(&mut self, click_location_pixels: Pos2, map_response: Response, map_memory: &MapMemory) -> &mut Self {
+    fn update(
+        &mut self,
+        click_location_pixels: Pos2,
+        map_response: Response,
+        map_memory: &MapMemory,
+    ) -> &mut Self {
         let map_center_position = Position::from_lon_lat(DEFAULT_LONGITUDE, DEFAULT_LATITUDE);
-    
-       // Create a Projector instance
+
+        // Create a Projector instance
         let projector = Projector::new(map_response.interact_rect, map_memory, map_center_position);
 
         let mut click_vec2 = click_location_pixels.to_vec2() - map_response.rect.min.to_vec2();
@@ -89,7 +97,7 @@ impl RightClickMenu {
         let map_coordinates = projector.unproject(click_vec2);
 
         println!("Clicked at map coordinates: {:?}", map_coordinates);
-        
+
         self.open = true;
         self.position = map_coordinates;
         self.x_coordenate = map_coordinates.lon();
@@ -181,8 +189,6 @@ impl UIApplication {
         //     state: "Active".to_string(),
         // };
 
-        
-
         Self {
             new_incident_registration: IncidentRegistration {
                 name: String::new(),
@@ -255,24 +261,20 @@ fn update_cameras(cameras: &mut Vec<Camera>, camera: Camera) {
 }
 
 /// Handles the right clicks in the map to open the incident registration menu with coordenates selected
-fn handle_right_clicks
-(
-    ui: &mut Ui, 
-    response: Response, 
-    right_click_menu: &mut RightClickMenu, 
-    map_memory: &mut MapMemory, 
+fn handle_right_clicks(
+    ui: &mut Ui,
+    response: Response,
+    right_click_menu: &mut RightClickMenu,
+    map_memory: &mut MapMemory,
     new_incident_registration: &mut IncidentRegistration,
     sender: &Sender<UIAction>,
     layout: &mut Layout,
 ) {
-
     ui.ctx().input(|i| {
         if response.hovered() && i.pointer.secondary_clicked() {
             let click_location_pixels = i.pointer.hover_pos().unwrap_or_default();
             right_click_menu.update(click_location_pixels, response, map_memory);
-            
-        }
-        else if response.hovered() && i.pointer.primary_clicked() {
+        } else if response.hovered() && i.pointer.primary_clicked() {
             right_click_menu.open = false;
         }
     });
@@ -283,12 +285,14 @@ fn handle_right_clicks
             .show(ui.ctx(), |ui| {
                 ui.vertical(|ui| {
                     if ui.button("Register New Incident").clicked() {
-
                         new_incident_registration.name = String::new();
                         new_incident_registration.description = String::new();
                         new_incident_registration.x = right_click_menu.x_coordenate.to_string();
                         new_incident_registration.y = right_click_menu.y_coordenate.to_string();
-                        println!("New incident at coordenates: ({}, {})", right_click_menu.x_coordenate, right_click_menu.y_coordenate);
+                        println!(
+                            "New incident at coordenates: ({}, {})",
+                            right_click_menu.x_coordenate, right_click_menu.y_coordenate
+                        );
                         display_new_incident(ui, new_incident_registration, sender);
                         *layout = Layout::NewIncident;
 
@@ -305,7 +309,7 @@ fn handle_right_clicks
                         right_click_menu.open = false; // Close menu
                     }
                 });
-        });
+            });
     }
 }
 
@@ -320,19 +324,26 @@ fn display_incident_map(
     right_click_menu: &mut RightClickMenu,
     new_incident_registration: &mut IncidentRegistration,
     layout: &mut Layout,
-    sender: &Sender<UIAction>
+    sender: &Sender<UIAction>,
 ) {
-
     let position = Position::from_lon_lat(DEFAULT_LONGITUDE, DEFAULT_LATITUDE);
 
     let map = Map::new(Some(tiles), map_memory, position);
-    
+
     let places_plugin = update_places(incidents, drones, cameras);
     let map_with_plugin = map.with_plugin(places_plugin);
 
     let response = ui.add(map_with_plugin);
 
-    handle_right_clicks(ui, response, right_click_menu, map_memory, new_incident_registration, sender, layout);
+    handle_right_clicks(
+        ui,
+        response,
+        right_click_menu,
+        map_memory,
+        new_incident_registration,
+        sender,
+        layout,
+    );
 }
 
 /// Displays the form to create a new incident
@@ -751,7 +762,7 @@ fn update_places(incidents: &Vec<Incident>, drones: &Vec<Drone>, cameras: &Vec<C
                 label_color: Color32::BLACK,
                 label_background: Color32::TRANSPARENT, // Red background
                 symbol_font: FontId::monospace(25.0),
-                symbol_color: Color32::RED, // White symbol
+                symbol_color: Color32::RED,              // White symbol
                 symbol_background: Color32::TRANSPARENT, // Red background
                 symbol_stroke: Stroke::new(2.0, Color32::TRANSPARENT), // Black border
             },
@@ -761,10 +772,10 @@ fn update_places(incidents: &Vec<Incident>, drones: &Vec<Drone>, cameras: &Vec<C
 
     for drone in drones {
         let color = match drone.status {
-            DroneStatus::Free => Color32::BLACK,    // MARINE GREEN                       
-            DroneStatus::AttendingIncident => Color32::BLACK, // CORAL RED            
-            DroneStatus::Travelling => Color32::BLACK,         // SHARK GREY          
-            DroneStatus::Recharging => Color32::BLACK,          // Coral orange     
+            DroneStatus::Free => Color32::BLACK,              // MARINE GREEN
+            DroneStatus::AttendingIncident => Color32::BLACK, // CORAL RED
+            DroneStatus::Travelling => Color32::BLACK,        // SHARK GREY
+            DroneStatus::Recharging => Color32::BLACK,        // Coral orange
         };
         let place = Place {
             position: Position::from_lon_lat(drone.x_coordinate, drone.y_coordinate),
@@ -775,7 +786,7 @@ fn update_places(incidents: &Vec<Incident>, drones: &Vec<Drone>, cameras: &Vec<C
                 label_color: Color32::BLACK,
                 label_background: Color32::TRANSPARENT, // Blue background
                 symbol_font: FontId::monospace(25.0),
-                symbol_color: color, // White symbol
+                symbol_color: color,                     // White symbol
                 symbol_background: Color32::TRANSPARENT, // Orange background
                 symbol_stroke: Stroke::new(2.0, Color32::TRANSPARENT), // Black border
             },
@@ -793,7 +804,7 @@ fn update_places(incidents: &Vec<Incident>, drones: &Vec<Drone>, cameras: &Vec<C
                 label_color: Color32::BLACK,
                 label_background: Color32::TRANSPARENT, // Orange background
                 symbol_font: FontId::monospace(25.0),
-                symbol_color: Color32::BLACK, // Electric blue
+                symbol_color: Color32::BLACK,            // Electric blue
                 symbol_background: Color32::TRANSPARENT, // Orange background
                 symbol_stroke: Stroke::new(2.0, Color32::TRANSPARENT), // Black border
             },
@@ -803,4 +814,3 @@ fn update_places(incidents: &Vec<Incident>, drones: &Vec<Drone>, cameras: &Vec<C
 
     Places::new(places)
 }
-
