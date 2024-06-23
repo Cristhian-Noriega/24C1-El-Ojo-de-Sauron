@@ -13,7 +13,6 @@ fn test_attending_incident_once() {
         IncidentStatus::Pending,
     );
 
-
     monitor.new_incident(incident.clone());
     assert_eq!(monitor.get_incident(&incident.uuid).unwrap(), &incident);
 
