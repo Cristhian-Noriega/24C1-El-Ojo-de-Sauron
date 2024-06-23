@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Number of drone instances
-NUM_DRONES=10
+NUM_DRONES=$1
 
 # Build all binaries
 cargo build --release --manifest-path project/server/Cargo.toml
