@@ -22,7 +22,7 @@ use crate::{
         DroneRegistration, IncidentEdit, IncidentRegistration, MonitorAction, UIAction,
     },
     config::Config,
-    drone::Drone,
+    drone::{Drone, DroneStatus},
     monitor::Monitor,
     ui_application::UIApplication,
 };
@@ -214,7 +214,7 @@ fn start_monitor(
                 None
             }
 
-            Ok(UIAction::ResolveIncident(incident)) => resolve_incident(incident, publish_counter),
+            Ok(UIAction::ResolveIncident(incident)) => resolve_incident(incident, &mut monitor, publish_counter, monitor_sender.clone()),
             Err(_) => None,
         };
 
@@ -247,10 +247,10 @@ fn drone_data(publish: Publish, monitor_sender: Sender<MonitorAction>) {
 
     let x_coordinate = splitted_content[0].parse::<f64>().unwrap();
     let y_coordinate = splitted_content[1].parse::<f64>().unwrap();
-    let state = splitted_content[2].to_string();
+    let status = DroneStatus::from_str(splitted_content[2]);
     let battery = splitted_content[3].parse::<usize>().unwrap();
 
-    let drone = Drone::new(id.clone(), state, battery, x_coordinate, y_coordinate);
+    let drone = Drone::new(id.clone(), status, battery, x_coordinate, y_coordinate);
 
     match monitor_sender.send(MonitorAction::Drone(drone.clone())) {
         Ok(_) => {
@@ -408,7 +408,21 @@ fn edit_incident(
 }
 
 /// Resolves an incident
-fn resolve_incident(incident: Incident, package_identifier: u16) -> Option<Publish> {
+fn resolve_incident(incident: Incident, monitor: &mut Monitor, package_identifier: u16, monitor_sender: Sender<MonitorAction>) -> Option<Publish> {
+    let incident_id = incident.id();
+    monitor.set_resolved_incident(incident.id());
+    
+    if let Some(incident) = monitor.get_incident(incident_id.as_str()) {
+        match monitor_sender.send(MonitorAction::Incident(incident.clone())) {
+            Ok(_) => {}
+            Err(_) => {
+                println!("Error sending incident data to UI");
+            }
+        }
+    } else {
+        println!("Unknown incident");
+    }
+
     let topic_name = TopicName::new(
         vec![CLOSE_INCIDENT.to_vec(), incident.uuid.clone().into_bytes()],
         false,
