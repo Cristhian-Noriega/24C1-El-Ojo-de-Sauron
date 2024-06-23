@@ -80,3 +80,85 @@ impl Monitor {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new_incident() {
+        let mut monitor = Monitor::new();
+        let incident = Incident::new(
+            "incident1".to_string(),
+            "incident1".to_string(),
+            "incident1".to_string(),
+            1.0,
+            1.0,
+            IncidentStatus::Pending,
+        );
+
+        monitor.new_incident(incident.clone());
+        assert_eq!(monitor.get_incident(&incident.uuid).unwrap(), &incident);
+    }
+
+    #[test]
+    fn test_attend_incident() {
+        let mut monitor = Monitor::new();
+        let incident = Incident::new(
+            "incident1".to_string(),
+            "incident1".to_string(),
+            "incident1".to_string(),
+            1.0,
+            1.0,
+            IncidentStatus::Pending,
+        );
+
+        monitor.new_incident(incident.clone());
+        assert_eq!(monitor.get_incident(&incident.uuid).unwrap(), &incident);
+
+        let incident = monitor.attend_incident(incident.uuid).unwrap();
+        let incident = monitor.attend_incident(incident.uuid).unwrap();
+
+        assert_eq!(incident.status, IncidentStatus::InProgress);
+    }
+
+    #[test]
+    fn test_resolvable_incident() {
+        let mut monitor = Monitor::new();
+        let incident = Incident::new(
+            "incident1".to_string(),
+            "incident1".to_string(),
+            "incident1".to_string(),
+            1.0,
+            1.0,
+            IncidentStatus::Pending,
+        );
+
+        monitor.new_incident(incident.clone());
+        assert_eq!(monitor.get_incident(&incident.uuid).unwrap(), &incident);
+
+        monitor.set_resolvable_incident(incident.uuid.clone());
+        let incident = monitor.get_incident(&incident.uuid).unwrap();
+        assert_eq!(incident.status, IncidentStatus::Resolvable);
+    }
+
+    #[test]
+    fn test_solve_incident() {
+        let mut monitor = Monitor::new();
+        let incident = Incident::new(
+            "incident1".to_string(),
+            "incident1".to_string(),
+            "incident1".to_string(),
+            1.0,
+            1.0,
+            IncidentStatus::Pending,
+        );
+
+        monitor.new_incident(incident.clone());
+        assert_eq!(monitor.get_incident(&incident.uuid).unwrap(), &incident);
+
+        monitor.set_resolved_incident(incident.uuid.clone());
+        let incident = monitor.get_incident(&incident.uuid).unwrap();
+        assert_eq!(incident.status, IncidentStatus::Resolved);
+    }
+}
