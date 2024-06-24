@@ -1,5 +1,3 @@
-// #![allow(unused_variables)]
-
 use std::fmt;
 use std::io::Write;
 use std::net::TcpStream;
@@ -116,7 +114,7 @@ mod tests {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let port = listener.local_addr().unwrap().port();
         let stream = TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
-        listener.accept().unwrap().0
+        stream
     }
 
     fn setup_client() -> Client {
