@@ -21,7 +21,7 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new(id: Vec<u8>, stream: TcpStream, clean_session: bool, keep_alive: u16) -> Client {
+    pub fn new(id: Vec<u8>, stream: TcpStream, _clean_session: bool, _keep_alive: u16) -> Client {
         Client {
             id,
             subscriptions: Vec::new(),
@@ -74,7 +74,7 @@ impl Client {
             Ok(_) => {
                 logfile.log_sent_message(message_str, client_id_str);
             }
-            Err(e) => logfile.log_sending_message_error(message_str, client_id_str),
+            Err(_) => logfile.log_sending_message_error(message_str, client_id_str),
         }
     }
 
