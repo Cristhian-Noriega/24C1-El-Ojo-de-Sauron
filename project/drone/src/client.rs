@@ -97,6 +97,10 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
         recharge_battery(drone_cloned);
     });
 
+    let x = config.get_x_anchor_position();
+    let y = config.get_y_anchor_position();
+    travel(drone.clone(), x, y, TravelLocation::Anchor);
+
     thread_update.join().unwrap();
     thread_read.join().unwrap();
     thread_discharge_battery.join().unwrap();
