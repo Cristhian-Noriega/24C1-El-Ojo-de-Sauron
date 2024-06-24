@@ -454,25 +454,40 @@ fn handle_attending_incident(
 
     drop(drone_locked);
 
-    thread::spawn(move || {
-        let cloned_drone = drone.clone();
+    //let cloned_drone = drone.clone();
+    travel(drone.clone(), x, y, TravelLocation::Anchor);
+    // let thread = thread::spawn(move || {
+    //     travel(cloned_drone, x, y, TravelLocation::Anchor);
+    // });
+    // let cloned_drone = drone.clone();
+    // let cloned_stream = server_stream.clone();
+    // let cloned_key = *key;
 
-        travel(drone, x, y, TravelLocation::Anchor);
+    // let thread = thread::spawn(move || {
+    //     travel_with_interruption(
+    //         cloned_drone,
+    //         x,
+    //         y,
+    //         TravelLocation::Anchor,
+    //         cloned_stream,
+    //         &cloned_key,
+    //     );
+    // });
 
-        let mut locked_drone = match cloned_drone.lock() {
-            Ok(drone) => drone,
-            Err(_) => {
-                println!("Mutex was poisoned");
-                return;
-            }
-        };
-
-        if locked_drone.distance_to(x, y) == 0.0 {
-            locked_drone.set_status(DroneStatus::Free);
+    let mut locked_drone = match drone.lock() {
+        Ok(drone) => drone,
+        Err(_) => {
+            println!("Mutex was poisoned");
+            return;
         }
+    };
 
-        drop(locked_drone);
-    });
+    if locked_drone.distance_to(x, y) == 0.0 {
+        locked_drone.set_status(DroneStatus::Free);
+    }
+
+    drop(locked_drone);
+    
 }
 
 /// Simulates the incident resolution
@@ -933,7 +948,7 @@ pub fn handle_pending_incidents(
 
         // cambiando esto a considerar tmb si esta anchor, el drone se vuelve greedy
         // si solo veo que esta free, vuelve a anchor y luego va al nuevo incidente
-        if !locked_drone.has_pending_incidents() || !locked_drone.can_handle_new_incident() {
+        if !locked_drone.is_free() {
             drop(locked_drone);
             thread::sleep(Duration::from_secs(1));
             continue;
@@ -991,6 +1006,7 @@ pub fn handle_pending_incidents(
 //             drop(locked_drone);
 //             break;
 //         }
+
 
 //         locked_drone.travel_to(x, y);
 //         drop(locked_drone);

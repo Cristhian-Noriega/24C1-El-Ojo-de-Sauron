@@ -218,9 +218,9 @@ impl Drone {
             || self.status == DroneStatus::Travelling(TravelLocation::Anchor)
     }
 
-    // pub fn is_free(&self) -> bool {
-    //     self.status == DroneStatus::Free
-    // }
+    pub fn is_free(&self) -> bool {
+        self.status == DroneStatus::Free
+    }
 }
 
 /// Calculates the euclidean distance between two points

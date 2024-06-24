@@ -115,6 +115,7 @@ impl TaskHandler {
 
         if let Some(client) = clients.get_mut(&client_id) {
             self.suback(subscribe_packet.packet_identifier(), client);
+
             self.log_file
                 .log_successful_subscription(&client_id, &subscribe_packet);
 
