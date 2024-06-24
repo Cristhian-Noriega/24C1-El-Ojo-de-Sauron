@@ -75,10 +75,6 @@ impl Config {
         &self.login_file
     }
 
-    // pub fn get_segs_to_disconnect(&self) -> u32 {
-    //     self.segs_to_disconnect
-    // }
-
     /// Returns the key of the encryption
     pub fn get_key(&self) -> &[u8; 32] {
         &self.key

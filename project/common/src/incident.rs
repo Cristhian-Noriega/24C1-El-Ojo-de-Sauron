@@ -92,8 +92,14 @@ impl Incident {
         let id = splited_string[0].to_string();
         let name = splited_string[1].to_string();
         let description = splited_string[2].to_string();
-        let x_coordinate = splited_string[3].parse().unwrap();
-        let y_coordinate = splited_string[4].parse().unwrap();
+        let x_coordinate = match splited_string[3].parse() {
+            Ok(value) => value,
+            Err(_) => return Err(Error::new("Invalid x coordinate".to_string())),
+        };
+        let y_coordinate = match splited_string[4].parse() {
+            Ok(value) => value,
+            Err(_) => return Err(Error::new("Invalid y coordinate".to_string())),
+        };
         let state = IncidentStatus::from_string(splited_string[5].to_string());
 
         Ok(Incident {

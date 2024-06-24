@@ -1,5 +1,3 @@
-#![allow(unused_variables)]
-
 use std::fmt;
 use std::io::Write;
 use std::net::TcpStream;
@@ -21,7 +19,7 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new(id: Vec<u8>, stream: TcpStream, clean_session: bool, keep_alive: u16) -> Client {
+    pub fn new(id: Vec<u8>, stream: TcpStream, _clean_session: bool, _keep_alive: u16) -> Client {
         Client {
             id,
             subscriptions: Vec::new(),
@@ -30,15 +28,13 @@ impl Client {
         }
     }
 
-    /// Subscribes the client to a topic
+    /// Adds a subscription to a client
     pub fn add_subscription(&mut self, topic: TopicFilter) {
-        let client_id = String::from_utf8(self.id.clone()).unwrap();
         self.subscriptions.push(topic);
     }
 
     /// Unsubscribes the client from a topic
     pub fn remove_subscription(&mut self, topic: &TopicFilter) {
-        let client_id = String::from_utf8(self.id.clone()).unwrap();
         self.subscriptions.retain(|t| t != topic);
     }
 
@@ -56,15 +52,15 @@ impl Client {
         logfile: &Arc<crate::logfile::Logger>,
         key: &[u8],
     ) {
-        let message_str = std::str::from_utf8(publish_packet.message()).unwrap();
-        let client_id_str = std::str::from_utf8(&self.id).unwrap();
+        let message_str = String::from_utf8_lossy(publish_packet.message()).to_string();
+        let client_id_str = String::from_utf8_lossy(&self.id).to_string();
 
         let mut stream = self.stream.lock().unwrap();
         match stream.write_all(publish_packet.to_bytes(key).as_slice()) {
             Ok(_) => {
                 logfile.log_sent_message(message_str, client_id_str);
             }
-            Err(e) => logfile.log_sending_message_error(message_str, client_id_str),
+            Err(_) => logfile.log_sending_message_error(message_str, client_id_str),
         }
     }
 
@@ -105,8 +101,7 @@ mod tests {
     fn setup_stream() -> TcpStream {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let port = listener.local_addr().unwrap().port();
-        let stream = TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
-        listener.accept().unwrap().0
+        TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap()
     }
 
     fn setup_client() -> Client {

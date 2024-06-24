@@ -58,7 +58,10 @@ impl CameraSystem {
 
     /// Closes an incident by changing the status of the cameras that are near
     pub fn close_incident(&mut self, incident_id: &String) {
-        let incident = self.active_incidents.get(incident_id).unwrap(); // TODO: que pasa si el incidente no estaba activo?
+        let incident = match self.active_incidents.get(incident_id) {
+            Some(incident) => incident,
+            None => return,
+        };
 
         for camera in &mut self.cameras {
             if camera.is_near(incident) {

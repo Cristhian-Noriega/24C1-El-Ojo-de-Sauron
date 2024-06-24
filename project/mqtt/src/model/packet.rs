@@ -34,7 +34,10 @@ impl Packet {
         let encrypted_content = &mut vec![0; remaining_length];
         stream.read_exact(encrypted_content)?;
 
-        let content = decrypt(encrypted_content, key).unwrap();
+        let content = match decrypt(encrypted_content, key) {
+            Ok(content) => content,
+            Err(error) => return Err(Error::new(format!("Error decrypting content: {}", error))),
+        };
         let stream = &mut Cursor::new(content);
 
         let packet = match packet_type {

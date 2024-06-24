@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use common::coordenate::Coordenate;
 use serde_derive::{Deserialize, Serialize};
 use std::{fs::File, io::Read, path::Path};
@@ -35,7 +33,7 @@ impl Config {
 
     /// Returns the key of the encryption
     pub fn get_key(&self) -> &[u8; 32] {
-        self.key.as_bytes().try_into().unwrap()
+        self.key.as_bytes().try_into().unwrap_or(&[0; 32])
     }
 
     /// Returns the client id of the server

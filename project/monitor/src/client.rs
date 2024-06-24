@@ -251,13 +251,31 @@ fn drone_data(publish: Publish, monitor_sender: Sender<MonitorAction>) {
 
     let id = String::from_utf8_lossy(id.to_vec().as_slice()).to_string();
     let content = publish.message();
-    let content_str = std::str::from_utf8(content).unwrap();
+    let content_str = String::from_utf8_lossy(content).to_string();
     let splitted_content: Vec<&str> = content_str.split(SEPARATOR).collect();
 
-    let x_coordinate = splitted_content[0].parse::<f64>().unwrap();
-    let y_coordinate = splitted_content[1].parse::<f64>().unwrap();
+    let x_coordinate = match splitted_content[0].parse::<f64>() {
+        Ok(x) => x,
+        Err(_) => {
+            println!("Error parsing x coordinate");
+            return;
+        }
+    };
+    let y_coordinate = match splitted_content[1].parse::<f64>() {
+        Ok(y) => y,
+        Err(_) => {
+            println!("Error parsing y coordinate");
+            return;
+        }
+    };
     let status = DroneStatus::get_status_from_str(splitted_content[2]);
-    let battery = splitted_content[3].parse::<usize>().unwrap();
+    let battery = match splitted_content[3].parse::<usize>() {
+        Ok(battery) => battery,
+        Err(_) => {
+            println!("Error parsing battery");
+            return;
+        }
+    };
 
     let drone = Drone::new(id.clone(), status, battery, x_coordinate, y_coordinate);
 
@@ -273,16 +291,40 @@ fn drone_data(publish: Publish, monitor_sender: Sender<MonitorAction>) {
 fn camera_data(publish: Publish, monitor_sender: Sender<MonitorAction>) {
     let content = publish.message();
 
-    let content_str = std::str::from_utf8(content).unwrap();
+    let content_str = String::from_utf8_lossy(content).to_string();
     let splitted_content: Vec<&str> = content_str.split(ENUMARATOR).collect();
 
     // this are camera data
     for camera_data in splitted_content {
         let camera_data = camera_data.split(SEPARATOR).collect::<Vec<&str>>();
-        let id = camera_data[0].parse::<String>().unwrap();
-        let x_coordinate = camera_data[1].parse::<f64>().unwrap();
-        let y_coordinate = camera_data[2].parse::<f64>().unwrap();
-        let state = camera_data[3].parse::<String>().unwrap();
+        let id = match camera_data[0].parse::<String>() {
+            Ok(id) => id,
+            Err(_) => {
+                println!("Error parsing camera id");
+                return;
+            }
+        };
+        let x_coordinate = match camera_data[1].parse::<f64>() {
+            Ok(x) => x,
+            Err(_) => {
+                println!("Error parsing x coordinate");
+                return;
+            }
+        };
+        let y_coordinate = match camera_data[2].parse::<f64>() {
+            Ok(y) => y,
+            Err(_) => {
+                println!("Error parsing y coordinate");
+                return;
+            }
+        };
+        let state = match camera_data[3].parse::<String>() {
+            Ok(state) => state,
+            Err(_) => {
+                println!("Error parsing camera state");
+                return;
+            }
+        };
 
         let camera = Camera::new(id, x_coordinate, y_coordinate, state);
 
@@ -364,15 +406,24 @@ fn register_incident(
     package_identifier: u16,
 ) -> Option<Publish> {
     let uuid = monitor.get_amount_incidents().to_string();
-
-    let incident = Incident::new(
-        uuid,
-        incident_registration.name.clone(),
-        incident_registration.description.clone(),
-        incident_registration.x.clone().parse().unwrap(),
-        incident_registration.y.clone().parse().unwrap(),
-        IncidentStatus::Pending,
-    );
+    let name = incident_registration.name.clone();
+    let description = incident_registration.description.clone();
+    let x_coordinate = match incident_registration.x.clone().parse() {
+        Ok(x) => x,
+        Err(_) => {
+            println!("Error parsing x coordinate");
+            return None;
+        }
+    };
+    let y_coordinate = match incident_registration.y.clone().parse() {
+        Ok(y) => y,
+        Err(_) => {
+            println!("Error parsing y coordinate");
+            return None;
+        }
+    };
+    let status = IncidentStatus::Pending;
+    let incident = Incident::new(uuid, name, description, x_coordinate, y_coordinate, status);
 
     let topic_name = TopicName::new(vec![NEW_INCIDENT.to_vec()], false);
     let message = incident.to_string().into_bytes();

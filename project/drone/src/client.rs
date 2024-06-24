@@ -119,11 +119,22 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
     locked_drone.set_status(DroneStatus::Free);
     drop(locked_drone);
 
-    thread_update.join().unwrap();
-    thread_read.join().unwrap();
-    thread_pending_incidents.join().unwrap();
-    thread_discharge_battery.join().unwrap();
-    thread_recharge_battery.join().unwrap();
+    let threads = vec![
+        thread_update,
+        thread_read,
+        thread_pending_incidents,
+        thread_discharge_battery,
+        thread_recharge_battery,
+    ];
+
+    for thread in threads {
+        match thread.join() {
+            Ok(_) => {}
+            Err(_) => {
+                println!("Error in thread");
+            }
+        }
+    }
 
     Ok(())
 }
@@ -139,9 +150,22 @@ fn read_incoming_packets(stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<Drone>>
             }
         };
 
-        let mut cloned_stream = locked_stream.try_clone().unwrap();
+        let mut cloned_stream = match locked_stream.try_clone() {
+            Ok(stream) => stream,
+            Err(_) => {
+                println!("Mutex was poisoned");
+                return;
+            }
+        };
 
-        cloned_stream.set_nonblocking(true).unwrap();
+        match cloned_stream.set_nonblocking(true) {
+            Ok(_) => {}
+            Err(_) => {
+                println!("Error setting non-blocking");
+                return;
+            }
+        }
+
         match Packet::from_bytes(&mut cloned_stream, key) {
             Ok(Packet::Publish(publish)) => {
                 drop(locked_stream);
@@ -178,7 +202,13 @@ fn handle_publish(
     server_stream: Arc<Mutex<TcpStream>>,
     key: &[u8; 32],
 ) {
-    let message = String::from_utf8(publish.message().to_vec()).unwrap();
+    let message = match String::from_utf8(publish.message().to_vec()) {
+        Ok(message) => message,
+        Err(_) => {
+            println!("Invalid message");
+            return;
+        }
+    };
     let topic_levels = publish.topic().levels();
     if topic_levels.len() == 1 && topic_levels[0] == NEW_INCIDENT {
         let incident = match Incident::from_string(message) {
@@ -559,7 +589,12 @@ fn handle_close_incident(
         travel(cloned_drone, x, y, TravelLocation::Anchor);
     });
 
-    thread.join().unwrap();
+    match thread.join() {
+        Ok(_) => {}
+        Err(_) => {
+            println!("Error in thread");
+        }
+    }
 
     let mut locked_drone = match drone.lock() {
         Ok(drone) => drone,
@@ -655,7 +690,13 @@ fn subscribe(
     server_stream: &mut MutexGuard<TcpStream>,
     key: &[u8; 32],
 ) -> std::io::Result<()> {
-    let mut server_stream = server_stream.try_clone().unwrap();
+    let mut server_stream = match server_stream.try_clone() {
+        Ok(stream) => stream,
+        Err(_) => {
+            println!("Mutex was poisoned");
+            return Err(std::io::Error::new(ErrorKind::Other, "Mutex was poisoned"));
+        }
+    };
 
     let packet_id = 1;
     let qos = QoS::AtMost;
@@ -682,7 +723,13 @@ fn unsubscribe(
     server_stream: &mut MutexGuard<TcpStream>,
     key: &[u8; 32],
 ) -> std::io::Result<()> {
-    let mut server_stream = server_stream.try_clone().unwrap();
+    let mut server_stream = match server_stream.try_clone() {
+        Ok(stream) => stream,
+        Err(_) => {
+            println!("Mutex was poisoned");
+            return Err(std::io::Error::new(ErrorKind::Other, "Mutex was poisoned"));
+        }
+    };
 
     let packet_id = 1;
     let topics_filters = vec![(filter)];
@@ -711,7 +758,13 @@ fn publish(
     qos: QoS,
     key: &[u8; 32],
 ) -> std::io::Result<()> {
-    let mut server_stream = server_stream.try_clone().unwrap();
+    let mut server_stream = match server_stream.try_clone() {
+        Ok(stream) => stream,
+        Err(_) => {
+            println!("Mutex was poisoned");
+            return Err(std::io::Error::new(ErrorKind::Other, "Mutex was poisoned"));
+        }
+    };
 
     let dup = false;
     let retain = true;

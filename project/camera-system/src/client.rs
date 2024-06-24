@@ -1,5 +1,5 @@
 use std::{
-    io::{ErrorKind, Write},
+    io::{ErrorKind, Read, Write},
     net::TcpStream,
     sync::{Arc, Mutex},
     thread,
@@ -65,8 +65,19 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
         read_incoming_packets(server_stream_clone, camera_system_clone, &key);
     });
 
-    thread_update.join().unwrap();
-    thread_read.join().unwrap();
+    match thread_update.join() {
+        Ok(_) => {}
+        Err(_) => {
+            println!("Error in update thread");
+        }
+    }
+
+    match thread_read.join() {
+        Ok(_) => {}
+        Err(_) => {
+            println!("Error in read thread");
+        }
+    }
 
     Ok(())
 }
@@ -78,19 +89,47 @@ fn read_incoming_packets(
     key: &[u8; 32],
 ) {
     loop {
-        let mut locked_stream = server_stream.lock().unwrap().try_clone().unwrap();
-        locked_stream.set_nonblocking(true).unwrap();
+        let mut buffer = [0; 1024];
+        let mut locked_stream = match server_stream.lock() {
+            Ok(stream) => stream,
+            Err(_) => {
+                println!("Mutex was poisoned");
+                return;
+            }
+        };
 
-        let incoming_publish = match Packet::from_bytes(&mut locked_stream, key) {
-            Ok(Packet::Publish(publish)) => publish,
-            _ => {
+        match locked_stream.set_nonblocking(true) {
+            Ok(_) => {}
+            Err(_) => {
+                println!("Error setting non-blocking");
+                return;
+            }
+        }
+
+        let incoming_publish = match locked_stream.read(&mut buffer) {
+            Ok(_) => {
+                let packet = Packet::from_bytes(&mut buffer.as_slice(), key);
+                drop(locked_stream);
+
+                match packet {
+                    Ok(Packet::Publish(publish)) => publish,
+                    _ => {
+                        thread::sleep(Duration::from_secs(READ_MESSAGE_INTERVAL));
+                        continue;
+                    }
+                }
+            }
+            Err(e) if e.kind() == ErrorKind::WouldBlock => {
+                drop(locked_stream);
+                thread::sleep(Duration::from_secs(READ_MESSAGE_INTERVAL));
+                continue;
+            }
+            Err(_) => {
                 drop(locked_stream);
                 thread::sleep(Duration::from_secs(READ_MESSAGE_INTERVAL));
                 continue;
             }
         };
-
-        drop(locked_stream);
 
         let topic_levels = incoming_publish.topic().levels();
 
