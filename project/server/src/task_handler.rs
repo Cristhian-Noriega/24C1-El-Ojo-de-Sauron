@@ -110,7 +110,13 @@ impl TaskHandler {
     pub fn subscribe(&self, subscribe_packet: Subscribe, client_id: Vec<u8>) -> ServerResult<()> {
         let mut clients = self.clients.write()?;
 
+        
         if let Some(client) = clients.get_mut(&client_id) {
+            
+            self.suback(subscribe_packet.packet_identifier(), client);
+            self.log_file
+                .log_successful_subscription(&client_id, &subscribe_packet);
+
             for (topic_filter, _) in subscribe_packet.topics() {
                 client.add_subscription(topic_filter.clone());
 
@@ -121,9 +127,6 @@ impl TaskHandler {
                     }
                 }
             }
-            self.log_file
-                .log_successful_subscription(&client_id, &subscribe_packet);
-            self.suback(subscribe_packet.packet_identifier(), client);
         } else {
             self.log_file.log_client_does_not_exist(&client_id);
         }
