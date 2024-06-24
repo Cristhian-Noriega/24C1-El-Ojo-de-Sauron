@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use common::drone_status::{DroneStatus, TravelLocation};
 
 use common::incident::Incident;
@@ -5,7 +7,9 @@ use common::incident::Incident;
 const MINIMUM_BATTERY_LEVEL: usize = 20;
 const MAXIMUM_BATTERY_LEVEL: usize = 100;
 
-const BATTERY_UNIT: usize = 1;
+const BATTERY_DISCHARGE_TRAVELLING: usize = 2;
+const BATTERY_DISCHARGE_IDLE: usize = 1;
+const BATTERY_RECHARGE: usize = 5;
 
 /// Represents a drone
 #[derive(Debug, Clone)]
@@ -20,6 +24,7 @@ pub struct Drone {
     x_anchor: f64,
     y_anchor: f64,
     current_incident: Option<(Incident, usize)>,
+    incident_queue: VecDeque<Incident>,
     velocity: f64,
     active_range: f64,
 }
@@ -46,6 +51,7 @@ impl Drone {
             x_anchor,
             y_anchor,
             current_incident: None,
+            incident_queue: VecDeque::new(),
             velocity,
             active_range,
         }
@@ -112,21 +118,34 @@ impl Drone {
             self.x_coordinate = x;
             self.y_coordinate = y;
         }
-
-        self.discharge_battery();
     }
 
     /// Discharges the battery of the drone
     pub fn discharge_battery(&mut self) {
-        if self.battery > 0 {
-            self.battery -= BATTERY_UNIT;
+        let battery_to_discharge = match self.status {
+            DroneStatus::Travelling(_) => BATTERY_DISCHARGE_TRAVELLING,
+            DroneStatus::Free => BATTERY_DISCHARGE_IDLE,
+            DroneStatus::AttendingIncident => BATTERY_DISCHARGE_IDLE,
+            DroneStatus::Recharging => {
+                return;
+            }
+        };
+
+        if self.battery < battery_to_discharge {
+            self.battery = 0;
+            return;
         }
+
+        self.battery -= battery_to_discharge;
     }
 
     /// Recharges the battery of the drone
     pub fn recharge_battery(&mut self) {
         if self.battery < MAXIMUM_BATTERY_LEVEL {
-            self.battery += BATTERY_UNIT;
+            self.battery += BATTERY_RECHARGE;
+        }
+        if self.battery > MAXIMUM_BATTERY_LEVEL {
+            self.battery = MAXIMUM_BATTERY_LEVEL;
         }
     }
 
@@ -141,10 +160,6 @@ impl Drone {
 
         distance < self.active_range
     }
-
-    // pub fn battery(&self) -> usize {
-    //     self.battery
-    // }
 
     /// Returns the status of the drone
     pub fn status(&self) -> DroneStatus {
@@ -189,8 +204,28 @@ impl Drone {
     }
 
     /// Returns true if the drone is attending an incident
-    pub fn check_is_travelling_to_incident(&self) -> bool {
-        self.status != DroneStatus::Travelling(TravelLocation::Incident)
+    pub fn is_travelling_to_incident(&self) -> bool {
+        self.status == DroneStatus::Travelling(TravelLocation::Incident)
+    }
+
+    pub fn add_incident(&mut self, incident: Incident) {
+        self.incident_queue.push_back(incident);
+    }
+
+    pub fn has_pending_incidents(&self) -> bool {
+        !self.incident_queue.is_empty()
+    }
+
+    pub fn current_incident(&self) -> Option<Incident> {
+        self.incident_queue.front().cloned()
+    }
+
+    pub fn remove_current_incident(&mut self) {
+        self.incident_queue.pop_front();
+    }
+
+    pub fn is_free(&self) -> bool {
+        self.status == DroneStatus::Free
     }
 }
 
@@ -229,6 +264,6 @@ mod tests {
     fn test_drone_travel_to() {
         let mut drone = Drone::new(1, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0);
         drone.travel_to(3.0, 3.0);
-        assert_eq!(drone.data(), "1.7071067811865475;1.7071067811865475;3;99");
+        assert_eq!(drone.data(), "1.7071067811865475;1.7071067811865475;3;100");
     }
 }

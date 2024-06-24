@@ -32,7 +32,7 @@ fn test_new_incident() {
         DroneStatus::Travelling(TravelLocation::Incident)
     );
     drone.travel_to(2.0, 2.0);
-    assert_eq!(drone.data(), "1.7071067811865475;1.7071067811865475;4;99");
+    assert_eq!(drone.data(), "1.7071067811865475;1.7071067811865475;4;100");
 
     // Camara
     let mut camera_system = CameraSystem::new();
@@ -96,8 +96,8 @@ fn test_new_incident_gets_attended() {
     drone2.travel_to(incident.x_coordinate, incident.y_coordinate);
     drone.set_status(DroneStatus::AttendingIncident);
     drone2.set_status(DroneStatus::AttendingIncident);
-    assert_eq!(drone.data(), "5;5;1;94");
-    assert_eq!(drone2.data(), "5;5;1;94");
+    assert_eq!(drone.data(), "5;5;1;100");
+    assert_eq!(drone2.data(), "5;5;1;100");
 
     monitor.attend_incident(incident.uuid.clone());
     monitor.attend_incident(incident.uuid.clone());

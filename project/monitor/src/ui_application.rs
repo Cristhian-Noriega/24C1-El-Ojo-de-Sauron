@@ -178,17 +178,12 @@ fn handle_right_clicks(
                         new_incident_registration.description = String::new();
                         new_incident_registration.x = right_click_menu.x_coordenate.to_string();
                         new_incident_registration.y = right_click_menu.y_coordenate.to_string();
-                        println!(
-                            "New incident at coordenates: ({}, {})",
-                            right_click_menu.x_coordenate, right_click_menu.y_coordenate
-                        );
                         display_new_incident(ui, new_incident_registration, sender, layout);
                         *layout = Layout::NewIncident;
 
                         right_click_menu.open = false;
                     }
                     if ui.button("Cancel").clicked() {
-                        println!("Menu closed");
                         right_click_menu.open = false;
                     }
                 });
@@ -539,7 +534,7 @@ fn display_camera_list(ui: &mut egui::Ui, cameras: &[Camera]) {
 /// Displays the header of the UI
 fn display_header(ui: &mut egui::Ui, current_layout: &mut Layout) {
     ui.horizontal(|ui| {
-        ui.heading(egui::RichText::new("Monitoring Aplication").size(30.0));
+        ui.heading(egui::RichText::new("Monitoring Application").size(30.0));
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             ui.image(egui::include_image!("images/logo.png"));
         });

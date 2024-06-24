@@ -25,7 +25,7 @@ const NEW_INCIDENT: &[u8] = b"new-incident";
 const CLOSE_INCIDENT: &[u8] = b"close-incident";
 const CAMERA_DATA: &[u8] = b"camera-data";
 
-const UPDATE_DATA_INTERVAL: u64 = 3;
+const UPDATE_DATA_INTERVAL: u64 = 2;
 const READ_MESSAGE_INTERVAL: u64 = 1;
 
 /// Runs the client
@@ -214,7 +214,6 @@ fn connect_to_server(config: Config) -> std::io::Result<TcpStream> {
     let password = config.get_password().to_owned();
     let key = config.get_key().to_owned();
 
-    println!("\nConnecting to address: {:?}", address);
     let mut to_server_stream = TcpStream::connect(address)?;
 
     let client_id_bytes: Vec<u8> = id.as_bytes().to_vec();

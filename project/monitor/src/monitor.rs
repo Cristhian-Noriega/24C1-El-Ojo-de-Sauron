@@ -85,6 +85,11 @@ impl Monitor {
             self.active_incidents.remove(&incident_uuid);
         }
     }
+
+    /// Gets the amount of incidents
+    pub fn get_amount_incidents(&self) -> usize {
+        self.incidents.len()
+    }
 }
 
 #[cfg(test)]

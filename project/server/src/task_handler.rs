@@ -8,7 +8,7 @@ use std::{
 use crate::{client::Client, client_manager::ClientManager, error::ServerResult, logfile::Logger};
 
 use mqtt::model::{
-    components::qos::QoS,
+    components::{qos::QoS, topic_name::TopicName},
     packets::{
         connack::Connack, pingresp::Pingresp, puback::Puback, publish::Publish, suback::Suback,
         subscribe::Subscribe, unsuback::Unsuback, unsubscribe::Unsubscribe,
@@ -36,15 +36,8 @@ pub struct TaskHandler {
     client_actions_receiver_channel: mpsc::Receiver<Task>,
     clients: RwLock<HashMap<Vec<u8>, Client>>,
     active_connections: HashSet<Vec<u8>>,
-    retained_messages: HashMap<Vec<u8>, VecDeque<Publish>>,
-
-    // monitor se subscribe a (drone-data/+) <- es un topic filter
-
-    // drone data publica en (drone-data/1) <- esto es un topic name
-
-    // debería guardar que monitor está suscrito a (drone-data/+)
-    // cuando drone data publica en (drone-data/1) recorro todos los subscribes y me fijo si alguno matchea
-    // si matchea, le mando el msg
+    offline_messages: HashMap<Vec<u8>, VecDeque<Publish>>,
+    retained_messages: HashMap<TopicName, VecDeque<Publish>>,
     log_file: Arc<Logger>,
     client_manager: Arc<RwLock<ClientManager>>,
     key: [u8; 32],
@@ -62,6 +55,7 @@ impl TaskHandler {
             client_actions_receiver_channel: receiver_channel,
             clients: RwLock::new(HashMap::new()),
             active_connections: HashSet::new(),
+            offline_messages: HashMap::new(),
             retained_messages: HashMap::new(),
             log_file,
             client_manager,
@@ -112,12 +106,23 @@ impl TaskHandler {
         let mut clients = self.clients.write()?;
 
         if let Some(client) = clients.get_mut(&client_id) {
-            for (topic_filter, _) in subscribe_packet.topics() {
-                client.add_subscription(topic_filter.clone());
-            }
+            self.suback(subscribe_packet.packet_identifier(), client);
+
             self.log_file
                 .log_successful_subscription(&client_id, &subscribe_packet);
-            self.suback(subscribe_packet.packet_identifier(), client);
+
+            for (topic_filter, _) in subscribe_packet.topics() {
+                client.add_subscription(topic_filter.clone());
+
+                // Send the retained message if it exists
+                for (topic_name, retained_messages) in &self.retained_messages {
+                    if topic_filter.match_topic_name(topic_name.clone()) {
+                        for message in retained_messages {
+                            client.send_message(message.clone(), &self.log_file, &self.key);
+                        }
+                    }
+                }
+            }
         } else {
             self.log_file.log_client_does_not_exist(&client_id);
         }
@@ -156,6 +161,13 @@ impl TaskHandler {
             return Ok(());
         }
 
+        if publish_packet.retain() {
+            self.retained_messages
+                .entry(topic_name.clone())
+                .or_default()
+                .push_back(publish_packet.clone());
+        }
+
         let mut clients = vec![];
 
         for client in self.clients.read()?.values() {
@@ -178,7 +190,7 @@ impl TaskHandler {
                 if self.active_connections.contains(&client_id) {
                     client.send_message(publish_packet.clone(), &self.log_file, &self.key);
                 } else {
-                    self.retained_messages
+                    self.offline_messages
                         .entry(client_id.clone())
                         .or_default()
                         .push_back(publish_packet.clone());
@@ -195,11 +207,11 @@ impl TaskHandler {
             }
         }
 
-        let clients_retained_messages = self.retained_messages.get(&client_id);
+        let clients_retained_messages = self.offline_messages.get(&client_id);
         let client = clients.get_mut(&client_id).unwrap();
         if let Some(clients_retained_messages) = clients_retained_messages {
             self.handle_retained_messages(client, clients_retained_messages);
-            self.retained_messages.get_mut(&client_id).unwrap().clear();
+            self.offline_messages.get_mut(&client_id).unwrap().clear();
         }
 
         Ok(())

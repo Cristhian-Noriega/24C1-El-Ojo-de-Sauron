@@ -15,7 +15,7 @@ pub struct Client {
     pub id: Vec<u8>,
     pub subscriptions: Vec<TopicFilter>,
     pub alive: AtomicBool,
-    pub stream: Arc<Mutex<TcpStream>>, // ARC MUTEX TCP STREAM
+    pub stream: Arc<Mutex<TcpStream>>,
 }
 
 impl Client {
@@ -31,22 +31,12 @@ impl Client {
     /// Subscribes the client to a topic
     pub fn add_subscription(&mut self, topic: TopicFilter) {
         let client_id = String::from_utf8(self.id.clone()).unwrap();
-        println!(
-            "Client with client id {:?} subscribed to {:?}",
-            client_id,
-            topic.clone().to_string()
-        );
         self.subscriptions.push(topic);
     }
 
     /// Unsubscribes the client from a topic
     pub fn remove_subscription(&mut self, topic: &TopicFilter) {
         let client_id = String::from_utf8(self.id.clone()).unwrap();
-        println!(
-            "Client with client id {:?} unsubscribed from {:?}",
-            client_id,
-            topic.clone().to_string()
-        );
         self.subscriptions.retain(|t| t != topic);
     }
 

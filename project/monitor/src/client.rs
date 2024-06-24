@@ -82,7 +82,6 @@ fn connect_to_server(config: Config) -> std::io::Result<TcpStream> {
     let username = config.get_username();
     let password = config.get_password();
 
-    println!("\nConnecting to address: {:?}", address);
     let mut to_server_stream = TcpStream::connect(address)?;
 
     let client_id_bytes = client_id.as_bytes().to_vec();
@@ -190,7 +189,6 @@ fn start_monitor(
                         attend_incident(publish.clone(), &mut monitor, monitor_sender.clone());
                     }
                     READY_INCIDENT => {
-                        println!("LE LLEGO UN READY INCIDENT AL MONITOR");
                         ready_incident(publish.clone(), &mut monitor, monitor_sender.clone());
                     }
                     _ => {
@@ -282,9 +280,7 @@ fn drone_data(publish: Publish, monitor_sender: Sender<MonitorAction>) {
     let drone = Drone::new(id.clone(), status, battery, x_coordinate, y_coordinate);
 
     match monitor_sender.send(MonitorAction::Drone(drone.clone())) {
-        Ok(_) => {
-            // println!("Drone data sent to UI");
-        }
+        Ok(_) => {}
         Err(_) => {
             println!("Error sending drone data to UI");
         }
@@ -333,9 +329,7 @@ fn camera_data(publish: Publish, monitor_sender: Sender<MonitorAction>) {
         let camera = Camera::new(id, x_coordinate, y_coordinate, state);
 
         match monitor_sender.send(MonitorAction::Camera(camera)) {
-            Ok(_) => {
-                println!("Camera data sent to UI");
-            }
+            Ok(_) => {}
             Err(_) => {
                 println!("Error sending camera data to UI");
             }
@@ -371,7 +365,6 @@ fn ready_incident(publish: Publish, monitor: &mut Monitor, monitor_sender: Sende
     monitor.set_resolvable_incident(incident_id.clone());
 
     if let Some(incident) = monitor.get_incident(incident_id.as_str()) {
-        println!("ENTRO AL IF DE SI OBTUVE EL INCIDENTE CO EL GET? ");
         match monitor_sender.send(MonitorAction::Incident(incident.clone())) {
             Ok(_) => {}
             Err(_) => {
@@ -412,7 +405,7 @@ fn register_incident(
     monitor_sender: Sender<MonitorAction>,
     package_identifier: u16,
 ) -> Option<Publish> {
-    let uuid = incident_registration.name.clone();
+    let uuid = monitor.get_amount_incidents().to_string();
     let name = incident_registration.name.clone();
     let description = incident_registration.description.clone();
     let x_coordinate = match incident_registration.x.clone().parse() {
@@ -436,7 +429,7 @@ fn register_incident(
     let message = incident.to_string().into_bytes();
     let dup = false;
     let qos = QoS::AtLeast;
-    let retain = false;
+    let retain = true;
     let package_identifier = Some(package_identifier);
 
     let publish = Publish::new(dup, qos, retain, topic_name, package_identifier, message);

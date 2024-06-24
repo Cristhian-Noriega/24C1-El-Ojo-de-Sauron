@@ -130,6 +130,10 @@ impl Incident {
     pub fn id(&self) -> String {
         self.uuid.clone()
     }
+
+    pub fn status(&self) -> IncidentStatus {
+        self.status.clone()
+    }
 }
 
 impl fmt::Display for Incident {
