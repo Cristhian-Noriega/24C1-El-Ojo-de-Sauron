@@ -55,8 +55,14 @@ impl Client {
         let message_str = String::from_utf8_lossy(publish_packet.message()).to_string();
         let client_id_str = String::from_utf8_lossy(&self.id).to_string();
 
-        let mut stream = self.stream.lock().unwrap();
-        match stream.write_all(publish_packet.to_bytes(key).as_slice()) {
+        let mut locked_stream = match self.stream.lock() {
+            Ok(stream) => stream,
+            Err(_) => {
+                logfile.log_sending_message_error(message_str, client_id_str);
+                return;
+            }
+        };
+        match locked_stream.write_all(publish_packet.to_bytes(key).as_slice()) {
             Ok(_) => {
                 logfile.log_sent_message(message_str, client_id_str);
             }

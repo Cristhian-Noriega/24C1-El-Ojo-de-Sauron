@@ -1,5 +1,5 @@
 use std::{
-    io::{ErrorKind, Read, Write},
+    io::{ErrorKind, Write},
     net::TcpStream,
     sync::{Arc, Mutex},
     thread,
@@ -89,8 +89,7 @@ fn read_incoming_packets(
     key: &[u8; 32],
 ) {
     loop {
-        let mut buffer = [0; 1024];
-        let mut locked_stream = match server_stream.lock() {
+        let locked_stream = match server_stream.lock() {
             Ok(stream) => stream,
             Err(_) => {
                 println!("Mutex was poisoned");
@@ -98,38 +97,32 @@ fn read_incoming_packets(
             }
         };
 
-        match locked_stream.set_nonblocking(true) {
+        let mut clone_stream = match locked_stream.try_clone() {
+            Ok(stream) => stream,
+            Err(_) => {
+                println!("Error cloning stream");
+                return;
+            }
+        };
+
+        match clone_stream.set_nonblocking(true) {
             Ok(_) => {}
             Err(_) => {
                 println!("Error setting non-blocking");
                 return;
             }
-        }
+        };
 
-        let incoming_publish = match locked_stream.read(&mut buffer) {
-            Ok(_) => {
-                let packet = Packet::from_bytes(&mut buffer.as_slice(), key);
-                drop(locked_stream);
-
-                match packet {
-                    Ok(Packet::Publish(publish)) => publish,
-                    _ => {
-                        thread::sleep(Duration::from_secs(READ_MESSAGE_INTERVAL));
-                        continue;
-                    }
-                }
-            }
-            Err(e) if e.kind() == ErrorKind::WouldBlock => {
-                drop(locked_stream);
-                thread::sleep(Duration::from_secs(READ_MESSAGE_INTERVAL));
-                continue;
-            }
-            Err(_) => {
+        let incoming_publish = match Packet::from_bytes(&mut clone_stream, key) {
+            Ok(Packet::Publish(publish)) => publish,
+            _ => {
                 drop(locked_stream);
                 thread::sleep(Duration::from_secs(READ_MESSAGE_INTERVAL));
                 continue;
             }
         };
+
+        drop(locked_stream);
 
         let topic_levels = incoming_publish.topic().levels();
 

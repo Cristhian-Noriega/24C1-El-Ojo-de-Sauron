@@ -440,6 +440,9 @@ impl TaskHandler {
     /// Handle a client disconnection
     pub fn handle_client_disconnected(&mut self, client_id: Vec<u8>) -> ServerResult<()> {
         self.active_connections.remove(&client_id);
+        self.client_manager
+            .write()?
+            .disconnect_client(client_id.clone());
         Ok(())
     }
 }

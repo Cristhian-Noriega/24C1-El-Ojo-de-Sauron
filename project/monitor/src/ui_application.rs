@@ -96,7 +96,6 @@ impl UIApplication {
                 description: String::new(),
             },
 
-            //connection_status: false,
             current_layout: Layout::IncidentMap,
             tiles: Tiles::new(OpenStreetMap, egui_ctx),
             map_memory: MapMemory::default(),
@@ -646,13 +645,13 @@ fn update_places(
         }
         let place = Place {
             position: Position::from_lon_lat(incident.x_coordinate, incident.y_coordinate),
-            label: format!("  {}", incident.name.clone()),
+            label: format!("    {}", incident.name.clone()),
             symbol: INCIDENT_SYMBOL,
             style: Style {
                 label_font: FontId::proportional(13.0),
                 label_color: Color32::BLACK,
                 label_background: Color32::TRANSPARENT,
-                symbol_font: FontId::monospace(30.0),
+                symbol_font: FontId::monospace(40.0),
                 symbol_color: Color32::RED,
                 symbol_background: Color32::TRANSPARENT,
                 symbol_stroke: Stroke::new(2.0, Color32::TRANSPARENT),

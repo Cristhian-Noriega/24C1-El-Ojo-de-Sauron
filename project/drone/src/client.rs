@@ -31,6 +31,7 @@ const READY_INCIDENT: &[u8] = b"ready-incident";
 const READ_MESSAGE_INTERVAL: u64 = 100;
 const UPDATE_DATA_INTERVAL: u64 = 1;
 const CHECK_BATTERY_INTERVAL: u64 = 5;
+const PENDING_INCIDENTS_INTERVAL: u64 = 1;
 
 const TRAVEL_INTERVAL: u64 = 1;
 const BATTERY_DISCHARGE_INTERVAL: u64 = 5;
@@ -175,13 +176,12 @@ fn read_incoming_packets(stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<Drone>>
                 handle_publish(publish, cloned_drone, cloned_stream, key);
                 continue;
             }
-            Ok(Packet::Puback(_)) => println!("Received Puback packet!"),
-            Ok(Packet::Pingresp(_)) => println!("Received Pingresp packet!"),
-            Ok(Packet::Suback(_)) => println!("Received Suback packet!"),
-            Ok(Packet::Unsuback(_)) => println!("Received Unsuback packet!"),
-            Ok(Packet::Pingreq(_)) => println!("Received Pingreq packet!"),
+            Ok(Packet::Puback(_)) => {}
+            Ok(Packet::Pingresp(_)) => {}
+            Ok(Packet::Suback(_)) => {}
+            Ok(Packet::Unsuback(_)) => {}
+            Ok(Packet::Pingreq(_)) => {}
             Ok(Packet::Disconnect(_)) => {
-                println!("Received Disconnect packet!");
                 break;
             }
             _ => {
@@ -385,7 +385,7 @@ fn travel_to_new_incident(
     let message = b"".to_vec();
 
     match publish(topic_name, message, &mut locked_stream, QoS::AtMost, key) {
-        Ok(_) => println!("Drone is attending the incident"),
+        Ok(_) => {}
         Err(_) => println!("Drone is attending the incident. no le llego el puback"),
     }
 
@@ -706,15 +706,6 @@ fn subscribe(
     let _ = server_stream.write(subscribe_packet.to_bytes(key).as_slice());
 
     Ok(())
-
-    // server_stream.set_nonblocking(false).unwrap();
-    // match Packet::from_bytes(&mut server_stream, key) {
-    //     Ok(Packet::Suback(_)) => Ok(()),
-    //     _ => Err(std::io::Error::new(
-    //         ErrorKind::Other,
-    //         "Suback was not received.",
-    //     )),
-    // }
 }
 
 /// Unsubscribes from the specified topic filter
@@ -739,15 +730,6 @@ fn unsubscribe(
     let _ = server_stream.write(unsubscribe_packet.to_bytes(key).as_slice());
 
     Ok(())
-
-    // server_stream.set_nonblocking(false).unwrap();
-    // match Packet::from_bytes(&mut server_stream, key) {
-    //     Ok(Packet::Unsuback(_)) => Ok(()),
-    //     _ => Err(std::io::Error::new(
-    //         ErrorKind::Other,
-    //         "Unsuback was not received.",
-    //     )),
-    // }
 }
 
 /// Publishes the specified message to the server
@@ -768,12 +750,7 @@ fn publish(
 
     let dup = false;
     let retain = true;
-    let mut package_identifier = None;
-    if qos == QoS::AtLeast {
-        package_identifier = Some(1);
-    } else if QoS::AtMost == qos {
-        package_identifier = None;
-    }
+    let package_identifier = None;
     let message_bytes = message;
 
     let publish_packet = Publish::new(
@@ -787,18 +764,7 @@ fn publish(
 
     let _ = server_stream.write(publish_packet.to_bytes(key).as_slice());
 
-    // if qos == QoS::AtMost {
     Ok(())
-    // }
-
-    // server_stream.set_nonblocking(false).unwrap();
-    // match Packet::from_bytes(&mut server_stream, key) {
-    //     Ok(Packet::Puback(_)) => Ok(()),
-    //     _ => Err(std::io::Error::new(
-    //         ErrorKind::Other,
-    //         "Puback was not received.???",
-    //     )),
-    // }
 }
 
 /// Travels to the specified location
@@ -950,19 +916,19 @@ pub fn handle_pending_incidents(
         };
         if !locked_drone.has_pending_incidents() {
             drop(locked_drone);
-            thread::sleep(Duration::from_secs(1));
+            thread::sleep(Duration::from_secs(PENDING_INCIDENTS_INTERVAL));
             continue;
         }
 
         if locked_drone.is_below_minimun() {
             drop(locked_drone);
-            thread::sleep(Duration::from_secs(1));
+            thread::sleep(Duration::from_secs(PENDING_INCIDENTS_INTERVAL));
             continue;
         }
 
         if !locked_drone.is_free() {
             drop(locked_drone);
-            thread::sleep(Duration::from_secs(1));
+            thread::sleep(Duration::from_secs(PENDING_INCIDENTS_INTERVAL));
             continue;
         }
 
@@ -975,6 +941,6 @@ pub fn handle_pending_incidents(
                 drop(locked_drone);
             }
         }
-        thread::sleep(Duration::from_secs(1));
+        thread::sleep(Duration::from_secs(PENDING_INCIDENTS_INTERVAL));
     }
 }

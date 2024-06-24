@@ -131,12 +131,30 @@ impl ClientManager {
         if let Some((stored_username, stored_password, is_connected)) =
             registered_clients.get_mut(&client_id)
         {
+            if *is_connected {
+                return false;
+            }
+
             if stored_username == &username && stored_password == &password {
                 *is_connected = true;
                 return true;
             }
         }
         false
+    }
+
+    /// Disconnects a client with the specified client ID
+    pub fn disconnect_client(&self, client_id: Vec<u8>) {
+        let mut registered_clients = match self.registered_clients.lock() {
+            Ok(clients) => clients,
+            Err(err) => {
+                println!("Error locking registered clients: {:?}", err);
+                return;
+            }
+        };
+        if let Some((_, _, is_connected)) = registered_clients.get_mut(&client_id) {
+            *is_connected = false;
+        }
     }
 
     /// Processes a connect packet by validating the login information and authenticating the client
