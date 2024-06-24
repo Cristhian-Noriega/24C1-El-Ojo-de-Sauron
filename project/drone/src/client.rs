@@ -169,7 +169,6 @@ fn handle_publish(
 ) {
     println!("Received publish message on topic: {:?}", publish.topic());
     let message = String::from_utf8(publish.message().to_vec()).unwrap();
-
     let topic_levels = publish.topic().levels();
     if topic_levels.len() == 1 && topic_levels[0] == NEW_INCIDENT {
         println!("LE LLEGO UN NEW INCIDENT");
@@ -248,7 +247,6 @@ fn handle_new_incident(
 
     drop(drone_locked);
 
-
     let topic_filter = TopicFilter::new(
         vec![
             TopicLevel::Literal(ATTENDING_INCIDENT.to_vec()),
@@ -281,7 +279,7 @@ fn handle_new_incident(
         Err(_) => {
             println!("Mutex was poisoned");
             return;
-        } 
+        }
     };
 
     drone_locked.set_incident(Some(incident.clone()));
@@ -393,6 +391,7 @@ fn handle_attending_incident(
     }
 
     drone_locked.increment_attending_counter();
+
     if drone_locked.attending_counter() < 2 {
         drop(drone_locked);
         return;
@@ -531,7 +530,6 @@ fn handle_close_incident(
     server_stream: Arc<Mutex<TcpStream>>,
     key: &[u8; 32],
 ) {
-    println!("ME LLEGO UN CLOSE INCIDENT DEL MONITOR? ");
     let mut locked_drone = match drone.lock() {
         Ok(drone) => drone,
         Err(_) => {
@@ -654,6 +652,7 @@ fn connect_to_server(
 ) -> std::io::Result<TcpStream> {
     println!("\nConnecting to address: {:?}", address);
     let mut to_server_stream = TcpStream::connect(address)?;
+    println!("stream: {:?}", to_server_stream);
 
     let client_id_bytes: Vec<u8> = id.to_string().into_bytes();
 
@@ -670,7 +669,10 @@ fn connect_to_server(
 
     match Packet::from_bytes(&mut to_server_stream, key) {
         Ok(Packet::Connack(connack)) => match connack.connect_return_code() {
-            ConnectReturnCode::ConnectionAccepted => Ok(to_server_stream),
+            ConnectReturnCode::ConnectionAccepted => {
+                println!("Connection accepted");
+                Ok(to_server_stream)
+            }
             _ => Err(std::io::Error::new(
                 ErrorKind::Other,
                 format!("Connection refused: {:?}", connack.connect_return_code()),
@@ -928,7 +930,7 @@ pub fn handle_pending_incidents(
                 continue;
             }
         };
-        
+
         // cambiando esto a considerar tmb si esta anchor, el drone se vuelve greedy
         // si solo veo que esta free, vuelve a anchor y luego va al nuevo incidente
         if !locked_drone.has_pending_incidents() || !locked_drone.can_handle_new_incident() {

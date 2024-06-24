@@ -28,7 +28,7 @@ impl DroneStatus {
             DroneStatus::Recharging => "Charging",
         }
     }
-    pub fn from_str(string: &str) -> Self {
+    pub fn get_status_from_str(string: &str) -> Self {
         match string {
             "0" => DroneStatus::Free,
             "1" => DroneStatus::AttendingIncident,

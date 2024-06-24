@@ -1,5 +1,8 @@
 use std::{
-    collections::{HashMap, HashSet, VecDeque}, hash::Hash, io::Write, sync::{mpsc, Arc, RwLock}, time::Duration
+    collections::{HashMap, HashSet, VecDeque},
+    io::Write,
+    sync::{mpsc, Arc, RwLock},
+    time::Duration,
 };
 
 use crate::{client::Client, client_manager::ClientManager, error::ServerResult, logfile::Logger};
@@ -110,9 +113,7 @@ impl TaskHandler {
     pub fn subscribe(&self, subscribe_packet: Subscribe, client_id: Vec<u8>) -> ServerResult<()> {
         let mut clients = self.clients.write()?;
 
-        
         if let Some(client) = clients.get_mut(&client_id) {
-            
             self.suback(subscribe_packet.packet_identifier(), client);
             self.log_file
                 .log_successful_subscription(&client_id, &subscribe_packet);
@@ -164,12 +165,11 @@ impl TaskHandler {
             self.retained_messages_per_topic
                 .insert(topic_name.clone(), publish_packet.clone());
         }
-        
+
         if topic_name.server_reserved() {
             self.handle_server_reserved_topic(publish_packet, client_id);
             return Ok(());
         }
-
 
         let mut clients = vec![];
 
@@ -262,7 +262,11 @@ impl TaskHandler {
         }
     }
 
-    pub fn handle_retained_messages(&self, client: &mut Client, retained_messages: &VecDeque<Publish>) {
+    pub fn handle_retained_messages(
+        &self,
+        client: &mut Client,
+        retained_messages: &VecDeque<Publish>,
+    ) {
         for message in retained_messages {
             client.send_message(message.clone(), &self.log_file, &self.key);
         }
@@ -441,5 +445,4 @@ impl TaskHandler {
         self.active_connections.remove(&client_id);
         Ok(())
     }
-
 }
