@@ -107,7 +107,17 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
 
     let x = config.get_x_anchor_position();
     let y = config.get_y_anchor_position();
+    
     travel(drone.clone(), x, y, TravelLocation::Anchor);
+    let mut locked_drone = match drone.lock() {
+        Ok(drone) => drone,
+        Err(_) => {
+            println!("Mutex was poisoned");
+            return Ok(());
+        }
+    };
+    locked_drone.set_status(DroneStatus::Free);
+    drop(locked_drone);
 
     thread_update.join().unwrap();
     thread_read.join().unwrap();
@@ -232,13 +242,13 @@ fn handle_new_incident(
         }
     };
 
-    println!("Handling new incident: {:?}", incident);
+    // println!("Handling new incident: {:?}", incident);
 
-    if drone_locked.is_below_minimun() {
-        println!("Drone battery is below minimum level");
-        drop(drone_locked);
-        return;
-    }
+    // if drone_locked.is_below_minimun() {
+    //     println!("Drone battery is below minimum level");
+    //     drop(drone_locked);
+    //     return;
+    // }
 
     if !drone_locked.is_within_range(incident.x_coordinate, incident.y_coordinate) {
         println!("Drone is not within range of the incident");
@@ -859,7 +869,7 @@ fn recharge_battery(drone: Arc<Mutex<Drone>>) {
             }
         };
 
-        if !locked_drone.is_below_minimun() || !locked_drone.can_handle_new_incident() {
+        if !locked_drone.is_below_minimun() || locked_drone.status() != DroneStatus::Free {
             drop(locked_drone);
             thread::sleep(Duration::from_secs(CHECK_BATTERY_INTERVAL));
             continue;
@@ -947,6 +957,18 @@ pub fn handle_pending_incidents(
                 continue;
             }
         };
+        if !locked_drone.has_pending_incidents() {
+            drop(locked_drone);
+            thread::sleep(Duration::from_secs(1));
+            continue;
+        }
+    
+    
+        if locked_drone.is_below_minimun() {
+            println!("Drone battery is below minimum level");
+            drop(locked_drone);
+            continue;
+        }
 
         // cambiando esto a considerar tmb si esta anchor, el drone se vuelve greedy
         // si solo veo que esta free, vuelve a anchor y luego va al nuevo incidente
