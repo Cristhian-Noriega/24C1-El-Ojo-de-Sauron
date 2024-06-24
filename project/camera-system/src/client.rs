@@ -1,6 +1,9 @@
 use std::{
     io::{ErrorKind, Write},
     net::TcpStream,
+    sync::{Arc, Mutex},
+    thread,
+    time::Duration,
 };
 
 use common::incident::Incident;
@@ -27,10 +30,10 @@ const READ_MESSAGE_INTERVAL: u64 = 1;
 
 /// Runs the client
 pub fn client_run(config: Config) -> std::io::Result<()> {
-    let key = config.get_key();
+    let key = config.get_key().clone();
     let active_range = config.get_active_range();
 
-    let mut server_stream = connect_to_server(&config.clone())?;
+    let mut server_stream = connect_to_server(config.clone())?;
     let mut camera_system = CameraSystem::new();
 
     for (i, camera) in config.get_cameras().iter().enumerate() {
@@ -43,7 +46,7 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
         camera_system.add_camera(camara);
     }
 
-    make_initial_subscribes(&mut server_stream, key);
+    make_initial_subscribes(&mut server_stream, &key);
 
     let server_stream = Arc::new(Mutex::new(server_stream));
     let camera_system = Arc::new(Mutex::new(camera_system));
@@ -64,16 +67,18 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
 
     thread_update.join().unwrap();
     thread_read.join().unwrap();
+
+    Ok(())
 }
 
 /// Read incoming packages in a loop
 fn read_incoming_packets(
     server_stream: Arc<Mutex<TcpStream>>,
     camera_system: Arc<Mutex<CameraSystem>>,
-    &key: &[u8; 32],
+    key: &[u8; 32],
 ) {
     loop {
-        let mut locked_stream = stream.lock().unwrap().try_clone().unwrap();
+        let mut locked_stream = server_stream.lock().unwrap().try_clone().unwrap();
         locked_stream.set_nonblocking(true).unwrap();
 
         let incoming_publish = match Packet::from_bytes(&mut locked_stream, key) {
@@ -89,10 +94,12 @@ fn read_incoming_packets(
 
         let topic_levels = incoming_publish.topic().levels();
 
+        let cloned_camera_system = camera_system.clone();
+
         if topic_levels.len() == 1 && topic_levels[0] == NEW_INCIDENT {
-            handle_new_incident(incoming_publish, camera_system, key);
+            handle_new_incident(incoming_publish, cloned_camera_system);
         } else if topic_levels.len() == 2 && topic_levels[0] == CLOSE_INCIDENT {
-            handle_close_incident(incoming_publish, camera_system, key);
+            handle_close_incident(incoming_publish, cloned_camera_system);
         }
     }
 }
@@ -101,7 +108,7 @@ fn read_incoming_packets(
 fn update_camera_system_status(
     server_stream: Arc<Mutex<TcpStream>>,
     camera_system: Arc<Mutex<CameraSystem>>,
-    &key: &[u8; 32],
+    key: &[u8; 32],
 ) {
     loop {
         let locked_camera_system = match camera_system.lock() {
@@ -117,7 +124,9 @@ fn update_camera_system_status(
 
         drop(locked_camera_system);
 
-        publish(topic_name, cameras_data, server_stream, key)?;
+        let cloned_server_stream = server_stream.clone();
+
+        publish(topic_name, cameras_data, cloned_server_stream, key);
 
         thread::sleep(Duration::from_secs(UPDATE_DATA_INTERVAL));
     }
@@ -133,7 +142,7 @@ fn publish(
     let dup = false;
     let qos = QoS::AtMost;
     let retain = false;
-    let package_identifier = Some(1);
+    let package_identifier = None;
     let message_bytes = message;
 
     let publish_packet = Publish::new(
@@ -159,7 +168,7 @@ fn publish(
 }
 
 /// Connects to the server
-fn connect_to_server(config: &Config) -> std::io::Result<TcpStream> {
+fn connect_to_server(config: Config) -> std::io::Result<TcpStream> {
     let address = config.get_address().to_owned();
     let id = config.get_id().to_owned();
     let username = config.get_username().to_owned();
@@ -194,11 +203,7 @@ fn connect_to_server(config: &Config) -> std::io::Result<TcpStream> {
 }
 
 /// Handles a new incident
-fn handle_new_incident(
-    incoming_publish: Publish,
-    camera_system: Arc<Mutex<CameraSystem>>,
-    key: &[u8; 32],
-) {
+fn handle_new_incident(incoming_publish: Publish, camera_system: Arc<Mutex<CameraSystem>>) {
     let incident_string = String::from_utf8_lossy(incoming_publish.message()).to_string();
     let incident = match Incident::from_string(incident_string) {
         Ok(incident) => incident,
@@ -208,7 +213,7 @@ fn handle_new_incident(
         }
     };
 
-    let locked_camera_system = match camera_system.lock() {
+    let mut locked_camera_system = match camera_system.lock() {
         Ok(locked_camera_system) => locked_camera_system,
         Err(_) => {
             println!("Mutex was poisoned");
@@ -222,15 +227,11 @@ fn handle_new_incident(
 }
 
 /// Handles the closing of an incident
-fn handle_close_incident(
-    incoming_publish: Publish,
-    camera_system: Arc<Mutex<CameraSystem>>,
-    key: &[u8; 32],
-) {
+fn handle_close_incident(incoming_publish: Publish, camera_system: Arc<Mutex<CameraSystem>>) {
     let topic_levels = incoming_publish.topic().levels();
     let incident_id = String::from_utf8_lossy(topic_levels[1].as_slice()).to_string();
 
-    let locked_camera_system = match camera_system.lock() {
+    let mut locked_camera_system = match camera_system.lock() {
         Ok(locked_camera_system) => locked_camera_system,
         Err(_) => {
             println!("Mutex was poisoned");
@@ -254,7 +255,7 @@ fn make_initial_subscribes(server_stream: &mut TcpStream, key: &[u8; 32]) {
         false,
     );
     let topics = vec![new_incident, close_incident];
-    subscribe(topics, &mut server_stream, key);
+    subscribe(topics, server_stream, key);
 }
 
 /// Handles the subscription to a topic
@@ -271,7 +272,7 @@ fn subscribe(filter: Vec<TopicFilter>, server_stream: &mut TcpStream, key: &[u8;
     let _ = server_stream.write(subscribe_packet.to_bytes(key).as_slice());
 
     match Packet::from_bytes(server_stream, key) {
-        Ok(Packet::Suback(suback)) => {}
+        Ok(Packet::Suback(_)) => {}
         _ => {
             println!("Suback was not recibed");
             return;
