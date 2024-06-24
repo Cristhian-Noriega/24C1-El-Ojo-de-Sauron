@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 
-use std::{fs::File, io::Read, path::Path};
 use common::coordenate::Coordenate;
 use serde_derive::{Deserialize, Serialize};
+use std::{fs::File, io::Read, path::Path};
 
 /// Represents the configuration of the server
 #[derive(Serialize, Deserialize, Debug, Clone)]

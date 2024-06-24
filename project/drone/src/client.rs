@@ -16,10 +16,7 @@ use mqtt::model::{
     return_codes::connect_return_code::ConnectReturnCode,
 };
 
-use crate::{
-    config::Config,
-    drone::Drone,
-};
+use crate::{config::Config, drone::Drone};
 
 use common::drone_status::{DroneStatus, TravelLocation};
 

@@ -1,11 +1,19 @@
 #![allow(clippy::too_many_arguments)]
 
 use crate::{
-    camera::Camera, channels_tasks::{
+    camera::Camera,
+    channels_tasks::{
         DroneRegistration, IncidentEdit, IncidentRegistration, MonitorAction, UIAction,
-    }, drone::Drone, right_click_menu::RightClickMenu
+    },
+    drone::Drone,
+    right_click_menu::RightClickMenu,
 };
-use common::{coordenate::Coordenate, incident::{Incident, IncidentStatus}, camera_status::CameraStatus, drone_status::{DroneStatus, TravelLocation}};
+use common::{
+    camera_status::CameraStatus,
+    coordenate::Coordenate,
+    drone_status::{DroneStatus, TravelLocation},
+    incident::{Incident, IncidentStatus},
+};
 use eframe::egui::{Color32, FontId, Stroke};
 
 use eframe::egui;
@@ -596,9 +604,12 @@ impl eframe::App for UIApplication {
                     &mut self.current_layout,
                     &self.sender,
                 ),
-                Layout::NewIncident => {
-                    display_new_incident(ui, &mut self.new_incident_registration, &self.sender, &mut self.current_layout)
-                }
+                Layout::NewIncident => display_new_incident(
+                    ui,
+                    &mut self.new_incident_registration,
+                    &self.sender,
+                    &mut self.current_layout,
+                ),
                 Layout::EditIncident => {
                     display_edit_incident(ui, &mut self.new_incident_edit, &self.sender)
                 }
@@ -651,7 +662,7 @@ fn update_places(
         places.push(place);
         activity_cordenates.push((incident.x_coordinate, incident.y_coordinate));
     }
-    
+
     for coordenate in charging_station_coordenates {
         let charging_station_place = Place {
             position: Position::from_lon_lat(coordenate.x_coordinate, coordenate.y_coordinate),
@@ -675,7 +686,7 @@ fn update_places(
         let color = match drone.status {
             DroneStatus::Free => Color32::BLACK,
             DroneStatus::AttendingIncident => Color32::from_rgb(220, 20, 60),
-            DroneStatus::Travelling(TravelLocation::Central) =>Color32::from_rgb(50, 205, 50),
+            DroneStatus::Travelling(TravelLocation::Central) => Color32::from_rgb(50, 205, 50),
             DroneStatus::Travelling(TravelLocation::Anchor) => Color32::BLACK,
             DroneStatus::Travelling(TravelLocation::Incident) => Color32::from_rgb(255, 79, 0),
             DroneStatus::Recharging => Color32::GREEN,
@@ -685,18 +696,22 @@ fn update_places(
             let overlapping_activities = places
                 .iter_mut()
                 .filter(|activity| {
-                    activity.position.lon() == drone.x_coordinate && activity.position.lat() == drone.y_coordinate
+                    activity.position.lon() == drone.x_coordinate
+                        && activity.position.lat() == drone.y_coordinate
                 })
                 .collect::<Vec<&mut Place>>();
             for overlapping_activity in overlapping_activities {
                 if overlapping_activity.symbol == CHARGING_STATION_SYMBOL {
                     overlapping_activity.style.symbol_color = Color32::from_rgb(50, 205, 50);
-                }
-                else {
+                } else {
                     overlapping_activity.style.label_color = Color32::from_rgb(83, 0, 0);
                 }
-                overlapping_activity.label =
-                    format!("{}, {}{}", overlapping_activity.label, DRONE_SYMBOL, drone.id.clone());
+                overlapping_activity.label = format!(
+                    "{}, {}{}",
+                    overlapping_activity.label,
+                    DRONE_SYMBOL,
+                    drone.id.clone()
+                );
             }
             continue;
         }
@@ -741,6 +756,6 @@ fn update_places(
         };
         places.push(place);
     }
-    
+
     Places::new(places)
 }

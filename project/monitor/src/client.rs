@@ -5,7 +5,10 @@ use std::{
     sync::mpsc::{channel, Receiver, Sender},
 };
 
-use common::{drone_status::DroneStatus, incident::{Incident, IncidentStatus}};
+use common::{
+    drone_status::DroneStatus,
+    incident::{Incident, IncidentStatus},
+};
 use mqtt::model::{
     components::{
         encoded_string::EncodedString, login::Login, qos::QoS, topic_filter::TopicFilter,
@@ -57,7 +60,11 @@ pub fn client_run(config: Config) -> Result<(), String> {
     });
 
     // start the ui in the main thread
-    match start_ui(ui_sender, monitor_receiver, config.get_charging_coordenates()) {
+    match start_ui(
+        ui_sender,
+        monitor_receiver,
+        config.get_charging_coordenates(),
+    ) {
         Ok(_) => {}
         Err(err) => {
             println!("Error starting UI: {:?}", err);

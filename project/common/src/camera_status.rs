@@ -12,7 +12,6 @@ impl std::fmt::Display for CameraStatus {
             CameraStatus::Sleep => write!(f, "0"),
         }
     }
-
 }
 
 impl CameraStatus {

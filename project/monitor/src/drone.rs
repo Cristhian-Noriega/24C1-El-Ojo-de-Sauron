@@ -1,4 +1,4 @@
-use common::{incident::Incident, drone_status::DroneStatus};
+use common::{drone_status::DroneStatus, incident::Incident};
 
 /// Represents a drone in the monitor
 #[derive(Debug, PartialEq, Clone)]
