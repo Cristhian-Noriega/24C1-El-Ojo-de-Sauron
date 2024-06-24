@@ -5,6 +5,7 @@ use walkers::{MapMemory, Position, Projector};
 
 use crate::ui_application::{DEFAULT_LATITUDE, DEFAULT_LONGITUDE};
 
+/// Represents the menu shown when a right click in the map is registered
 #[derive(Clone)]
 pub struct RightClickMenu {
     pub open: bool,
@@ -16,12 +17,14 @@ pub struct RightClickMenu {
 }
 
 impl Default for RightClickMenu {
+    /// Returns empty RightClickMenu
     fn default() -> Self {
         Self::new()
     }
 }
 
 impl RightClickMenu {
+    /// Creates a new RightClickMenu
     pub fn new() -> Self {
         Self {
             open: false,
@@ -33,6 +36,7 @@ impl RightClickMenu {
         }
     }
 
+    /// Updates the RightClickMenu based on the action registered
     pub fn update(
         &mut self,
         click_location_pixels: Pos2,

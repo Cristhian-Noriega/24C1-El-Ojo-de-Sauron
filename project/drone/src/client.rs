@@ -385,7 +385,7 @@ fn travel_to_new_incident(
     let message = b"".to_vec();
 
     match publish(topic_name, message, &mut locked_stream, QoS::AtMost, key) {
-        Ok(_) => println!("Drone is attending the incident"),
+        Ok(_) => {}
         Err(_) => println!("Drone is attending the incident. no le llego el puback"),
     }
 
