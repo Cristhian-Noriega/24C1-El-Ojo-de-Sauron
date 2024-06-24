@@ -1,14 +1,11 @@
 #![allow(clippy::too_many_arguments)]
 
 use crate::{
-    camera::{Camera, CameraStatus},
-    channels_tasks::{
+    camera::{Camera, CameraStatus}, channels_tasks::{
         DroneRegistration, IncidentEdit, IncidentRegistration, MonitorAction, UIAction,
-    },
-    drone::{Drone, DroneStatus},
-    right_click_menu::RightClickMenu,
+    }, drone::{Drone, DroneStatus}, right_click_menu::RightClickMenu
 };
-use common::incident::{Incident, IncidentStatus};
+use common::{coordenate::Coordenate, incident::{Incident, IncidentStatus}};
 use eframe::egui::{Color32, FontId, Stroke};
 
 use eframe::egui;
@@ -24,9 +21,6 @@ use walkers::{
 
 pub const DEFAULT_LONGITUDE: f64 = -58.372170426210836;
 pub const DEFAULT_LATITUDE: f64 = -34.60840997593428;
-
-const CHARGING_STATION_LONGITUDE: f64 = -58.3703;
-const CHARGING_STATION_LATITUDE: f64 = -34.6082;
 
 /// Represents the layout of the UI
 #[derive(PartialEq)]
@@ -46,7 +40,6 @@ pub struct UIApplication {
     new_drone_registration: DroneRegistration,
     new_incident_edit: IncidentEdit,
 
-    //connection_status: bool,
     current_layout: Layout,
     tiles: Tiles,
     map_memory: MapMemory,
@@ -57,7 +50,7 @@ pub struct UIApplication {
     drones: Vec<Drone>,
     incidents: Vec<Incident>,
     cameras: Vec<Camera>,
-    charging_station_coordenates: (f64, f64),
+    charging_station_coordenates: Vec<Coordenate>,
 
     right_click_menu: RightClickMenu,
 }
@@ -68,6 +61,7 @@ impl UIApplication {
         egui_ctx: Context,
         sender: Sender<UIAction>,
         receiver: Receiver<MonitorAction>,
+        charging_station_coordenates: Vec<Coordenate>,
     ) -> Self {
         Self {
             new_incident_registration: IncidentRegistration {
@@ -99,7 +93,7 @@ impl UIApplication {
             drones: vec![],
             incidents: vec![],
             cameras: vec![],
-            charging_station_coordenates: (CHARGING_STATION_LONGITUDE, CHARGING_STATION_LATITUDE),
+            charging_station_coordenates,
 
             right_click_menu: RightClickMenu::default(),
         }
@@ -195,7 +189,7 @@ fn display_incident_map(
     incidents: &Vec<Incident>,
     drones: &Vec<Drone>,
     cameras: &Vec<Camera>,
-    charging_station_coordenates: &(f64, f64),
+    charging_station_coordenates: &Vec<Coordenate>,
     tiles: &mut Tiles,
     map_memory: &mut MapMemory,
     right_click_menu: &mut RightClickMenu,
@@ -277,7 +271,7 @@ fn display_edit_incident(
         ui.add_space(10.0);
         ui.horizontal(|ui| {
             ui.label("UUID:");
-            ui.add_space(70.0);
+            ui.add_space(71.0);
             ui.text_edit_singleline(&mut edit_incident.uuid);
         });
         ui.add_space(5.0);
@@ -621,7 +615,7 @@ fn update_places(
     incidents: &Vec<Incident>,
     drones: &Vec<Drone>,
     cameras: &Vec<Camera>,
-    charging_station_coordenates: &(f64, f64),
+    charging_station_coordenates: &Vec<Coordenate>,
 ) -> Places {
     let mut places = vec![];
 
@@ -710,24 +704,23 @@ fn update_places(
         places.push(place);
     }
 
-    let charging_station_place = Place {
-        position: Position::from_lon_lat(
-            charging_station_coordenates.0,
-            charging_station_coordenates.1,
-        ),
-        label: "   Drone Central".to_string(),
-        symbol: '🖧',
-        style: Style {
-            label_font: FontId::proportional(10.0),
-            label_color: Color32::BLACK,
-            label_background: Color32::TRANSPARENT,
-            symbol_font: FontId::monospace(35.0),
-            symbol_color: Color32::BLACK,
-            symbol_background: Color32::TRANSPARENT,
-            symbol_stroke: Stroke::new(2.0, Color32::TRANSPARENT),
-        },
-    };
-    places.push(charging_station_place);
+    for coordenate in charging_station_coordenates {
+        let charging_station_place = Place {
+            position: Position::from_lon_lat(coordenate.x_coordinate, coordenate.y_coordinate),
+            label: "  Charging Station".to_string(),
+            symbol: '🖧',
+            style: Style {
+                label_font: FontId::proportional(10.0),
+                label_color: Color32::BLACK,
+                label_background: Color32::TRANSPARENT,
+                symbol_font: FontId::monospace(35.0),
+                symbol_color: Color32::BLACK,
+                symbol_background: Color32::TRANSPARENT,
+                symbol_stroke: Stroke::new(2.0, Color32::TRANSPARENT),
+            },
+        };
+        places.push(charging_station_place);
+    }
 
     Places::new(places)
 }

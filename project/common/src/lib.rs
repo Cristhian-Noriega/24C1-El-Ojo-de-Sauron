@@ -6,3 +6,6 @@ pub mod incident;
 
 /// Represents an error
 pub mod error;
+
+/// Represents a position
+pub mod coordenate;

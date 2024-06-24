@@ -34,7 +34,6 @@ pub fn client_run(config: Config) -> Result<(), String> {
     let (ui_sender, ui_receiver) = channel();
 
     // Connect to the server
-
     let mut stream = match connect_to_server(config.clone()) {
         Ok(stream) => stream,
         Err(e) => {
@@ -53,19 +52,17 @@ pub fn client_run(config: Config) -> Result<(), String> {
     let cloned_key = *config.get_key();
 
     // monitor start in a thread to avoid blocking the main thread
-    let monitor_thread = std::thread::spawn(move || {
+    std::thread::spawn(move || {
         start_monitor(stream, monitor_sender, ui_receiver, &cloned_key);
     });
 
     // start the ui in the main thread
-    match start_ui(ui_sender, monitor_receiver) {
+    match start_ui(ui_sender, monitor_receiver, config.get_charging_coordenates()) {
         Ok(_) => {}
         Err(err) => {
             println!("Error starting UI: {:?}", err);
         }
     }
-
-    monitor_thread.join().unwrap();
 
     Ok(())
 }
@@ -109,6 +106,7 @@ fn connect_to_server(config: Config) -> std::io::Result<TcpStream> {
 fn start_ui(
     ui_sender: Sender<UIAction>,
     from_monitor_receiver: Receiver<MonitorAction>,
+    charging_stations: Vec<common::coordenate::Coordenate>,
 ) -> Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default(),
@@ -124,6 +122,7 @@ fn start_ui(
                 cc.egui_ctx.clone(),
                 ui_sender,
                 from_monitor_receiver,
+                charging_stations,
             ))
         }),
     )
