@@ -1,0 +1,14 @@
+{
+    "address": "127.0.0.1:8080",
+    "id": "camera-system",
+    "username": "camera-system",
+    "password": "sauron",
+    "key": "12345678901234567890123456789012",
+    "active_range": 0.005,
+    "cameras": [
+        {
+            "x_coordinate": -58.376475455498785,
+            "y_coordinate": -34.60691845264953
+        }
+    ]
+}

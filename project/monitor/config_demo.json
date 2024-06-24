@@ -1,0 +1,13 @@
+{
+    "address": "127.0.0.1:8080",
+    "id": "admin",
+    "username": "admin",
+    "password": "admin",
+    "key": "12345678901234567890123456789012",
+    "charging_stations": [
+        {
+            "x_coordinate": -58.367998636718276,
+            "y_coordinate": -34.610003103793545
+        }
+    ]
+}
