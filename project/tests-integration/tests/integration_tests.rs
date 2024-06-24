@@ -2,7 +2,7 @@ use camera_system::camera::Camera;
 use camera_system::camera_system::CameraSystem;
 use common::incident::{Incident, IncidentStatus};
 use drone::drone::Drone;
-use drone::drone_status::{DroneStatus, TravelLocation};
+use common::drone_status::{DroneStatus, TravelLocation};
 use monitor::monitor::Monitor;
 
 #[test]

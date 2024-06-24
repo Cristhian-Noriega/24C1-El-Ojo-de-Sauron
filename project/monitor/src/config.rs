@@ -8,7 +8,7 @@ use serde_derive::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Config {
     address: String,
-    key: [u8; 32],
+    key: String,
     id: String,
     username: String,
     password: String,
@@ -35,7 +35,7 @@ impl Config {
 
     /// Returns the key of the encryption
     pub fn get_key(&self) -> &[u8; 32] {
-        &self.key
+        self.key.as_bytes().try_into().unwrap()
     }
 
     /// Returns the client id of the server

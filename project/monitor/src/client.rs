@@ -5,7 +5,7 @@ use std::{
     sync::mpsc::{channel, Receiver, Sender},
 };
 
-use common::incident::{Incident, IncidentStatus};
+use common::{drone_status::DroneStatus, incident::{Incident, IncidentStatus}};
 use mqtt::model::{
     components::{
         encoded_string::EncodedString, login::Login, qos::QoS, topic_filter::TopicFilter,
@@ -22,7 +22,7 @@ use crate::{
         DroneRegistration, IncidentEdit, IncidentRegistration, MonitorAction, UIAction,
     },
     config::Config,
-    drone::{Drone, DroneStatus},
+    drone::Drone,
     monitor::Monitor,
     ui_application::UIApplication,
 };

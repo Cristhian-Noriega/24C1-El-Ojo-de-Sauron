@@ -1,4 +1,4 @@
-use crate::drone_status::{DroneStatus, TravelLocation};
+use common::drone_status::{DroneStatus, TravelLocation};
 
 use common::incident::Incident;
 

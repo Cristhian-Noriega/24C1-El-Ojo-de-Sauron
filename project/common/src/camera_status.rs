@@ -12,4 +12,14 @@ impl std::fmt::Display for CameraStatus {
             CameraStatus::Sleep => write!(f, "0"),
         }
     }
+
+}
+
+impl CameraStatus {
+    pub fn to_str(&self) -> String {
+        match self {
+            CameraStatus::Active => "Active".to_string(),
+            CameraStatus::Sleep => "Inactive".to_string(),
+        }
+    }
 }

@@ -28,6 +28,30 @@ impl std::fmt::Display for DroneStatus {
     }
 }
 
+impl DroneStatus {
+    pub fn to_str(&self) -> &str {
+        match self {
+            DroneStatus::Free => "Free",
+            DroneStatus::AttendingIncident => "Attending Incident",
+            DroneStatus::Travelling(TravelLocation::Central) => "Travelling to Central",
+            DroneStatus::Travelling(TravelLocation::Anchor) => "Travelling to Anchor",
+            DroneStatus::Travelling(TravelLocation::Incident) => "Travelling to Incident",
+            DroneStatus::Recharging => "Charging",
+        }
+    }
+    pub fn get_status_from_str(string: &str) -> Self {
+        match string {
+            "0" => DroneStatus::Free,
+            "1" => DroneStatus::AttendingIncident,
+            "2" => DroneStatus::Travelling(TravelLocation::Central),
+            "3" => DroneStatus::Travelling(TravelLocation::Anchor),
+            "4" => DroneStatus::Travelling(TravelLocation::Incident),
+            "5" => DroneStatus::Recharging,
+            _ => DroneStatus::Free,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

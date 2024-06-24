@@ -1,11 +1,11 @@
 #![allow(clippy::too_many_arguments)]
 
 use crate::{
-    camera::{Camera, CameraStatus}, channels_tasks::{
+    camera::Camera, channels_tasks::{
         DroneRegistration, IncidentEdit, IncidentRegistration, MonitorAction, UIAction,
-    }, drone::{Drone, DroneStatus}, right_click_menu::RightClickMenu
+    }, drone::Drone, right_click_menu::RightClickMenu
 };
-use common::{coordenate::Coordenate, incident::{Incident, IncidentStatus}};
+use common::{coordenate::Coordenate, incident::{Incident, IncidentStatus}, camera_status::CameraStatus, drone_status::{DroneStatus, TravelLocation}};
 use eframe::egui::{Color32, FontId, Stroke};
 
 use eframe::egui;
@@ -21,6 +21,11 @@ use walkers::{
 
 pub const DEFAULT_LONGITUDE: f64 = -58.372170426210836;
 pub const DEFAULT_LATITUDE: f64 = -34.60840997593428;
+
+pub const DRONE_SYMBOL: char = '❇';
+pub const INCIDENT_SYMBOL: char = '⚠';
+pub const CAMERA_SYMBOL: char = '📹';
+pub const CHARGING_STATION_SYMBOL: char = '🖧';
 
 /// Represents the layout of the UI
 #[derive(PartialEq)]
@@ -169,7 +174,7 @@ fn handle_right_clicks(
                             "New incident at coordenates: ({}, {})",
                             right_click_menu.x_coordenate, right_click_menu.y_coordenate
                         );
-                        display_new_incident(ui, new_incident_registration, sender);
+                        display_new_incident(ui, new_incident_registration, sender, layout);
                         *layout = Layout::NewIncident;
 
                         right_click_menu.open = false;
@@ -222,6 +227,7 @@ fn display_new_incident(
     ui: &mut egui::Ui,
     new_incident: &mut IncidentRegistration,
     sender: &Sender<UIAction>,
+    layout: &mut Layout,
 ) {
     egui::Frame::group(ui.style()).show(ui, |ui| {
         ui.label("New Incident Registration:");
@@ -255,6 +261,7 @@ fn display_new_incident(
                 new_incident.description.clear();
                 new_incident.x.clear();
                 new_incident.y.clear();
+                *layout = Layout::IncidentMap;
             }
         });
     });
@@ -312,21 +319,21 @@ fn display_incident_list(
     TableBuilder::new(ui)
         .striped(true)
         .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
-        .column(Column::initial(50.0))
-        .column(Column::remainder())
+        .column(Column::initial(55.0))
+        .column(Column::initial(55.0))
         .column(Column::remainder())
         .column(Column::remainder())
         .column(Column::initial(75.0))
         .column(Column::remainder())
         .header(10.0, |mut header| {
             header.col(|ui| {
+                ui.heading("Actions");
+            });
+            header.col(|ui| {
                 ui.heading("UUID");
             });
             header.col(|ui| {
                 ui.heading("Name");
-            });
-            header.col(|ui| {
-                ui.heading("Description");
             });
             header.col(|ui| {
                 ui.heading("Coordinates");
@@ -335,30 +342,12 @@ fn display_incident_list(
                 ui.heading("Status");
             });
             header.col(|ui| {
-                ui.heading("Actions");
+                ui.heading("Description");
             });
         })
         .body(|mut body| {
             for incident in incidents.iter() {
                 body.row(50.0, |mut row| {
-                    row.col(|ui| {
-                        ui.label(incident.uuid.clone());
-                    });
-                    row.col(|ui| {
-                        ui.label(incident.name.clone());
-                    });
-                    row.col(|ui| {
-                        ui.label(incident.description.clone());
-                    });
-                    row.col(|ui| {
-                        ui.label(format!(
-                            "({}, {})",
-                            incident.x_coordinate, incident.y_coordinate
-                        ));
-                    });
-                    row.col(|ui| {
-                        ui.label(incident.status.clone().meaning());
-                    });
                     row.col(|ui| {
                         if incident.status == IncidentStatus::Resolvable {
                             if ui.button("Resolve").clicked() {
@@ -374,6 +363,24 @@ fn display_incident_list(
                                 .clone_from(&incident.description);
                             *current_layout = Layout::EditIncident;
                         }
+                    });
+                    row.col(|ui| {
+                        ui.label(incident.uuid.clone());
+                    });
+                    row.col(|ui| {
+                        ui.label(incident.name.clone());
+                    });
+                    row.col(|ui| {
+                        ui.label(format!(
+                            "({}, {})",
+                            incident.x_coordinate, incident.y_coordinate
+                        ));
+                    });
+                    row.col(|ui| {
+                        ui.label(incident.status.clone().meaning());
+                    });
+                    row.col(|ui| {
+                        ui.label(incident.description.clone());
                     });
                 });
             }
@@ -570,6 +577,8 @@ impl eframe::App for UIApplication {
             }
         }
 
+        ctx.request_repaint();
+
         egui::CentralPanel::default().show(ctx, |ui| {
             display_header(ui, &mut self.current_layout);
 
@@ -588,7 +597,7 @@ impl eframe::App for UIApplication {
                     &self.sender,
                 ),
                 Layout::NewIncident => {
-                    display_new_incident(ui, &mut self.new_incident_registration, &self.sender)
+                    display_new_incident(ui, &mut self.new_incident_registration, &self.sender, &mut self.current_layout)
                 }
                 Layout::EditIncident => {
                     display_edit_incident(ui, &mut self.new_incident_edit, &self.sender)
@@ -628,7 +637,7 @@ fn update_places(
         let place = Place {
             position: Position::from_lon_lat(incident.x_coordinate, incident.y_coordinate),
             label: format!("  {}", incident.name.clone()),
-            symbol: '⚠',
+            symbol: INCIDENT_SYMBOL,
             style: Style {
                 label_font: FontId::proportional(13.0),
                 label_color: Color32::BLACK,
@@ -642,31 +651,60 @@ fn update_places(
         places.push(place);
         activity_cordenates.push((incident.x_coordinate, incident.y_coordinate));
     }
+    
+    for coordenate in charging_station_coordenates {
+        let charging_station_place = Place {
+            position: Position::from_lon_lat(coordenate.x_coordinate, coordenate.y_coordinate),
+            label: "  Charging Station".to_string(),
+            symbol: CHARGING_STATION_SYMBOL,
+            style: Style {
+                label_font: FontId::proportional(13.0),
+                label_color: Color32::BLACK,
+                label_background: Color32::TRANSPARENT,
+                symbol_font: FontId::monospace(35.0),
+                symbol_color: Color32::BLACK,
+                symbol_background: Color32::TRANSPARENT,
+                symbol_stroke: Stroke::new(2.0, Color32::TRANSPARENT),
+            },
+        };
+        places.push(charging_station_place);
+        activity_cordenates.push((coordenate.x_coordinate, coordenate.y_coordinate));
+    }
 
     for drone in drones {
         let color = match drone.status {
             DroneStatus::Free => Color32::BLACK,
             DroneStatus::AttendingIncident => Color32::from_rgb(220, 20, 60),
-            DroneStatus::Travelling => Color32::from_rgb(255, 79, 0),
+            DroneStatus::Travelling(TravelLocation::Central) =>Color32::from_rgb(50, 205, 50),
+            DroneStatus::Travelling(TravelLocation::Anchor) => Color32::BLACK,
+            DroneStatus::Travelling(TravelLocation::Incident) => Color32::from_rgb(255, 79, 0),
             DroneStatus::Recharging => Color32::GREEN,
         };
 
         if activity_cordenates.contains(&(drone.x_coordinate, drone.y_coordinate)) {
-            let overlapping_activity = places
+            let overlapping_activities = places
                 .iter_mut()
-                .find(|place| {
-                    place.position == Position::from_lon_lat(drone.x_coordinate, drone.y_coordinate)
+                .filter(|activity| {
+                    activity.position.lon() == drone.x_coordinate && activity.position.lat() == drone.y_coordinate
                 })
-                .unwrap();
-            overlapping_activity.label =
-                format!("{}, ❇{}", overlapping_activity.label, drone.id.clone());
+                .collect::<Vec<&mut Place>>();
+            for overlapping_activity in overlapping_activities {
+                if overlapping_activity.symbol == CHARGING_STATION_SYMBOL {
+                    overlapping_activity.style.symbol_color = Color32::from_rgb(50, 205, 50);
+                }
+                else {
+                    overlapping_activity.style.label_color = Color32::from_rgb(83, 0, 0);
+                }
+                overlapping_activity.label =
+                    format!("{}, {}{}", overlapping_activity.label, DRONE_SYMBOL, drone.id.clone());
+            }
             continue;
         }
 
         let place = Place {
             position: Position::from_lon_lat(drone.x_coordinate, drone.y_coordinate),
             label: format!("  {}", drone.id.clone()),
-            symbol: '❇',
+            symbol: DRONE_SYMBOL,
             style: Style {
                 label_font: FontId::proportional(15.0),
                 label_color: Color32::BLACK,
@@ -683,14 +721,14 @@ fn update_places(
 
     for camera in cameras {
         let color = match camera.status {
-            CameraStatus::Inactive => Color32::BLACK,
+            CameraStatus::Sleep => Color32::BLACK,
             CameraStatus::Active => Color32::RED,
         };
 
         let place = Place {
             position: Position::from_lon_lat(camera.x_coordinate, camera.y_coordinate),
             label: format!(" {}", camera.id.clone()),
-            symbol: '📹',
+            symbol: CAMERA_SYMBOL,
             style: Style {
                 label_font: FontId::proportional(14.0),
                 label_color: Color32::BLACK,
@@ -703,24 +741,6 @@ fn update_places(
         };
         places.push(place);
     }
-
-    for coordenate in charging_station_coordenates {
-        let charging_station_place = Place {
-            position: Position::from_lon_lat(coordenate.x_coordinate, coordenate.y_coordinate),
-            label: "  Charging Station".to_string(),
-            symbol: '🖧',
-            style: Style {
-                label_font: FontId::proportional(10.0),
-                label_color: Color32::BLACK,
-                label_background: Color32::TRANSPARENT,
-                symbol_font: FontId::monospace(35.0),
-                symbol_color: Color32::BLACK,
-                symbol_background: Color32::TRANSPARENT,
-                symbol_stroke: Stroke::new(2.0, Color32::TRANSPARENT),
-            },
-        };
-        places.push(charging_station_place);
-    }
-
+    
     Places::new(places)
 }
