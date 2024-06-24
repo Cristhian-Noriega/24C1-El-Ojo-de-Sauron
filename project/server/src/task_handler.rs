@@ -164,7 +164,6 @@ impl TaskHandler {
     pub fn publish(&mut self, publish_packet: &Publish, client_id: Vec<u8>) -> ServerResult<()> {
         let topic_name = publish_packet.topic();
 
-
         if topic_name.server_reserved() {
             self.handle_server_reserved_topic(publish_packet, client_id);
             return Ok(());

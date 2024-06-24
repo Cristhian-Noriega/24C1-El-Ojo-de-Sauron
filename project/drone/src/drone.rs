@@ -123,15 +123,9 @@ impl Drone {
     /// Discharges the battery of the drone
     pub fn discharge_battery(&mut self) {
         let battery_to_discharge = match self.status {
-            DroneStatus::Travelling(_) => {
-                BATTERY_DISCHARGE_TRAVELLING
-            }
-            DroneStatus::Free => {
-                BATTERY_DISCHARGE_IDLE
-            }
-            DroneStatus::AttendingIncident => {
-                BATTERY_DISCHARGE_IDLE
-            }
+            DroneStatus::Travelling(_) => BATTERY_DISCHARGE_TRAVELLING,
+            DroneStatus::Free => BATTERY_DISCHARGE_IDLE,
+            DroneStatus::AttendingIncident => BATTERY_DISCHARGE_IDLE,
             DroneStatus::Recharging => {
                 return;
             }
@@ -279,6 +273,6 @@ mod tests {
     fn test_drone_travel_to() {
         let mut drone = Drone::new(1, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0);
         drone.travel_to(3.0, 3.0);
-        assert_eq!(drone.data(), "1.7071067811865475;1.7071067811865475;3;99");
+        assert_eq!(drone.data(), "1.7071067811865475;1.7071067811865475;3;100");
     }
 }

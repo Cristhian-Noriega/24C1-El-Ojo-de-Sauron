@@ -788,7 +788,7 @@ fn publish(
     let _ = server_stream.write(publish_packet.to_bytes(key).as_slice());
 
     // if qos == QoS::AtMost {
-    return Ok(());
+    Ok(())
     // }
 
     // server_stream.set_nonblocking(false).unwrap();
