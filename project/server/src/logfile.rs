@@ -84,7 +84,7 @@ impl Logger {
     ) {
         let message = format!(
             "Client {} unsubscribed to topics {}",
-            String::from_utf8_lossy(client_id).to_string(),
+            String::from_utf8_lossy(client_id),
             unsubscribe_packet
                 .topics()
                 .iter()
@@ -99,9 +99,9 @@ impl Logger {
     pub fn log_successful_publish(&self, client_id: &[u8], publish_packet: &Publish) {
         let message = format!(
             "Client {} published message {} to topic {}",
-            String::from_utf8_lossy(client_id).to_string(),
-            String::from_utf8_lossy(publish_packet.message()).to_string(),
-            String::from_utf8_lossy(publish_packet.topic().to_string().as_bytes()).to_string()
+            String::from_utf8_lossy(client_id),
+            String::from_utf8_lossy(publish_packet.message()),
+            String::from_utf8_lossy(publish_packet.topic().to_string().as_bytes())
         );
         self.info(message.as_str());
     }
@@ -110,7 +110,7 @@ impl Logger {
     pub fn log_client_does_not_exist(&self, client_id: &[u8]) {
         let message = format!(
             "Client {} does not exist",
-            String::from_utf8_lossy(client_id).to_string()
+            String::from_utf8_lossy(client_id)
         );
         self.error(message.as_str());
     }
@@ -120,7 +120,7 @@ impl Logger {
         let message = format!(
             "Sent {} packet to client {}",
             packet_type,
-            String::from_utf8_lossy(client_id).to_string()
+            String::from_utf8_lossy(client_id)
         );
         self.info(message.as_str());
     }
@@ -130,7 +130,7 @@ impl Logger {
         let message = format!(
             "Error sending {} packet to client {}",
             packet_type,
-            String::from_utf8_lossy(client_id).to_string()
+            String::from_utf8_lossy(client_id)
         );
         self.error(message.as_str());
     }
@@ -139,7 +139,7 @@ impl Logger {
     pub fn log_error_getting_stream(&self, client_id: &[u8], packet_type: &str) {
         let message = format!(
             "Error getting stream for client {} when sending {} packet",
-            String::from_utf8_lossy(client_id).to_string(),
+            String::from_utf8_lossy(client_id),
             packet_type
         );
         self.error(message.as_str());
@@ -161,7 +161,7 @@ impl Logger {
     pub fn log_client_registrated(&self, client_id: &[u8]) {
         let message = format!(
             "Client with id {} has been registered successfully",
-            String::from_utf8_lossy(client_id).to_string()
+            String::from_utf8_lossy(client_id)
         );
         self.info(message.as_str());
     }
