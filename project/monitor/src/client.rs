@@ -383,7 +383,7 @@ fn register_incident(
     let message = incident.to_string().into_bytes();
     let dup = false;
     let qos = QoS::AtLeast;
-    let retain = false;
+    let retain = true;
     let package_identifier = Some(package_identifier);
 
     let publish = Publish::new(dup, qos, retain, topic_name, package_identifier, message);
