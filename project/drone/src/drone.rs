@@ -1,4 +1,4 @@
-use crate::drone_status::{DroneStatus, TravelLocation};
+use common::drone_status::{DroneStatus, TravelLocation};
 
 use common::incident::Incident;
 
@@ -226,10 +226,9 @@ mod tests {
     }
 
     #[test]
-    fn test_drone_travel_to(){
+    fn test_drone_travel_to() {
         let mut drone = Drone::new(1, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0);
         drone.travel_to(3.0, 3.0);
         assert_eq!(drone.data(), "1.7071067811865475;1.7071067811865475;0;99");
     }
-
 }

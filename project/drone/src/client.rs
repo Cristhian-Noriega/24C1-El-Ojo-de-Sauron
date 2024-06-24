@@ -16,11 +16,9 @@ use mqtt::model::{
     return_codes::connect_return_code::ConnectReturnCode,
 };
 
-use crate::{
-    config::Config,
-    drone::Drone,
-    drone_status::{DroneStatus, TravelLocation},
-};
+use crate::{config::Config, drone::Drone};
+
+use common::drone_status::{DroneStatus, TravelLocation};
 
 use common::incident::Incident;
 
@@ -631,7 +629,8 @@ fn connect_to_server(
         Ok(Packet::Connack(connack)) => match connack.connect_return_code() {
             ConnectReturnCode::ConnectionAccepted => {
                 println!("Connection accepted");
-                Ok(to_server_stream)},
+                Ok(to_server_stream)
+            }
             _ => Err(std::io::Error::new(
                 ErrorKind::Other,
                 format!("Connection refused: {:?}", connack.connect_return_code()),

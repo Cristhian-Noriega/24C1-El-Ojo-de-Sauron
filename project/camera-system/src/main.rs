@@ -6,7 +6,6 @@ use std::env::args;
 use std::path::Path;
 
 mod camera;
-mod camera_status;
 mod camera_system;
 mod client;
 
