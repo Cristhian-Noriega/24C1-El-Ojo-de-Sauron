@@ -52,8 +52,8 @@ impl Client {
         logfile: &Arc<crate::logfile::Logger>,
         key: &[u8],
     ) {
-        let message_str = std::str::from_utf8(publish_packet.message()).unwrap();
-        let client_id_str = std::str::from_utf8(&self.id).unwrap();
+        let message_str = String::from_utf8_lossy(publish_packet.message()).to_string();
+        let client_id_str = String::from_utf8_lossy(&self.id).to_string();
 
         let mut stream = self.stream.lock().unwrap();
         match stream.write_all(publish_packet.to_bytes(key).as_slice()) {

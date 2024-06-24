@@ -62,7 +62,7 @@ impl Display for TopicLevel {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
             TopicLevel::Literal(bytes) => {
-                let string = String::from_utf8(bytes.clone()).unwrap();
+                let string = String::from_utf8_lossy(bytes);
                 write!(f, "{}", string)
             }
             TopicLevel::MultiLevelWildcard => write!(f, "{}", MULTI_LEVEL_WILDCARD as char),

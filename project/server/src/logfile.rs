@@ -84,7 +84,7 @@ impl Logger {
     ) {
         let message = format!(
             "Client {} unsubscribed to topics {}",
-            std::str::from_utf8(client_id).unwrap(),
+            String::from_utf8_lossy(client_id).to_string(),
             unsubscribe_packet
                 .topics()
                 .iter()
@@ -99,9 +99,9 @@ impl Logger {
     pub fn log_successful_publish(&self, client_id: &[u8], publish_packet: &Publish) {
         let message = format!(
             "Client {} published message {} to topic {}",
-            std::str::from_utf8(client_id).unwrap(),
-            std::str::from_utf8(publish_packet.message()).unwrap(),
-            std::str::from_utf8(publish_packet.topic().to_string().as_bytes()).unwrap()
+            String::from_utf8_lossy(client_id).to_string(),
+            String::from_utf8_lossy(publish_packet.message()).to_string(),
+            String::from_utf8_lossy(publish_packet.topic().to_string().as_bytes()).to_string()
         );
         self.info(message.as_str());
     }
@@ -110,7 +110,7 @@ impl Logger {
     pub fn log_client_does_not_exist(&self, client_id: &[u8]) {
         let message = format!(
             "Client {} does not exist",
-            std::str::from_utf8(client_id).unwrap()
+            String::from_utf8_lossy(client_id).to_string()
         );
         self.error(message.as_str());
     }
@@ -120,7 +120,7 @@ impl Logger {
         let message = format!(
             "Sent {} packet to client {}",
             packet_type,
-            std::str::from_utf8(client_id).unwrap()
+            String::from_utf8_lossy(client_id).to_string()
         );
         self.info(message.as_str());
     }
@@ -130,7 +130,7 @@ impl Logger {
         let message = format!(
             "Error sending {} packet to client {}",
             packet_type,
-            std::str::from_utf8(client_id).unwrap()
+            String::from_utf8_lossy(client_id).to_string()
         );
         self.error(message.as_str());
     }
@@ -139,20 +139,20 @@ impl Logger {
     pub fn log_error_getting_stream(&self, client_id: &[u8], packet_type: &str) {
         let message = format!(
             "Error getting stream for client {} when sending {} packet",
-            std::str::from_utf8(client_id).unwrap(),
+            String::from_utf8_lossy(client_id).to_string(),
             packet_type
         );
         self.error(message.as_str());
     }
 
     /// Logs a custom message for successful disconnection
-    pub fn log_sent_message(&self, message: &str, client_id: &str) {
+    pub fn log_sent_message(&self, message: String, client_id: String) {
         let message = format!("Sent message: {} to client {}", message, client_id,);
         self.info(message.as_str());
     }
 
     /// Logs a custom message for successful disconnection
-    pub fn log_sending_message_error(&self, message: &str, client_id: &str) {
+    pub fn log_sending_message_error(&self, message: String, client_id: String) {
         let message = format!("Error sending message: {} to client {}", message, client_id);
         self.error(message.as_str());
     }
@@ -161,7 +161,7 @@ impl Logger {
     pub fn log_client_registrated(&self, client_id: &[u8]) {
         let message = format!(
             "Client with id {} has been registered successfully",
-            std::str::from_utf8(client_id).unwrap()
+            String::from_utf8_lossy(client_id).to_string()
         );
         self.info(message.as_str());
     }

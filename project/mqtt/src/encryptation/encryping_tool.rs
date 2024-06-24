@@ -30,9 +30,10 @@ pub fn decrypt(encrypted_data: &[u8], key: &[u8]) -> Result<Vec<u8>, String> {
     let (nonce, ciphertext) = encrypted_data.split_at(12);
     let nonce = Nonce::from_slice(nonce);
 
-    let data = cipher.decrypt(nonce, ciphertext).unwrap();
-
-    Ok(data)
+    match cipher.decrypt(nonce, ciphertext) {
+        Ok(data) => Ok(data),
+        Err(_) => Err("Error decrypting data".to_string()),
+    }
 }
 
 #[cfg(test)]

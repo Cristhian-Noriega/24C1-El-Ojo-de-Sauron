@@ -108,11 +108,11 @@ fn read_incoming_packets(
 
         let incoming_publish = match locked_stream.read(&mut buffer) {
             Ok(_) => {
-                let packet = Packet::from_bytes(&mut buffer.as_slice(), key).unwrap();
+                let packet = Packet::from_bytes(&mut buffer.as_slice(), key);
                 drop(locked_stream);
 
                 match packet {
-                    Packet::Publish(publish) => publish,
+                    Ok(Packet::Publish(publish)) => publish,
                     _ => {
                         thread::sleep(Duration::from_secs(READ_MESSAGE_INTERVAL));
                         continue;

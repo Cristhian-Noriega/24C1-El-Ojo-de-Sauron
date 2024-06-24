@@ -186,7 +186,7 @@ impl TaskHandler {
             .log_successful_publish(&client_id, publish_packet);
 
         for client_id in clients {
-            if let Some(client) = self.clients.read().unwrap().get(&client_id) {
+            if let Some(client) = self.clients.read()?.get(&client_id) {
                 if self.active_connections.contains(&client_id) {
                     client.send_message(publish_packet.clone(), &self.log_file, &self.key);
                 } else {
