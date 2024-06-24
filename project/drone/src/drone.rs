@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
 
-use crate::drone_status::{DroneStatus, TravelLocation};
+use common::drone_status::{DroneStatus, TravelLocation};
+
 
 use common::incident::Incident;
 
@@ -40,9 +41,9 @@ impl Drone {
     ) -> Self {
         Drone {
             id,
-            x_coordinate: x_anchor,
-            y_coordinate: y_anchor,
-            status: DroneStatus::Free,
+            x_coordinate: x_central,
+            y_coordinate: y_central,
+            status: DroneStatus::Travelling(TravelLocation::Anchor),
             battery: MAXIMUM_BATTERY_LEVEL,
             x_central,
             y_central,
@@ -235,7 +236,7 @@ mod tests {
     #[test]
     fn test_drone_data() {
         let drone = Drone::new(1, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0);
-        assert_eq!(drone.data(), "1;1;0;100");
+        assert_eq!(drone.data(), "1;1;3;100");
     }
 
     #[test]
@@ -255,10 +256,9 @@ mod tests {
     }
 
     #[test]
-    fn test_drone_travel_to(){
+    fn test_drone_travel_to() {
         let mut drone = Drone::new(1, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0);
         drone.travel_to(3.0, 3.0);
-        assert_eq!(drone.data(), "1.7071067811865475;1.7071067811865475;0;99");
+        assert_eq!(drone.data(), "1.7071067811865475;1.7071067811865475;3;99");
     }
-
 }

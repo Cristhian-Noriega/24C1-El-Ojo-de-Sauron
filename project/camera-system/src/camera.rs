@@ -1,6 +1,6 @@
 use common::incident::Incident;
 
-use crate::camera_status::CameraStatus;
+use common::camera_status::CameraStatus;
 
 /// Represents a camera in the camera system
 #[derive(Clone, Copy, Debug)]

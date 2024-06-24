@@ -1,12 +1,6 @@
+use common::coordenate::Coordenate;
 use serde_derive::{Deserialize, Serialize};
 use std::{fs::File, io::Read, path::Path};
-
-/// Represents a position in 2D space
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Position {
-    pub x_coordinate: f64,
-    pub y_coordinate: f64,
-}
 
 /// Represents the configuration of the camera system
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -17,7 +11,7 @@ pub struct Config {
     password: String,
     key: String,
     active_range: f64,
-    cameras: Vec<Position>,
+    cameras: Vec<Coordenate>,
 }
 
 impl Config {
@@ -55,7 +49,7 @@ impl Config {
 
     /// Returns the key of the camera system
     pub fn get_key(&self) -> &[u8; 32] {
-        self.key.as_bytes().try_into().unwrap()
+        self.key.as_bytes().try_into().unwrap_or(&[0; 32])
     }
 
     /// Returns the active range of the cameras
@@ -64,7 +58,7 @@ impl Config {
     }
 
     /// Returns the cameras of the camera system
-    pub fn get_cameras(&self) -> Vec<Position> {
+    pub fn get_cameras(&self) -> Vec<Coordenate> {
         self.cameras.clone()
     }
 }

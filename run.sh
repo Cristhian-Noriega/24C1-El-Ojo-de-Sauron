@@ -29,7 +29,7 @@ pids+=($!)
 sleep 5
 
 # Run the monitor next
-./project/target/release/monitor project/monitor/Settings.toml &
+./project/target/release/monitor project/monitor/config.json &
 pids+=($!)
 sleep 2
 
