@@ -36,8 +36,8 @@ pub struct TaskHandler {
     client_actions_receiver_channel: mpsc::Receiver<Task>,
     clients: RwLock<HashMap<Vec<u8>, Client>>,
     active_connections: HashSet<Vec<u8>>,
-    retained_messages: HashMap<Vec<u8>, VecDeque<Publish>>,
-    retained_messages_per_topic: HashMap<TopicName, Publish>,
+    offline_messages: HashMap<Vec<u8>, VecDeque<Publish>>,
+    retained_messages: HashMap<TopicName, VecDeque<Publish>>,
 
     // monitor se subscribe a (drone-data/+) <- es un topic filter
 
@@ -63,8 +63,8 @@ impl TaskHandler {
             client_actions_receiver_channel: receiver_channel,
             clients: RwLock::new(HashMap::new()),
             active_connections: HashSet::new(),
+            offline_messages: HashMap::new(),
             retained_messages: HashMap::new(),
-            retained_messages_per_topic: HashMap::new(),
             log_file,
             client_manager,
             key,
@@ -123,9 +123,11 @@ impl TaskHandler {
                 client.add_subscription(topic_filter.clone());
 
                 // Send the retained message if it exists
-                for (topic_name, retained_messages) in &self.retained_messages_per_topic {
+                for (topic_name, retained_messages) in &self.retained_messages {
                     if topic_filter.match_topic_name(topic_name.clone()) {
-                        client.send_message(retained_messages.clone(), &self.log_file, &self.key);
+                        for message in retained_messages {
+                            client.send_message(message.clone(), &self.log_file, &self.key);
+                        }
                     }
                 }
             }
@@ -162,14 +164,17 @@ impl TaskHandler {
     pub fn publish(&mut self, publish_packet: &Publish, client_id: Vec<u8>) -> ServerResult<()> {
         let topic_name = publish_packet.topic();
 
-        if publish_packet.retain() {
-            self.retained_messages_per_topic
-                .insert(topic_name.clone(), publish_packet.clone());
-        }
 
         if topic_name.server_reserved() {
             self.handle_server_reserved_topic(publish_packet, client_id);
             return Ok(());
+        }
+
+        if publish_packet.retain() {
+            self.retained_messages
+                .entry(topic_name.clone())
+                .or_default()
+                .push_back(publish_packet.clone());
         }
 
         let mut clients = vec![];
@@ -194,7 +199,7 @@ impl TaskHandler {
                 if self.active_connections.contains(&client_id) {
                     client.send_message(publish_packet.clone(), &self.log_file, &self.key);
                 } else {
-                    self.retained_messages
+                    self.offline_messages
                         .entry(client_id.clone())
                         .or_default()
                         .push_back(publish_packet.clone());
@@ -211,11 +216,11 @@ impl TaskHandler {
             }
         }
 
-        let clients_retained_messages = self.retained_messages.get(&client_id);
+        let clients_retained_messages = self.offline_messages.get(&client_id);
         let client = clients.get_mut(&client_id).unwrap();
         if let Some(clients_retained_messages) = clients_retained_messages {
             self.handle_retained_messages(client, clients_retained_messages);
-            self.retained_messages.get_mut(&client_id).unwrap().clear();
+            self.offline_messages.get_mut(&client_id).unwrap().clear();
         }
 
         Ok(())

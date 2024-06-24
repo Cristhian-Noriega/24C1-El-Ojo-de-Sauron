@@ -2,13 +2,14 @@ use std::collections::VecDeque;
 
 use common::drone_status::{DroneStatus, TravelLocation};
 
-
 use common::incident::Incident;
 
 const MINIMUM_BATTERY_LEVEL: usize = 20;
 const MAXIMUM_BATTERY_LEVEL: usize = 100;
 
-const BATTERY_UNIT: usize = 1;
+const BATTERY_DISCHARGE_TRAVELLING: usize = 2;
+const BATTERY_DISCHARGE_IDLE: usize = 1;
+const BATTERY_RECHARGE: usize = 5;
 
 /// Represents a drone
 #[derive(Debug, Clone)]
@@ -23,7 +24,7 @@ pub struct Drone {
     x_anchor: f64,
     y_anchor: f64,
     current_incident: Option<(Incident, usize)>,
-    pub incident_queue: VecDeque<Incident>,
+    incident_queue: VecDeque<Incident>,
     velocity: f64,
     active_range: f64,
 }
@@ -117,21 +118,40 @@ impl Drone {
             self.x_coordinate = x;
             self.y_coordinate = y;
         }
-
-        self.discharge_battery();
     }
 
     /// Discharges the battery of the drone
     pub fn discharge_battery(&mut self) {
-        if self.battery > 0 {
-            self.battery -= BATTERY_UNIT;
+        let battery_to_discharge = match self.status {
+            DroneStatus::Travelling(_) => {
+                BATTERY_DISCHARGE_TRAVELLING
+            }
+            DroneStatus::Free => {
+                BATTERY_DISCHARGE_IDLE
+            }
+            DroneStatus::AttendingIncident => {
+                BATTERY_DISCHARGE_IDLE
+            }
+            DroneStatus::Recharging => {
+                return;
+            }
+        };
+
+        if self.battery < battery_to_discharge {
+            self.battery = 0;
+            return;
         }
+
+        self.battery -= battery_to_discharge;
     }
 
     /// Recharges the battery of the drone
     pub fn recharge_battery(&mut self) {
         if self.battery < MAXIMUM_BATTERY_LEVEL {
-            self.battery += BATTERY_UNIT;
+            self.battery += BATTERY_RECHARGE;
+        }
+        if self.battery > MAXIMUM_BATTERY_LEVEL {
+            self.battery = MAXIMUM_BATTERY_LEVEL;
         }
     }
 
@@ -214,10 +234,10 @@ impl Drone {
         self.incident_queue.pop_front();
     }
 
-    pub fn can_handle_new_incident(&self) -> bool {
-        self.status == DroneStatus::Free
-            || self.status == DroneStatus::Travelling(TravelLocation::Anchor)
-    }
+    // pub fn can_handle_new_incident(&self) -> bool {
+    //     self.status == DroneStatus::Free
+    //         || self.status == DroneStatus::Travelling(TravelLocation::Anchor)
+    // }
 
     pub fn is_free(&self) -> bool {
         self.status == DroneStatus::Free

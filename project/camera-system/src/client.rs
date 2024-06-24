@@ -25,7 +25,7 @@ const NEW_INCIDENT: &[u8] = b"new-incident";
 const CLOSE_INCIDENT: &[u8] = b"close-incident";
 const CAMERA_DATA: &[u8] = b"camera-data";
 
-const UPDATE_DATA_INTERVAL: u64 = 3;
+const UPDATE_DATA_INTERVAL: u64 = 2;
 const READ_MESSAGE_INTERVAL: u64 = 1;
 
 /// Runs the client
