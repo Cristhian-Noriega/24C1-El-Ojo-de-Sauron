@@ -28,15 +28,13 @@ impl Client {
         }
     }
 
-    /// Subscribes the client to a topic
+    /// Adds a subscription to a client
     pub fn add_subscription(&mut self, topic: TopicFilter) {
-        let client_id = String::from_utf8(self.id.clone()).unwrap();
         self.subscriptions.push(topic);
     }
 
     /// Unsubscribes the client from a topic
     pub fn remove_subscription(&mut self, topic: &TopicFilter) {
-        let client_id = String::from_utf8(self.id.clone()).unwrap();
         self.subscriptions.retain(|t| t != topic);
     }
 
@@ -103,8 +101,7 @@ mod tests {
     fn setup_stream() -> TcpStream {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let port = listener.local_addr().unwrap().port();
-        let stream = TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
-        stream
+        TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap()
     }
 
     fn setup_client() -> Client {

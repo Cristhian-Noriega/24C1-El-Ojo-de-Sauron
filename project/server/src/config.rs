@@ -75,7 +75,6 @@ impl Config {
         &self.login_file
     }
 
-
     /// Returns the key of the encryption
     pub fn get_key(&self) -> &[u8; 32] {
         &self.key
