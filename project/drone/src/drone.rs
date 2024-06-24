@@ -37,8 +37,8 @@ impl Drone {
     ) -> Self {
         Drone {
             id,
-            x_coordinate: x_anchor,
-            y_coordinate: y_anchor,
+            x_coordinate: x_central,
+            y_coordinate: y_central,
             status: DroneStatus::Free,
             battery: MAXIMUM_BATTERY_LEVEL,
             x_central,

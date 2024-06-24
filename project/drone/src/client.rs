@@ -16,10 +16,7 @@ use mqtt::model::{
     return_codes::connect_return_code::ConnectReturnCode,
 };
 
-use crate::{
-    config::Config,
-    drone::Drone,
-};
+use crate::{config::Config, drone::Drone};
 
 use common::drone_status::{DroneStatus, TravelLocation};
 
@@ -99,6 +96,10 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
     let thread_recharge_battery = thread::spawn(move || {
         recharge_battery(drone_cloned);
     });
+
+    let x = config.get_x_anchor_position();
+    let y = config.get_y_anchor_position();
+    travel(drone.clone(), x, y, TravelLocation::Anchor);
 
     thread_update.join().unwrap();
     thread_read.join().unwrap();
