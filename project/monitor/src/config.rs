@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use common::coordenate::Coordenate;
 use serde_derive::{Deserialize, Serialize};
 use std::{fs::File, io::Read, path::Path};
