@@ -341,7 +341,7 @@ fn travel_to_new_incident(
     );
 
     match subscribe(topic_filter, &mut locked_stream, key) {
-        Ok(_) => println!("Subscribed to the close incident topic"),
+        Ok(_) => {}
         Err(_) => println!("Drone subscribe to close incident topic. no le llego el suback"),
     }
 
@@ -408,7 +408,7 @@ fn handle_attending_incident(
     };
 
     match unsubscribe(topic_filter, &mut locked_stream, key) {
-        Ok(_) => println!("Unsubscribed from the attendin incident topic"),
+        Ok(_) => {}
         Err(e) => eprintln!("Error: {:?}", e),
     }
 
@@ -474,8 +474,6 @@ fn simulate_incident_resolution(
 
     thread::sleep(duration_incident);
 
-    println!("Incident resolved");
-
     let topic_name = TopicName::new(
         vec![
             TopicLevel::Literal(READY_INCIDENT.to_vec()).to_bytes(),
@@ -494,7 +492,7 @@ fn simulate_incident_resolution(
     };
 
     match publish(topic_name, message, &mut locked_stream, QoS::AtMost, key) {
-        Ok(_) => println!("Incident has been resolved"),
+        Ok(_) => {}
         Err(e) => eprintln!("Error: {:?}", e),
     }
 
