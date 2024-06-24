@@ -1,6 +1,9 @@
 use std::{
     io::{ErrorKind, Write},
     net::TcpStream,
+    sync::{Arc, Mutex},
+    thread,
+    time::Duration,
 };
 
 use common::incident::Incident;
@@ -22,12 +25,15 @@ const NEW_INCIDENT: &[u8] = b"new-incident";
 const CLOSE_INCIDENT: &[u8] = b"close-incident";
 const CAMERA_DATA: &[u8] = b"camera-data";
 
+const UPDATE_DATA_INTERVAL: u64 = 3;
+const READ_MESSAGE_INTERVAL: u64 = 1;
+
 /// Runs the client
 pub fn client_run(config: Config) -> std::io::Result<()> {
-    let key = config.get_key();
+    let key = *config.get_key();
     let active_range = config.get_active_range();
 
-    let mut server_stream = connect_to_server(&config.clone())?;
+    let mut server_stream = connect_to_server(config.clone())?;
     let mut camera_system = CameraSystem::new();
 
     for (i, camera) in config.get_cameras().iter().enumerate() {
@@ -40,73 +46,89 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
         camera_system.add_camera(camara);
     }
 
-    publish_camera_state(&mut camera_system, &mut server_stream, key)?;
+    make_initial_subscribes(&mut server_stream, &key);
 
-    let new_incident = TopicFilter::new(vec![TopicLevel::Literal(NEW_INCIDENT.to_vec())], false);
-    let close_incident = TopicFilter::new(
-        vec![
-            TopicLevel::Literal(CLOSE_INCIDENT.to_vec()),
-            TopicLevel::SingleLevelWildcard,
-        ],
-        false,
-    );
-    let topics = vec![new_incident, close_incident];
-    subscribe(topics, &mut server_stream, key)?;
+    let server_stream = Arc::new(Mutex::new(server_stream));
+    let camera_system = Arc::new(Mutex::new(camera_system));
 
+    let server_stream_clone = server_stream.clone();
+    let camera_system_clone = camera_system.clone();
+
+    let thread_update = thread::spawn(move || {
+        update_camera_system_status(server_stream_clone, camera_system_clone, &key);
+    });
+
+    let server_stream_clone = server_stream.clone();
+    let camera_system_clone = camera_system.clone();
+
+    let thread_read = thread::spawn(move || {
+        read_incoming_packets(server_stream_clone, camera_system_clone, &key);
+    });
+
+    thread_update.join().unwrap();
+    thread_read.join().unwrap();
+
+    Ok(())
+}
+
+/// Read incoming packages in a loop
+fn read_incoming_packets(
+    server_stream: Arc<Mutex<TcpStream>>,
+    camera_system: Arc<Mutex<CameraSystem>>,
+    key: &[u8; 32],
+) {
     loop {
-        let incoming_publish = match Packet::from_bytes(&mut server_stream, key) {
+        let mut locked_stream = server_stream.lock().unwrap().try_clone().unwrap();
+        locked_stream.set_nonblocking(true).unwrap();
+
+        let incoming_publish = match Packet::from_bytes(&mut locked_stream, key) {
             Ok(Packet::Publish(publish)) => publish,
             _ => {
-                return Err(std::io::Error::new(
-                    ErrorKind::Other,
-                    "Unexpected packet type received",
-                ))
+                drop(locked_stream);
+                thread::sleep(Duration::from_secs(READ_MESSAGE_INTERVAL));
+                continue;
             }
         };
 
+        drop(locked_stream);
+
         let topic_levels = incoming_publish.topic().levels();
 
+        let cloned_camera_system = camera_system.clone();
+
         if topic_levels.len() == 1 && topic_levels[0] == NEW_INCIDENT {
-            handle_new_incident(
-                incoming_publish,
-                &mut camera_system,
-                &mut server_stream,
-                key,
-            )?;
+            handle_new_incident(incoming_publish, cloned_camera_system);
         } else if topic_levels.len() == 2 && topic_levels[0] == CLOSE_INCIDENT {
-            handle_close_incident(
-                incoming_publish,
-                &mut camera_system,
-                &mut server_stream,
-                key,
-            )?;
+            handle_close_incident(incoming_publish, cloned_camera_system);
         }
     }
 }
 
-/// Handles the subscription to a topic
-fn subscribe(
-    filter: Vec<TopicFilter>,
-    server_stream: &mut TcpStream,
+/// Periodically updates the camera system status
+fn update_camera_system_status(
+    server_stream: Arc<Mutex<TcpStream>>,
+    camera_system: Arc<Mutex<CameraSystem>>,
     key: &[u8; 32],
-) -> std::io::Result<()> {
-    let mut topics_filters = vec![];
+) {
+    loop {
+        let locked_camera_system = match camera_system.lock() {
+            Ok(locked_camera_system) => locked_camera_system,
+            Err(_) => {
+                println!("Mutex was poisoned");
+                return;
+            }
+        };
 
-    for topic_filter in filter {
-        topics_filters.push((topic_filter, QoS::AtLeast));
-    }
+        let topic_name = TopicName::new(vec![CAMERA_DATA.to_vec()], false);
+        let cameras_data = locked_camera_system.cameras_data().as_bytes().to_vec();
 
-    let packet_id = 1;
+        drop(locked_camera_system);
 
-    let subscribe_packet = Subscribe::new(packet_id, topics_filters);
-    let _ = server_stream.write(subscribe_packet.to_bytes(key).as_slice());
+        let cloned_server_stream = server_stream.clone();
 
-    match Packet::from_bytes(server_stream, key) {
-        Ok(Packet::Suback(_)) => Ok(()),
-        _ => Err(std::io::Error::new(
-            ErrorKind::Other,
-            "Suback was not received.",
-        )),
+        publish(topic_name, cameras_data, cloned_server_stream, key);
+
+        thread::sleep(Duration::from_secs(UPDATE_DATA_INTERVAL));
     }
 }
 
@@ -114,13 +136,13 @@ fn subscribe(
 fn publish(
     topic_name: TopicName,
     message: Vec<u8>,
-    server_stream: &mut TcpStream,
+    server_stream: Arc<Mutex<TcpStream>>,
     key: &[u8; 32],
-) -> std::io::Result<()> {
+) {
     let dup = false;
-    let qos = QoS::AtLeast;
+    let qos = QoS::AtMost;
     let retain = false;
-    let package_identifier = Some(1);
+    let package_identifier = None;
     let message_bytes = message;
 
     let publish_packet = Publish::new(
@@ -132,19 +154,21 @@ fn publish(
         message_bytes,
     );
 
-    let _ = server_stream.write(publish_packet.to_bytes(key).as_slice());
+    let mut locked_server_stream = match server_stream.lock() {
+        Ok(locked_server_stream) => locked_server_stream,
+        Err(_) => {
+            println!("Mutex was poisoned");
+            return;
+        }
+    };
 
-    match Packet::from_bytes(server_stream, key) {
-        Ok(Packet::Puback(_)) => Ok(()),
-        _ => Err(std::io::Error::new(
-            ErrorKind::Other,
-            "Puback was not received.",
-        )),
-    }
+    let _ = locked_server_stream.write(publish_packet.to_bytes(key).as_slice());
+
+    drop(locked_server_stream);
 }
 
 /// Connects to the server
-fn connect_to_server(config: &Config) -> std::io::Result<TcpStream> {
+fn connect_to_server(config: Config) -> std::io::Result<TcpStream> {
     let address = config.get_address().to_owned();
     let id = config.get_id().to_owned();
     let username = config.get_username().to_owned();
@@ -178,57 +202,79 @@ fn connect_to_server(config: &Config) -> std::io::Result<TcpStream> {
     }
 }
 
-/// Publishes the camera state to the server
-fn publish_camera_state(
-    camera_system: &mut CameraSystem,
-    server_stream: &mut TcpStream,
-    key: &[u8; 32],
-) -> std::io::Result<()> {
-    let cameras_data = camera_system.cameras_data().as_bytes().to_vec();
-    let topic_name = TopicName::new(vec![CAMERA_DATA.to_vec()], false);
-
-    publish(topic_name, cameras_data, server_stream, key)
-}
-
 /// Handles a new incident
-fn handle_new_incident(
-    incoming_publish: Publish,
-    camera_system: &mut CameraSystem,
-    server_stream: &mut TcpStream,
-    key: &[u8; 32],
-) -> std::io::Result<()> {
+fn handle_new_incident(incoming_publish: Publish, camera_system: Arc<Mutex<CameraSystem>>) {
     let incident_string = String::from_utf8_lossy(incoming_publish.message()).to_string();
     let incident = match Incident::from_string(incident_string) {
         Ok(incident) => incident,
         Err(_) => {
-            return Err(std::io::Error::new(
-                ErrorKind::Other,
-                "Error parsing incident",
-            ))
+            println!("Malformated incident");
+            return;
         }
     };
 
-    println!("New incident: {:?}", incident);
+    let mut locked_camera_system = match camera_system.lock() {
+        Ok(locked_camera_system) => locked_camera_system,
+        Err(_) => {
+            println!("Mutex was poisoned");
+            return;
+        }
+    };
 
-    camera_system.new_incident(incident.clone());
+    locked_camera_system.new_incident(incident.clone());
 
-    publish_camera_state(camera_system, server_stream, key)?;
-    Ok(())
+    drop(locked_camera_system);
 }
 
 /// Handles the closing of an incident
-fn handle_close_incident(
-    incoming_publish: Publish,
-    camera_system: &mut CameraSystem,
-    server_stream: &mut TcpStream,
-    key: &[u8; 32],
-) -> std::io::Result<()> {
+fn handle_close_incident(incoming_publish: Publish, camera_system: Arc<Mutex<CameraSystem>>) {
     let topic_levels = incoming_publish.topic().levels();
-
     let incident_id = String::from_utf8_lossy(topic_levels[1].as_slice()).to_string();
-    camera_system.close_incident(&incident_id);
 
-    publish_camera_state(camera_system, server_stream, key)?;
+    let mut locked_camera_system = match camera_system.lock() {
+        Ok(locked_camera_system) => locked_camera_system,
+        Err(_) => {
+            println!("Mutex was poisoned");
+            return;
+        }
+    };
 
-    Ok(())
+    locked_camera_system.close_incident(&incident_id);
+
+    drop(locked_camera_system);
+}
+
+/// Make initial subscribes
+fn make_initial_subscribes(server_stream: &mut TcpStream, key: &[u8; 32]) {
+    let new_incident = TopicFilter::new(vec![TopicLevel::Literal(NEW_INCIDENT.to_vec())], false);
+    let close_incident = TopicFilter::new(
+        vec![
+            TopicLevel::Literal(CLOSE_INCIDENT.to_vec()),
+            TopicLevel::SingleLevelWildcard,
+        ],
+        false,
+    );
+    let topics = vec![new_incident, close_incident];
+    subscribe(topics, server_stream, key);
+}
+
+/// Handles the subscription to a topic
+fn subscribe(filter: Vec<TopicFilter>, server_stream: &mut TcpStream, key: &[u8; 32]) {
+    let mut topics_filters = vec![];
+
+    for topic_filter in filter {
+        topics_filters.push((topic_filter, QoS::AtLeast));
+    }
+
+    let packet_id = 1;
+
+    let subscribe_packet = Subscribe::new(packet_id, topics_filters);
+    let _ = server_stream.write(subscribe_packet.to_bytes(key).as_slice());
+
+    match Packet::from_bytes(server_stream, key) {
+        Ok(Packet::Suback(_)) => {}
+        _ => {
+            println!("Suback was not recibed");
+        }
+    }
 }

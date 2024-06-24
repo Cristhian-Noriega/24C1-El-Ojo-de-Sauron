@@ -55,7 +55,7 @@ impl Config {
 
     /// Returns the key of the camera system
     pub fn get_key(&self) -> &[u8; 32] {
-        self.key.as_bytes().try_into().unwrap()
+        self.key.as_bytes().try_into().unwrap_or(&[0; 32])
     }
 
     /// Returns the active range of the cameras
