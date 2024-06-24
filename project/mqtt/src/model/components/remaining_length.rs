@@ -12,7 +12,7 @@ pub struct RemainingLength {
 impl RemainingLength {
     pub fn new(length: u32) -> RemainingLength {
         if length > MAX_LENGTH {
-            return RemainingLength { value: MAX_LENGTH }; // TODO esto no está del todo bien
+            return RemainingLength { value: MAX_LENGTH };
         }
         RemainingLength { value: length }
     }
