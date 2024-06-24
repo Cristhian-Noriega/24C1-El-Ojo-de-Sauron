@@ -30,7 +30,7 @@ const READ_MESSAGE_INTERVAL: u64 = 1;
 
 /// Runs the client
 pub fn client_run(config: Config) -> std::io::Result<()> {
-    let key = config.get_key().clone();
+    let key = *config.get_key();
     let active_range = config.get_active_range();
 
     let mut server_stream = connect_to_server(config.clone())?;
@@ -275,7 +275,6 @@ fn subscribe(filter: Vec<TopicFilter>, server_stream: &mut TcpStream, key: &[u8;
         Ok(Packet::Suback(_)) => {}
         _ => {
             println!("Suback was not recibed");
-            return;
         }
     }
 }
