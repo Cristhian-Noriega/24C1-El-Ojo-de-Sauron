@@ -212,10 +212,6 @@ impl Drone {
         self.incident_queue.push_back(incident);
     }
 
-    // pub fn get_next_incident(&mut self) -> Option<Incident> {
-    //     self.incident_queue.pop_front()
-    // }
-
     pub fn has_pending_incidents(&self) -> bool {
         !self.incident_queue.is_empty()
     }
@@ -227,11 +223,6 @@ impl Drone {
     pub fn remove_current_incident(&mut self) {
         self.incident_queue.pop_front();
     }
-
-    // pub fn can_handle_new_incident(&self) -> bool {
-    //     self.status == DroneStatus::Free
-    //         || self.status == DroneStatus::Travelling(TravelLocation::Anchor)
-    // }
 
     pub fn is_free(&self) -> bool {
         self.status == DroneStatus::Free

@@ -535,7 +535,7 @@ fn display_camera_list(ui: &mut egui::Ui, cameras: &[Camera]) {
 /// Displays the header of the UI
 fn display_header(ui: &mut egui::Ui, current_layout: &mut Layout) {
     ui.horizontal(|ui| {
-        ui.heading(egui::RichText::new("Monitoring Aplication").size(30.0));
+        ui.heading(egui::RichText::new("Monitoring Application").size(30.0));
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             ui.image(egui::include_image!("images/logo.png"));
         });

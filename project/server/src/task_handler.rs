@@ -38,14 +38,6 @@ pub struct TaskHandler {
     active_connections: HashSet<Vec<u8>>,
     offline_messages: HashMap<Vec<u8>, VecDeque<Publish>>,
     retained_messages: HashMap<TopicName, VecDeque<Publish>>,
-
-    // monitor se subscribe a (drone-data/+) <- es un topic filter
-
-    // drone data publica en (drone-data/1) <- esto es un topic name
-
-    // debería guardar que monitor está suscrito a (drone-data/+)
-    // cuando drone data publica en (drone-data/1) recorro todos los subscribes y me fijo si alguno matchea
-    // si matchea, le mando el msg
     log_file: Arc<Logger>,
     client_manager: Arc<RwLock<ClientManager>>,
     key: [u8; 32],

@@ -175,7 +175,6 @@ fn connect_to_server(config: Config) -> std::io::Result<TcpStream> {
     let password = config.get_password().to_owned();
     let key = config.get_key().to_owned();
 
-    println!("\nConnecting to address: {:?}", address);
     let mut to_server_stream = TcpStream::connect(address)?;
 
     let client_id_bytes: Vec<u8> = id.as_bytes().to_vec();
