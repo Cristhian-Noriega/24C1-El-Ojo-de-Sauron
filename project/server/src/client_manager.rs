@@ -74,7 +74,13 @@ impl ClientManager {
 
     /// Adds a client to the registered clients map
     fn add_client(&self, client_id: Vec<u8>, username: Vec<u8>, password: Vec<u8>) {
-        let mut registered_clients = self.registered_clients.lock().unwrap();
+        let mut registered_clients = match self.registered_clients.lock() {
+            Ok(clients) => clients,
+            Err(err) => {
+                println!("Error locking registered clients: {:?}", err);
+                return;
+            }
+        };
         registered_clients.insert(
             client_id.clone(),
             (username.clone(), password.clone(), false),
@@ -115,7 +121,13 @@ impl ClientManager {
         username: Vec<u8>,
         password: Vec<u8>,
     ) -> bool {
-        let mut registered_clients = self.registered_clients.lock().unwrap();
+        let mut registered_clients = match self.registered_clients.lock() {
+            Ok(clients) => clients,
+            Err(err) => {
+                println!("Error locking registered clients: {:?}", err);
+                return false;
+            }
+        };
         if let Some((stored_username, stored_password, is_connected)) =
             registered_clients.get_mut(&client_id)
         {
@@ -144,12 +156,14 @@ impl ClientManager {
         };
 
         if self.authenticate_client(client_id.clone(), username, password) {
-            Some(Client::new(
-                client_id.clone(),
-                stream.try_clone().unwrap(),
-                true,
-                0,
-            ))
+            let stream = match stream.try_clone() {
+                Ok(stream) => stream,
+                Err(err) => {
+                    println!("Error cloning stream: {:?}", err);
+                    return None;
+                }
+            };
+            Some(Client::new(client_id.clone(), stream, true, 0))
         } else {
             self.failure_connection(stream, ConnectReturnCode::IdentifierRejected, key);
             None

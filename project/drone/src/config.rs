@@ -52,7 +52,10 @@ impl Config {
 
     /// Returns the key of the drone
     pub fn get_key(&self) -> &[u8; 32] {
-        self.key.as_bytes().try_into().unwrap()
+        match self.key.as_bytes().try_into() {
+            Ok(key) => key,
+            Err(_) => &[0; 32],
+        }
     }
 
     /// Returns the x central position of the drone

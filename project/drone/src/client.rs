@@ -101,10 +101,21 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
     let y = config.get_y_anchor_position();
     travel(drone.clone(), x, y, TravelLocation::Anchor);
 
-    thread_update.join().unwrap();
-    thread_read.join().unwrap();
-    thread_discharge_battery.join().unwrap();
-    thread_recharge_battery.join().unwrap();
+    let threads = vec![
+        thread_update,
+        thread_read,
+        thread_discharge_battery,
+        thread_recharge_battery,
+    ];
+
+    for thread in threads {
+        match thread.join() {
+            Ok(_) => {}
+            Err(_) => {
+                println!("Error in thread");
+            }
+        }
+    }
 
     Ok(())
 }
@@ -113,12 +124,31 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
 fn read_incoming_packets(stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<Drone>>, key: &[u8; 32]) {
     loop {
         let mut buffer = [0; 1024];
-        let mut locked_stream = stream.lock().unwrap();
+        let mut locked_stream = match stream.lock() {
+            Ok(stream) => stream,
+            Err(_) => {
+                println!("Mutex was poisoned");
+                return;
+            }
+        };
 
-        locked_stream.set_nonblocking(true).unwrap();
+        match locked_stream.set_nonblocking(true) {
+            Ok(_) => {}
+            Err(_) => {
+                println!("Error setting non-blocking");
+                return;
+            }
+        };
+
         match locked_stream.read(&mut buffer) {
             Ok(_) => {
-                let packet = Packet::from_bytes(&mut buffer.as_slice(), key).unwrap();
+                let packet = match Packet::from_bytes(&mut buffer.as_slice(), key) {
+                    Ok(packet) => packet,
+                    Err(_) => {
+                        println!("Error reading packet");
+                        continue;
+                    }
+                };
                 drop(locked_stream);
 
                 match packet {
@@ -160,7 +190,13 @@ fn handle_publish(
     server_stream: Arc<Mutex<TcpStream>>,
     key: &[u8; 32],
 ) {
-    let message = String::from_utf8(publish.message().to_vec()).unwrap();
+    let message = match String::from_utf8(publish.message().to_vec()) {
+        Ok(message) => message,
+        Err(_) => {
+            println!("Invalid message");
+            return;
+        }
+    };
     let topic_levels = publish.topic().levels();
     if topic_levels.len() == 1 && topic_levels[0] == NEW_INCIDENT {
         let incident = match Incident::from_string(message) {
@@ -418,7 +454,12 @@ fn handle_attending_incident(
             simulate_incident_resolution(uuid_clone, server_stream_clone, &key_clone);
         });
 
-        thread.join().unwrap();
+        match thread.join() {
+            Ok(_) => {}
+            Err(_) => {
+                println!("Error in thread");
+            }
+        }
         return;
     }
 
@@ -549,7 +590,12 @@ fn handle_close_incident(
         travel(cloned_drone, x, y, TravelLocation::Anchor);
     });
 
-    thread.join().unwrap();
+    match thread.join() {
+        Ok(_) => {}
+        Err(_) => {
+            println!("Error in thread");
+        }
+    }
 
     let mut locked_drone = match drone.lock() {
         Ok(drone) => drone,
@@ -650,7 +696,13 @@ fn subscribe(
     server_stream: &mut MutexGuard<TcpStream>,
     key: &[u8; 32],
 ) -> std::io::Result<()> {
-    let mut server_stream = server_stream.try_clone().unwrap();
+    let mut server_stream = match server_stream.try_clone() {
+        Ok(stream) => stream,
+        Err(_) => {
+            println!("Mutex was poisoned");
+            return Err(std::io::Error::new(ErrorKind::Other, "Mutex was poisoned"));
+        }
+    };
 
     let packet_id = 1;
     let qos = QoS::AtLeast;
@@ -659,7 +711,17 @@ fn subscribe(
     let subscribe_packet = Subscribe::new(packet_id, topics_filters);
     let _ = server_stream.write(subscribe_packet.to_bytes(key).as_slice());
 
-    server_stream.set_nonblocking(false).unwrap();
+    match server_stream.set_nonblocking(false) {
+        Ok(_) => {}
+        Err(_) => {
+            println!("Error setting non-blocking");
+            return Err(std::io::Error::new(
+                ErrorKind::Other,
+                "Error setting non-blocking",
+            ));
+        }
+    }
+
     match Packet::from_bytes(&mut server_stream, key) {
         Ok(Packet::Suback(_)) => Ok(()),
         _ => Err(std::io::Error::new(
@@ -675,7 +737,13 @@ fn unsubscribe(
     server_stream: &mut MutexGuard<TcpStream>,
     key: &[u8; 32],
 ) -> std::io::Result<()> {
-    let mut server_stream = server_stream.try_clone().unwrap();
+    let mut server_stream = match server_stream.try_clone() {
+        Ok(stream) => stream,
+        Err(_) => {
+            println!("Mutex was poisoned");
+            return Err(std::io::Error::new(ErrorKind::Other, "Mutex was poisoned"));
+        }
+    };
 
     let packet_id = 1;
     let topics_filters = vec![(filter)];
@@ -684,7 +752,17 @@ fn unsubscribe(
 
     let _ = server_stream.write(unsubscribe_packet.to_bytes(key).as_slice());
 
-    server_stream.set_nonblocking(false).unwrap();
+    match server_stream.set_nonblocking(false) {
+        Ok(_) => {}
+        Err(_) => {
+            println!("Error setting non-blocking");
+            return Err(std::io::Error::new(
+                ErrorKind::Other,
+                "Error setting non-blocking",
+            ));
+        }
+    }
+
     match Packet::from_bytes(&mut server_stream, key) {
         Ok(Packet::Unsuback(_)) => Ok(()),
         _ => Err(std::io::Error::new(
@@ -702,7 +780,13 @@ fn publish(
     qos: QoS,
     key: &[u8; 32],
 ) -> std::io::Result<()> {
-    let mut server_stream = server_stream.try_clone().unwrap();
+    let mut server_stream = match server_stream.try_clone() {
+        Ok(stream) => stream,
+        Err(_) => {
+            println!("Mutex was poisoned");
+            return Err(std::io::Error::new(ErrorKind::Other, "Mutex was poisoned"));
+        }
+    };
 
     let dup = false;
     let retain = false;
@@ -729,7 +813,17 @@ fn publish(
         return Ok(());
     }
 
-    server_stream.set_nonblocking(false).unwrap();
+    match server_stream.set_nonblocking(false) {
+        Ok(_) => {}
+        Err(_) => {
+            println!("Error setting non-blocking");
+            return Err(std::io::Error::new(
+                ErrorKind::Other,
+                "Error setting non-blocking",
+            ));
+        }
+    }
+
     match Packet::from_bytes(&mut server_stream, key) {
         Ok(Packet::Puback(_)) => Ok(()),
         _ => Err(std::io::Error::new(

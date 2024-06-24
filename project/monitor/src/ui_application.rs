@@ -262,9 +262,10 @@ fn display_new_incident(
         ui.horizontal(|ui| {
             ui.add_space(444.0);
             if ui.button("Create").clicked() {
-                sender
-                    .send(UIAction::RegistrateIncident(new_incident.clone()))
-                    .unwrap();
+                match sender.send(UIAction::RegistrateIncident(new_incident.clone())) {
+                    Ok(_) => {}
+                    Err(_) => println!("Error creating incident"),
+                }
                 new_incident.name.clear();
                 new_incident.description.clear();
                 new_incident.x.clear();
@@ -305,9 +306,10 @@ fn display_edit_incident(
         ui.horizontal(|ui| {
             ui.add_space(368.0);
             if ui.button("Edit").clicked() {
-                sender
-                    .send(UIAction::EditIncident(edit_incident.clone()))
-                    .unwrap();
+                match sender.send(UIAction::EditIncident(edit_incident.clone())) {
+                    Ok(_) => {}
+                    Err(_) => println!("Error editing incident"),
+                }
                 edit_incident.uuid.clear();
                 edit_incident.name.clear();
                 edit_incident.description.clear();
@@ -359,9 +361,10 @@ fn display_incident_list(
                     row.col(|ui| {
                         if incident.status == IncidentStatus::Resolvable {
                             if ui.button("Resolve").clicked() {
-                                sender
-                                    .send(UIAction::ResolveIncident(incident.clone()))
-                                    .unwrap();
+                                match sender.send(UIAction::ResolveIncident(incident.clone())) {
+                                    Ok(_) => {}
+                                    Err(_) => println!("Error resolving incident"),
+                                }
                             }
                         } else if ui.button("Edit").clicked() {
                             new_incident_edit.uuid.clone_from(&incident.uuid);
@@ -433,9 +436,10 @@ fn display_new_drone(
         ui.horizontal(|ui| {
             ui.add_space(376.0);
             if ui.button("Register").clicked() {
-                sender
-                    .send(UIAction::RegistrateDrone(drone_registration.clone()))
-                    .unwrap();
+                match sender.send(UIAction::RegistrateDrone(drone_registration.clone())) {
+                    Ok(_) => {}
+                    Err(_) => println!("Error registering drone"),
+                }
                 drone_registration.id.clear();
                 drone_registration.username.clear();
                 drone_registration.password.clear();
