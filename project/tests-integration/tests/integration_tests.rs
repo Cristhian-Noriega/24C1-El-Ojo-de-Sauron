@@ -23,7 +23,7 @@ fn test_new_incident() {
 
     // Drone
     let mut drone = Drone::new(1, 1.0, 1.0, 1.0, 1.0, 1.0, 5.0);
-    assert_eq!(drone.data(), "1;1;0;100");
+    assert_eq!(drone.data(), "1;1;3;100");
     drone.set_incident(Some(incident.clone()));
     assert_eq!(drone.incident().unwrap(), incident);
     drone.set_status(DroneStatus::Travelling(TravelLocation::Incident));

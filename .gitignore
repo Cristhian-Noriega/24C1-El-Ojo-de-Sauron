@@ -21,3 +21,4 @@ project/.rustc_info.json
 
 # Runtime files
 server.log
+test_login_file.txt
