@@ -252,7 +252,7 @@ fn drone_data(publish: Publish, monitor_sender: Sender<MonitorAction>) {
 
     let x_coordinate = splitted_content[0].parse::<f64>().unwrap();
     let y_coordinate = splitted_content[1].parse::<f64>().unwrap();
-    let status = DroneStatus::from_str(splitted_content[2]);
+    let status = DroneStatus::get_status_from_str(splitted_content[2]);
     let battery = splitted_content[3].parse::<usize>().unwrap();
 
     let drone = Drone::new(id.clone(), status, battery, x_coordinate, y_coordinate);

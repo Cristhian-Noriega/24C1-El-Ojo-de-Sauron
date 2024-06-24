@@ -13,6 +13,12 @@ pub struct CameraSystem {
     active_incidents: HashMap<String, Incident>,
 }
 
+impl Default for CameraSystem {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CameraSystem {
     /// Creates a new camera system
     pub fn new() -> Self {
@@ -61,5 +67,78 @@ impl CameraSystem {
         }
 
         self.active_incidents.remove(incident_id);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ::common::incident::IncidentStatus;
+
+    #[test]
+    fn test_add_camera() {
+        let mut camera_system = CameraSystem::new();
+        let camera = Camera::new(
+            1_u8,
+            1.5,
+            1.5,
+            3.0,
+        );
+        camera_system.add_camera(camera);
+        let camera_data = camera_system.cameras_data();
+        assert_eq!(camera_data, "1;1.5;1.5;0");
+    }
+
+    #[test]
+    fn test_new_incident() {
+        let mut camera_system = CameraSystem::new();
+        let camera = Camera::new(
+            1_u8,
+            1.5,
+            1.5,
+            3.0,
+        );
+        camera_system.add_camera(camera);
+        let camera_data1 = camera_system.cameras_data();
+        let incident = Incident::new(
+            "incident1".to_string(),
+            "incident1".to_string(),
+            "incident1".to_string(),
+            1.0,
+            1.0,
+            IncidentStatus::Pending,
+        );
+        camera_system.new_incident(incident.clone());
+        let camera_data2 = camera_system.cameras_data();
+        assert_eq!(camera_data1, "1;1.5;1.5;0");
+        assert_eq!(camera_data2, "1;1.5;1.5;1");
+    }
+
+    #[test]
+    fn test_close_incident() {
+        let mut camera_system = CameraSystem::new();
+        let camera = Camera::new(
+            1_u8,
+            1.5,
+            1.5,
+            3.0,
+        );
+        camera_system.add_camera(camera);
+        let camera_data1 = camera_system.cameras_data();
+        let incident = Incident::new(
+            "incident1".to_string(),
+            "incident1".to_string(),
+            "incident1".to_string(),
+            1.0,
+            1.0,
+            IncidentStatus::Pending,
+        );
+        camera_system.new_incident(incident.clone());
+        let camera_data2 = camera_system.cameras_data();
+        camera_system.close_incident(&incident.uuid);
+        let camera_data3 = camera_system.cameras_data();
+        assert_eq!(camera_data1, "1;1.5;1.5;0");
+        assert_eq!(camera_data2, "1;1.5;1.5;1");
+        assert_eq!(camera_data3, "1;1.5;1.5;0");
     }
 }

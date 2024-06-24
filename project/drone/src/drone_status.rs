@@ -27,3 +27,18 @@ impl std::fmt::Display for DroneStatus {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_drone_status_display() {
+        assert_eq!(format!("{}", DroneStatus::Free), "0");
+        assert_eq!(format!("{}", DroneStatus::AttendingIncident), "1");
+        assert_eq!(format!("{}", DroneStatus::Travelling(TravelLocation::Central)), "2");
+        assert_eq!(format!("{}", DroneStatus::Travelling(TravelLocation::Anchor)), "3");
+        assert_eq!(format!("{}", DroneStatus::Travelling(TravelLocation::Incident)), "4");
+        assert_eq!(format!("{}", DroneStatus::Recharging), "5");
+    }
+}

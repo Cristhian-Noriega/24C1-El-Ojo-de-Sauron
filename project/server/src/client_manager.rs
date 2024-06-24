@@ -207,3 +207,38 @@ impl ClientManager {
         registered_clients
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register_client() {
+        let client_manager = ClientManager::new("test_login_file.txt");
+        let client_id = b"client1".to_vec();
+        let username = b"username".to_vec();
+        let password = b"password".to_vec();
+
+        client_manager.register_client(client_id.clone(), username.clone(), password.clone());
+
+        let registered_clients = client_manager.registered_clients.lock().unwrap();
+        let logins = registered_clients.get(&client_id).unwrap();
+        assert_eq!(logins.0, username);
+        assert_eq!(logins.1, password);
+        assert!(!logins.2);
+    }
+
+    #[test]
+    fn test_authenticate_client() {
+        let client_manager = ClientManager::new("test_login_file.txt");
+        let client_id = b"client1".to_vec();
+        let username = b"username".to_vec();
+        let password = b"password".to_vec();
+
+        client_manager.register_client(client_id.clone(), username.clone(), password.clone());
+
+        assert!(client_manager.authenticate_client(client_id.clone(), username.clone(), password.clone()));
+        assert!(!client_manager.authenticate_client(client_id.clone(), b"wrong".to_vec(), password.clone()));
+        assert!(!client_manager.authenticate_client(client_id.clone(), username.clone(), b"wrong".to_vec()));
+    }
+}
