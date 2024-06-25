@@ -688,6 +688,7 @@ fn update_places(
             DroneStatus::Travelling(TravelLocation::Anchor) => Color32::BLACK,
             DroneStatus::Travelling(TravelLocation::Incident) => Color32::from_rgb(255, 79, 0),
             DroneStatus::Recharging => Color32::GREEN,
+            DroneStatus::Interrupted => Color32::RED,
         };
 
         if activity_cordenates.contains(&(drone.x_coordinate, drone.y_coordinate)) {
