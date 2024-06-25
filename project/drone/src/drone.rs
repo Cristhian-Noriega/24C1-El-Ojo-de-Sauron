@@ -198,6 +198,11 @@ impl Drone {
         self.current_incident_count
     }
 
+    /// Returns true if the drone is in the anchor
+    pub fn is_in_anchor(&self) -> bool {
+        self.x_coordinate == self.x_anchor && self.y_coordinate == self.y_anchor
+    }
+
     /// Returns the incident of the drone
     // pub fn incident(&self) -> Option<Incident> {
     //     self.current_incident
@@ -233,6 +238,7 @@ impl Drone {
 
     pub fn is_free(&self) -> bool {
         self.status == DroneStatus::Free
+            || self.status == DroneStatus::Travelling(TravelLocation::Anchor)
     }
 }
 

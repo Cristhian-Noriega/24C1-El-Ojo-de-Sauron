@@ -112,7 +112,11 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
             return Ok(());
         }
     };
-    locked_drone.set_status(DroneStatus::Free);
+
+    if locked_drone.is_in_anchor() {
+        locked_drone.set_status(DroneStatus::Free);
+    }
+
     drop(locked_drone);
 
     let threads = vec![
@@ -320,7 +324,9 @@ fn handle_attending_incident(uuid: String, drone: Arc<Mutex<Drone>>) {
 
     drone_locked.increment_attending_counter();
 
-    if drone_locked.attending_counter() >= DRONE_COUNT_PER_INCIDENT + 1 {
+    if drone_locked.attending_counter() == DRONE_COUNT_PER_INCIDENT
+        && drone_locked.status() != DroneStatus::AttendingIncident
+    {
         drone_locked.set_status(DroneStatus::Interrupted);
     }
 
@@ -383,28 +389,23 @@ fn handle_close_incident(
 
     drop(stream);
 
-    let cloned_drone = drone.clone();
-    let thread = thread::spawn(move || {
-        travel(cloned_drone, x, y, TravelLocation::Anchor);
+    thread::spawn(move || {
+        travel(drone.clone(), x, y, TravelLocation::Anchor);
+
+        let mut locked_drone = match drone.lock() {
+            Ok(drone) => drone,
+            Err(_) => {
+                println!("Mutex was poisoned");
+                return;
+            }
+        };
+
+        if locked_drone.is_in_anchor() {
+            locked_drone.set_status(DroneStatus::Free);
+        }
+
+        drop(locked_drone);
     });
-
-    match thread.join() {
-        Ok(_) => {}
-        Err(_) => {
-            println!("Error in thread");
-        }
-    }
-
-    let mut locked_drone = match drone.lock() {
-        Ok(drone) => drone,
-        Err(_) => {
-            println!("Mutex was poisoned");
-            return;
-        }
-    };
-
-    locked_drone.set_status(DroneStatus::Free);
-    drop(locked_drone);
 }
 
 /// Updates the drone status
@@ -596,7 +597,14 @@ pub fn handle_pending_incidents(
         match locked_drone.current_incident() {
             Some(incident) => {
                 drop(locked_drone);
-                handle_incident(incident, drone.clone(), server_stream.clone(), key);
+
+                let drone = drone.clone();
+                let server_stream = server_stream.clone();
+                let key = *key;
+
+                thread::spawn(move || {
+                    handle_incident(incident, drone.clone(), server_stream.clone(), &key);
+                });
             }
             None => {
                 drop(locked_drone);
@@ -690,7 +698,10 @@ fn handle_incident(
                 return;
             }
         };
-        locked_drone.set_status(DroneStatus::Free);
+        if locked_drone.is_in_anchor() {
+            locked_drone.set_status(DroneStatus::Free);
+        }
+
         drop(locked_drone);
 
         return;
@@ -779,11 +790,7 @@ fn handle_incident(
 
     let duration_incident = Duration::from_secs(DRONE_ATTENDING_DURATION);
 
-    println!("Drone is attending the incident");
-
     thread::sleep(duration_incident);
-
-    println!("Drone has attended the incident");
 
     let topic_name = TopicName::new(
         vec![
@@ -903,7 +910,10 @@ fn recharge_battery(drone: Arc<Mutex<Drone>>) {
             }
         };
 
-        locked_drone.set_status(DroneStatus::Free);
+        if locked_drone.is_in_anchor() {
+            locked_drone.set_status(DroneStatus::Free);
+        }
+
         drop(locked_drone);
     }
 }
