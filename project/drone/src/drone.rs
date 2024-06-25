@@ -8,6 +8,7 @@ const MINIMUM_BATTERY_LEVEL: usize = 20;
 const MAXIMUM_BATTERY_LEVEL: usize = 100;
 
 const BATTERY_DISCHARGE_TRAVELLING: usize = 2;
+const BATTERY_DISCHARGE_ATTENDING: usize = 2;
 const BATTERY_DISCHARGE_IDLE: usize = 1;
 const BATTERY_RECHARGE: usize = 5;
 
@@ -125,7 +126,7 @@ impl Drone {
         let battery_to_discharge = match self.status {
             DroneStatus::Travelling(_) => BATTERY_DISCHARGE_TRAVELLING,
             DroneStatus::Free | DroneStatus::Interrupted => BATTERY_DISCHARGE_IDLE,
-            DroneStatus::AttendingIncident => BATTERY_DISCHARGE_IDLE,
+            DroneStatus::AttendingIncident => BATTERY_DISCHARGE_ATTENDING,
             DroneStatus::Recharging => {
                 return;
             }

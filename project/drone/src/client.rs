@@ -846,7 +846,7 @@ fn recharge_battery(drone: Arc<Mutex<Drone>>) {
             }
         };
 
-        if !locked_drone.is_below_minimun() || locked_drone.is_free() {
+        if !locked_drone.is_below_minimun() || !locked_drone.is_free() {
             drop(locked_drone);
             thread::sleep(Duration::from_secs(CHECK_BATTERY_INTERVAL));
             continue;
