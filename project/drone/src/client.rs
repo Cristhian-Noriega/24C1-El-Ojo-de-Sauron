@@ -572,7 +572,7 @@ fn travel(drone: Arc<Mutex<Drone>>, x: f64, y: f64, travel_location: TravelLocat
 }
 
 /// Handles the pending incidents of the drone queue
-pub fn handle_pending_incidents(
+fn handle_pending_incidents(
     drone: Arc<Mutex<Drone>>,
     server_stream: Arc<Mutex<TcpStream>>,
     key: &[u8; 32],
