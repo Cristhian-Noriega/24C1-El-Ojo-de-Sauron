@@ -32,6 +32,7 @@ const READ_MESSAGE_INTERVAL: u64 = 100;
 const UPDATE_DATA_INTERVAL: u64 = 1;
 const CHECK_BATTERY_INTERVAL: u64 = 5;
 const PENDING_INCIDENTS_INTERVAL: u64 = 1;
+const WAIT_FOR_DRONE_INTERVAL: u64 = 1;
 
 const TRAVEL_INTERVAL: u64 = 1;
 const BATTERY_DISCHARGE_INTERVAL: u64 = 5;
@@ -297,7 +298,10 @@ fn handle_new_incident(message: String, drone: Arc<Mutex<Drone>>) {
         }
     };
 
-    locked_drone.add_incident(incident);
+    if locked_drone.is_within_range(incident.x_coordinate, incident.y_coordinate) {
+        locked_drone.add_incident(incident);
+    }
+
     drop(locked_drone);
 }
 
@@ -621,27 +625,6 @@ fn handle_incident(
     server_stream: Arc<Mutex<TcpStream>>,
     key: &[u8; 32],
 ) {
-    let mut drone_locked = match drone.lock() {
-        Ok(drone) => drone,
-        Err(_) => {
-            println!("Mutex was poisoned");
-            return;
-        }
-    };
-
-    if drone_locked.is_below_minimun() {
-        drop(drone_locked);
-        return;
-    }
-
-    if !drone_locked.is_within_range(incident.x_coordinate, incident.y_coordinate) {
-        drone_locked.remove_current_incident();
-        drop(drone_locked);
-        return;
-    }
-
-    drop(drone_locked);
-
     let topic_filter = TopicFilter::new(
         vec![
             TopicLevel::Literal(ATTENDING_INCIDENT.to_vec()),
@@ -749,7 +732,7 @@ fn handle_incident(
         }
 
         drop(locked_drone);
-        thread::sleep(Duration::from_secs(1));
+        thread::sleep(Duration::from_secs(WAIT_FOR_DRONE_INTERVAL));
     }
 
     let mut locked_stream = match server_stream.lock() {
