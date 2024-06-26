@@ -245,7 +245,7 @@ fn handle_publish(
         }
     };
     let topic_levels = publish.topic().levels();
-    let action = match topic_levels.get(0) {
+    let action = match topic_levels.first() {
         Some(action) => action.as_slice(),
         None => {
             println!("Invalid topic");
