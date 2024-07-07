@@ -8,5 +8,5 @@ members = [
     "camera-system", 
     "monitor",
     "common",
-    "tests-integration"
-]
+    "tests-integration",
+    "aws-demo"]
