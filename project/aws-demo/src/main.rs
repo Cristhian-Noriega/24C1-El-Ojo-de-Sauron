@@ -1,23 +1,29 @@
 #![allow(deprecated)]
 
-use aws_sdk_s3::Client;
+use aws_sdk_s3::{Client, primitives::ByteStream};
 use aws_types::region::Region;
+use std::path::Path;
 
 #[tokio::main]
 async fn main() -> Result<(), aws_sdk_s3::Error> {
     let config = aws_config::from_env().region(Region::new("us-east-2")).load().await;
     let client = Client::new(&config);
 
-    let resp = client.list_buckets().send().await?;
-    let buckets = resp.buckets();
-    let num_buckets = buckets.len();
+    let bucket = "fiuba-sauron";
+    let key = "test1.jpg";
+    let file_path = "images/test1.jpg";
 
-    for bucket in buckets {
-        println!("{}", bucket.name().unwrap_or_default());
-    }
+    let body = ByteStream::from_path(Path::new(file_path)).await;
 
-    println!();
-    println!("Found {} buckets.", num_buckets);
+    let resp = client
+        .put_object()
+        .bucket(bucket)
+        .key(key)
+        .body(body.unwrap())
+        .send()
+        .await?;
+
+    println!("Uploaded file with version ID: {:?}", resp.version_id);
 
     Ok(())
 }
