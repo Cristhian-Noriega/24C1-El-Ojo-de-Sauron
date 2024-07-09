@@ -17,7 +17,7 @@ use common::{
 use eframe::egui::{Color32, FontId, Stroke};
 
 use eframe::egui;
-use egui::{Context, Response, Ui};
+use egui::{Context, Response, Ui, ComboBox};
 use egui_extras::{Column, TableBuilder};
 
 use std::sync::mpsc::{Receiver, Sender};
@@ -112,16 +112,17 @@ impl UIApplication {
     }
 }
 
-/// Updates the drones in the UI
+/// Updates the drones in the UI (in a sorted way!)
 fn update_drones(drones: &mut Vec<Drone>, drone: Drone) {
-    for d in drones.iter_mut() {
-        if d.id == drone.id {
-            *d = drone;
-            return;
-        }
+    match drones.binary_search_by(|d| {
+        // Convert ids to numbers and compare
+        let id_num = d.id.parse::<usize>().unwrap_or(0);
+        let drone_id_num = drone.id.parse::<usize>().unwrap_or(0);
+        id_num.cmp(&drone_id_num)
+    }) {
+        Ok(pos) => drones[pos] = drone, // If the drone exists, update it
+        Err(pos) => drones.insert(pos, drone), // If the drone doesn't exist, insert it at the correct position
     }
-
-    drones.push(drone);
 }
 
 /// Updates the incidents in the UI
@@ -270,9 +271,10 @@ fn display_new_incident(
     });
 }
 
-/// Displays the form to edit a incident
+/// Displays the form to edit an incident
 fn display_edit_incident(
     ui: &mut egui::Ui,
+    incident_list: &Vec<Incident>,
     edit_incident: &mut IncidentEdit,
     sender: &Sender<UIAction>,
 ) {
@@ -282,7 +284,18 @@ fn display_edit_incident(
         ui.horizontal(|ui| {
             ui.label("UUID:");
             ui.add_space(71.0);
-            ui.text_edit_singleline(&mut edit_incident.uuid);
+            let incident_uuids: Vec<String> = incident_list.iter().map(|incident| incident.uuid.clone()).collect();
+            let mut selected_uuid = incident_uuids.iter().position(|uuid| *uuid == edit_incident.uuid).unwrap_or(0);
+            ComboBox::from_id_source("incident_uuid")
+                .selected_text(incident_uuids.get(selected_uuid).cloned().unwrap_or_default())
+                .show_ui(ui, |ui| {
+                    for (index, uuid) in incident_uuids.iter().enumerate() {
+                        if ui.selectable_value(&mut selected_uuid, index, uuid).clicked() {
+                            // Actualizar el UUID seleccionado en edit_incident
+                            edit_incident.uuid = uuid.clone();
+                        }
+                    }
+                });
         });
         ui.add_space(5.0);
         ui.horizontal(|ui| {
@@ -609,7 +622,7 @@ impl eframe::App for UIApplication {
                     &mut self.current_layout,
                 ),
                 Layout::EditIncident => {
-                    display_edit_incident(ui, &mut self.new_incident_edit, &self.sender)
+                    display_edit_incident(ui, &self.incidents, &mut self.new_incident_edit, &self.sender)
                 }
                 Layout::IncidentList => display_incident_list(
                     ui,

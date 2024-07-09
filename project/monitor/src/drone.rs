@@ -29,4 +29,5 @@ impl Drone {
             incident: None,
         }
     }
+
 }
