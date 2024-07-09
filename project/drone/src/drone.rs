@@ -167,35 +167,14 @@ impl Drone {
         self.status.clone()
     }
 
-    /// Sets the incident of the drone
-    // pub fn set_incident(&mut self, incident: Option<Incident>) {
-    //     match incident {
-    //         Some(incident) => {
-    //             self.current_incident = Some((incident, 0));
-    //         }
-    //         None => {
-    //             self.current_incident = None;
-    //         }
-    //     }
-    // }
 
     /// Increments the attending counter of the drone
     pub fn increment_attending_counter(&mut self) {
         self.current_incident_count += 1;
-        // match &mut self.current_incident {
-        //     Some((_, counter)) => {
-        //         *counter += 1;
-        //     }
-        //     None => {}
-        // }
     }
 
     /// Returns the attending counter of the drone
     pub fn attending_counter(&self) -> usize {
-        // match &self.current_incident {
-        //     Some((_, counter)) => *counter,
-        //     None => 0,
-        // }
         self.current_incident_count
     }
 
@@ -204,39 +183,28 @@ impl Drone {
         self.x_coordinate == self.x_anchor && self.y_coordinate == self.y_anchor
     }
 
-    /// Returns the incident of the drone
-    // pub fn incident(&self) -> Option<Incident> {
-    //     self.current_incident
-    //         .as_ref()
-    //         .map(|(incident, _)| incident.clone())
-    // }
-
-    // /// Returns true if the drone is attending an incident
-    // pub fn is_travelling_to_incident(&self) -> bool {
-    //     self.status == DroneStatus::Travelling(TravelLocation::Incident)
-    // }
-
+    /// Returns true if the drone has been interrupted
     pub fn is_interrupted(&self) -> bool {
         self.status == DroneStatus::Interrupted
     }
 
+    /// Adds an incident to the drone queue of incidents
     pub fn add_incident(&mut self, incident: Incident) {
         self.incident_queue.push_back(incident);
     }
 
-    // pub fn has_pending_incidents(&self) -> bool {
-    //     !self.incident_queue.is_empty()
-    // }
-
+    /// Returns the current incident of the drone
     pub fn current_incident(&self) -> Option<Incident> {
         self.incident_queue.front().cloned()
     }
 
+    /// Removes the current incident of the drone
     pub fn remove_current_incident(&mut self) {
         self.incident_queue.pop_front();
         self.current_incident_count = 0;
     }
 
+    /// Checks if the drone is free to attend an incident
     pub fn is_free(&self) -> bool {
         self.status == DroneStatus::Free
             || self.status == DroneStatus::Travelling(TravelLocation::Anchor)
