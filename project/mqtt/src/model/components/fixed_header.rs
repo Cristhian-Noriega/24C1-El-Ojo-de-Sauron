@@ -1,4 +1,4 @@
-use crate::{encryptation::EXTRA_DATA_SIZE, model::packets::*, Error, Read, RemainingLength};
+use crate::{encryptation::EXTRA_DATA_SIZE, model::packets::*, MqttResult, Read, RemainingLength};
 
 /// Represents the fixed header of an MQTT packet.
 pub struct FixedHeader {
@@ -15,7 +15,7 @@ impl FixedHeader {
     }
 
     /// Converts a byte stream into a FixedHeader.
-    pub fn from_bytes(stream: &mut dyn Read) -> Result<FixedHeader, Error> {
+    pub fn from_bytes(stream: &mut dyn Read) -> MqttResult<FixedHeader> {
         let first_byte_buffer = &mut [0; 1];
         stream.read_exact(first_byte_buffer)?;
 

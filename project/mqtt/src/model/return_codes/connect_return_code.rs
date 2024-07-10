@@ -1,4 +1,4 @@
-use crate::Error;
+use crate::{MqttResult,MqttError};
 
 /// Represents the different connection return codes in MQTT.
 #[derive(PartialEq, Debug)]
@@ -25,7 +25,7 @@ impl ConnectReturnCode {
     }
 
     /// Converts a byte into a connection return code.
-    pub fn from_byte(byte: u8) -> Result<Self, Error> {
+    pub fn from_byte(byte: u8) -> MqttResult<Self> {
         match byte {
             0x00 => Ok(ConnectReturnCode::ConnectionAccepted),
             0x01 => Ok(ConnectReturnCode::UnacceptableProtocolVersion),
@@ -33,7 +33,7 @@ impl ConnectReturnCode {
             0x03 => Ok(ConnectReturnCode::ServerUnavailable),
             0x04 => Ok(ConnectReturnCode::BadUsernameOrPassword),
             0x05 => Ok(ConnectReturnCode::NotAuthorized),
-            _ => Err(Error::new(format!("Invalid ConnackReturnCode: {}", byte))),
+            _ => Err(MqttError::InvalidReturnCode(format!("Invalid ConnackReturnCode: {}", byte))),
         }
     }
 }

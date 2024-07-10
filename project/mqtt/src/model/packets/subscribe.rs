@@ -1,5 +1,5 @@
 use super::{DEFAULT_VARIABLE_HEADER_LENGTH, RESERVED_FIXED_HEADER_FLAGS, SUBSCRIBE_PACKET_TYPE};
-use crate::{encrypt, Error, FixedHeader, QoS, Read, RemainingLength, TopicFilter};
+use crate::{encrypt, MqttResult, MqttError, FixedHeader, QoS, Read, RemainingLength, TopicFilter};
 
 /// Represents a SUBSCRIBE packet of MQTT. The client uses it to subscribe to one or more topics.
 #[derive(Debug)]
@@ -17,12 +17,12 @@ impl Subscribe {
     }
 
     /// Converts a byte stream into a Subscribe.
-    pub fn from_bytes(fixed_header: FixedHeader, stream: &mut dyn Read) -> Result<Self, Error> {
+    pub fn from_bytes(fixed_header: FixedHeader, stream: &mut dyn Read) -> MqttResult<Self> {
         // Fixed Header
         let fixed_header_flags = fixed_header.first_byte() & 0b0000_1111;
 
         if fixed_header_flags != RESERVED_FIXED_HEADER_FLAGS {
-            return Err(Error::new("Invalid flags".to_string()));
+            return Err(MqttError::InvalidFixedHeaderFlags);
         }
 
         // Variable Header
@@ -48,7 +48,7 @@ impl Subscribe {
         }
 
         if topics.is_empty() {
-            return Err(Error::new("No topics specified in the payload".to_string()));
+            return Err(MqttError::NoTopicsSpecified);
         }
 
         Ok(Self {

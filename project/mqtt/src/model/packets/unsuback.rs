@@ -1,5 +1,5 @@
 use super::{DEFAULT_VARIABLE_HEADER_LENGTH, RESERVED_FIXED_HEADER_FLAGS, UNSUBACK_PACKET_TYPE};
-use crate::{encrypt, Error, FixedHeader, Read, RemainingLength};
+use crate::{encrypt, MqttResult, MqttError, FixedHeader, Read, RemainingLength};
 
 /// Represents an UNSUBACK packet from MQTT. The server uses it to confirm the unsubscription of one or more topics.
 #[derive(Debug)]
@@ -13,12 +13,12 @@ impl Unsuback {
     }
 
     /// Converts a stream of bytes into an Unsuback.
-    pub fn from_bytes(fixed_header: FixedHeader, stream: &mut dyn Read) -> Result<Self, Error> {
+    pub fn from_bytes(fixed_header: FixedHeader, stream: &mut dyn Read) -> MqttResult<Self> {
         // Fixed Header
         let fixed_header_flags = fixed_header.first_byte() & 0b0000_1111;
 
         if fixed_header_flags != RESERVED_FIXED_HEADER_FLAGS {
-            return Err(Error::new("Invalid flags".to_string()));
+            return Err(MqttError::InvalidFixedHeaderFlags);
         }
 
         // Variable Header

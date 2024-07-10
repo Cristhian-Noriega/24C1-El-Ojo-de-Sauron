@@ -1,7 +1,7 @@
 use std::fmt::{Display, Formatter};
 
 use super::{CONNACK_PACKET_TYPE, DEFAULT_VARIABLE_HEADER_LENGTH, RESERVED_FIXED_HEADER_FLAGS};
-use crate::{encrypt, ConnectReturnCode, Error, FixedHeader, Read, RemainingLength};
+use crate::{encrypt, ConnectReturnCode, MqttResult, MqttError, FixedHeader, Read, RemainingLength};
 
 /// Represents a CONNECT packet of MQTT that is used to accept a connection from a client.
 #[derive(Debug)]
@@ -22,12 +22,12 @@ impl Connack {
     }
 
     /// Converts a stream of bytes into a Connack.
-    pub fn from_bytes(fixed_header: FixedHeader, stream: &mut dyn Read) -> Result<Self, Error> {
+    pub fn from_bytes(fixed_header: FixedHeader, stream: &mut dyn Read) -> MqttResult<Self> {
         // Fixed Header
         let fixed_header_flags = fixed_header.first_byte() & 0b0000_1111;
 
         if fixed_header_flags != RESERVED_FIXED_HEADER_FLAGS {
-            return Err(Error::new("Invalid flags".to_string()));
+            return Err(MqttError::InvalidFixedHeaderFlags);
         }
 
         // Variable Header

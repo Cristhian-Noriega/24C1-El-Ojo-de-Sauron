@@ -1,7 +1,6 @@
 use super::{CONNECT_PACKET_TYPE, RESERVED_FIXED_HEADER_FLAGS};
 use crate::{
-    encrypt, EncodedString, Error, FixedHeader, Login, QoS, Read, RemainingLength, Will,
-    PROTOCOL_LEVEL, PROTOCOL_NAME,
+    encrypt, errors::error::MqttResult, EncodedString, MqttError, FixedHeader, Login, QoS, Read, RemainingLength, Will, PROTOCOL_LEVEL, PROTOCOL_NAME
 };
 
 /// Represents a MQTT CONNECT packet used to initialize a connection with the server.
@@ -36,12 +35,12 @@ impl Connect {
     }
 
     /// Converts a stream of bytes into a Connect.
-    pub fn from_bytes(fixed_header: FixedHeader, stream: &mut dyn Read) -> Result<Self, Error> {
+    pub fn from_bytes(fixed_header: FixedHeader, stream: &mut dyn Read) -> MqttResult<Self> {
         // Fixed Header
         let fixed_header_flags = fixed_header.first_byte() & 0b0000_1111;
 
         if fixed_header_flags != RESERVED_FIXED_HEADER_FLAGS {
-            return Err(Error::new("Invalid flags".to_string()));
+            return Err(MqttError::InvalidFixedHeaderFlags);
         }
 
         // Variable Header
@@ -51,7 +50,7 @@ impl Connect {
 
         for i in 0..PROTOCOL_NAME.len() {
             if protocol_name_content[i] != PROTOCOL_NAME[i] {
-                return Err(Error::new("Invalid protocol name".to_string()));
+                return Err(MqttError::InvalidProtocolName);
             }
         }
 
@@ -61,7 +60,7 @@ impl Connect {
         let protocol_level_byte = protocol_level_buffer[0];
 
         if protocol_level_byte != PROTOCOL_LEVEL {
-            return Err(Error::new("Invalid protocol level".to_string()));
+            return Err(MqttError::InvalidProtocolLevel);
         }
 
         let flags_buffer = &mut [0; 1];
@@ -71,7 +70,7 @@ impl Connect {
 
         let reserved = flags_byte & 0b0000_0001;
         if reserved != 0 {
-            return Err(Error::new("Invalid reserved flag".to_string()));
+            return Err(MqttError::InvalidReserverdFlag);
         }
 
         let clean_session = (flags_byte & 0b0000_0010) >> 1 == 1;
@@ -79,19 +78,19 @@ impl Connect {
 
         let will_qos = QoS::from_byte((flags_byte & 0b0001_1000) >> 3)?;
         if !will_flag && will_qos != QoS::AtMost {
-            return Err(Error::new("Invalid will qos".to_string()));
+            return Err(MqttError::InvalidWillQoS);
         }
 
         let will_retain = (flags_byte & 0b0010_0000) >> 5 == 1;
         if !will_flag && will_retain {
-            return Err(Error::new("Invalid will retain flag".to_string()));
+            return Err(MqttError::InvalidWillRetainFlag);
         }
 
         let username_flag = (flags_byte & 0b1000_0000) >> 7 == 1;
 
         let password_flag = (flags_byte & 0b0100_0000) >> 6 == 1;
         if !username_flag && password_flag {
-            return Err(Error::new("Invalid password flag".to_string()));
+            return Err(MqttError::InvalidPasswordFlag);
         }
 
         let keep_alive_buffer = &mut [0; 2];

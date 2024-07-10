@@ -6,7 +6,7 @@
 
 use {
     encryptation::encryping_tool::{decrypt, encrypt},
-    errors::error::Error,
+    errors::error::{MqttError, MqttResult},
     model::{
         components::{
             encoded_string::EncodedString, fixed_header::FixedHeader, login::Login, qos::QoS,

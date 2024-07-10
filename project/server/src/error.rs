@@ -1,4 +1,4 @@
-use mqtt::errors::error::Error as MqttError;
+use mqtt::errors::error::MqttError;
 use std::fmt;
 use std::io;
 use std::sync::mpsc::SendError;

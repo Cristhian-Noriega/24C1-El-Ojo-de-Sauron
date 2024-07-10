@@ -1,6 +1,6 @@
 use std::fmt::{self, Display, Formatter};
 
-use crate::Error;
+use crate::{MqttError, MqttResult};
 
 const MULTI_LEVEL_WILDCARD: u8 = 0x23;
 const SINGLE_LEVEL_WILDCARD: u8 = 0x2B;
@@ -15,7 +15,7 @@ pub enum TopicLevel {
 
 impl TopicLevel {
     /// Converts a vector of bytes into a TopicLevel.
-    pub fn from_bytes(bytes: Vec<u8>) -> Result<TopicLevel, Error> {
+    pub fn from_bytes(bytes: Vec<u8>) -> MqttResult<TopicLevel> {
         if bytes.len() == 1 {
             return match bytes.first() {
                 Some(&MULTI_LEVEL_WILDCARD) => Ok(TopicLevel::MultiLevelWildcard),
@@ -25,13 +25,13 @@ impl TopicLevel {
         }
 
         if bytes.contains(&MULTI_LEVEL_WILDCARD) {
-            return Err(Error::new(
+            return Err(MqttError::InvalidWildcard(
                 "Multi-level wildcard must be the only character".to_string(),
             ));
         }
 
         if bytes.contains(&SINGLE_LEVEL_WILDCARD) {
-            return Err(Error::new(
+            return Err(MqttError::InvalidWildcard(
                 "Single-level wildcard must be the only character".to_string(),
             ));
         }
