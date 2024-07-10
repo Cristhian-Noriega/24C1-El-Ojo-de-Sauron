@@ -189,14 +189,14 @@ impl ClientManager {
     }
 
     /// Gets the login information from a connect packet
-    pub fn get_login_info(&self, connect_packet: &Connect) -> Result<(Vec<u8>, Vec<u8>), String> {
+    pub fn get_login_info(&self, connect_packet: &Connect) -> ServerResult<(Vec<u8>, Vec<u8>)> {
         let login = connect_packet
             .login()
-            .ok_or("No login information provided")?;
+            .ok_or(ServerError::NoLoginProvided)?;
         let username = login.username().content().to_vec();
         let password = login
             .password()
-            .ok_or("No password provided")?
+            .ok_or(ServerError::NoPasswordProvided)?
             .content()
             .to_vec();
         Ok((username, password))

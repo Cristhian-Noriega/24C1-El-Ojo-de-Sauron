@@ -17,6 +17,8 @@ pub enum ServerError {
     ChannelSend(String),
     PoisonedLock,
     Utf8Error(FromUtf8Error),
+    NoLoginProvided,
+    NoPasswordProvided,
 }
 
 impl fmt::Display for ServerError {
@@ -30,6 +32,8 @@ impl fmt::Display for ServerError {
             ServerError::ChannelSend(msg) => write!(f, "Channel send error: {}", msg),
             ServerError::PoisonedLock => write!(f, "Poisoned lock error"),
             ServerError::Utf8Error(err) => write!(f, "UTF-8 error: {}", err),
+            ServerError::NoLoginProvided => write!(f, "No login provided"),
+            ServerError::NoPasswordProvided => write!(f, "No password provided"),
         }
     }
 }
