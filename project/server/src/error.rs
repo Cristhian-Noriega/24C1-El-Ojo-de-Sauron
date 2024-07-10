@@ -3,6 +3,7 @@ use std::fmt;
 use std::io;
 use std::sync::mpsc::SendError;
 use std::sync::PoisonError;
+use std::string::FromUtf8Error;
 
 pub type ServerResult<T> = Result<T, ServerError>;
 
@@ -15,6 +16,7 @@ pub enum ServerError {
     UnsupportedPacket,
     ChannelSend(String),
     PoisonedLock,
+    Utf8Error(FromUtf8Error),
 }
 
 impl fmt::Display for ServerError {
@@ -27,6 +29,7 @@ impl fmt::Display for ServerError {
             ServerError::UnsupportedPacket => write!(f, "Unsupported packet error"),
             ServerError::ChannelSend(msg) => write!(f, "Channel send error: {}", msg),
             ServerError::PoisonedLock => write!(f, "Poisoned lock error"),
+            ServerError::Utf8Error(err) => write!(f, "UTF-8 error: {}", err),
         }
     }
 }
@@ -52,5 +55,11 @@ impl<T> From<SendError<T>> for ServerError {
 impl<T> From<PoisonError<T>> for ServerError {
     fn from(_: PoisonError<T>) -> Self {
         ServerError::PoisonedLock
+    }
+}
+
+impl From<FromUtf8Error> for ServerError {
+    fn from(err: FromUtf8Error) -> Self {
+        ServerError::Utf8Error(err)
     }
 }
