@@ -1,20 +1,21 @@
 use std::{
-    collections::{HashMap, HashSet, VecDeque},
-    io::Write,
-    sync::{mpsc, Arc, RwLock},
-    time::Duration,
+    collections::{HashMap, HashSet, VecDeque}, io::Write, sync::{mpsc, Arc, RwLock}, thread, time::{Duration, Instant}
 };
 
 use crate::{client::Client, client_manager::ClientManager, error::ServerResult, logfile::Logger};
 
 use mqtt::model::{
-    components::{qos::QoS, topic_name::TopicName},
+    components::{qos::QoS, topic_name::TopicName, topic_filter::TopicFilter},
     packets::{
         connack::Connack, pingresp::Pingresp, puback::Puback, publish::Publish, suback::Suback,
         subscribe::Subscribe, unsuback::Unsuback, unsubscribe::Unsubscribe,
     },
     return_codes::{connect_return_code::ConnectReturnCode, suback_return_code::SubackReturnCode},
 };
+
+use serde::{Serialize, Deserialize};
+
+use std::fs::File;
 
 /// Represents the different tasks that the task handler can perform
 pub enum Task {
@@ -29,6 +30,7 @@ pub enum Task {
 const ADMIN_ID: &[u8] = b"admin";
 const CLIENT_REGISTER: &[u8] = b"$client-register";
 const SEPARATOR: u8 = b';';
+const SECONDS_TO_BACKUP: u64 = 10;
 
 /// Represents the task handler that will handle all the tasks that the server needs to process
 #[derive(Debug)]
@@ -41,6 +43,13 @@ pub struct TaskHandler {
     log_file: Arc<Logger>,
     client_manager: Arc<RwLock<ClientManager>>,
     key: [u8; 32],
+}
+
+#[derive(Serialize, Deserialize)]
+struct BackupData {
+    offline_messages: HashMap<Vec<u8>, VecDeque<Publish>>,
+    retained_messages: HashMap<TopicName, VecDeque<Publish>>,
+    clients: HashMap<Vec<u8>, Vec<TopicFilter>>,
 }
 
 impl TaskHandler {
@@ -70,8 +79,53 @@ impl TaskHandler {
         });
     }
 
+    pub fn backup_data(&self) {
+        // Clone the required data
+        let offline_messages_clone = self.offline_messages.clone();
+        let retained_messages_clone = self.retained_messages.clone();
+
+        // Serialize clients as a hashmap of client id to topic filters
+        let clients_clone = {
+            let clients = self.clients.read().unwrap();
+            clients.iter().map(|(id, client)| (id.clone(), client.subscriptions.clone())).collect()
+        };
+
+        // Create BackupData struct
+        let backup_data = BackupData {
+            offline_messages: offline_messages_clone,
+            retained_messages: retained_messages_clone,
+            clients: clients_clone,
+        };
+
+        // Spawn a thread to serialize and write the data to a file
+        thread::spawn(move || {
+            // Serialize the backup data using serde
+            match serde_json::to_string(&backup_data) {
+                Ok(serialized_data) => {
+                    // Write the serialized data to a backup file
+                    let mut file = match File::create("backup_file.json") {
+                        Ok(file) => file,
+                        Err(e) => {
+                            eprintln!("Failed to create backup file: {}", e);
+                            return;
+                        }
+                    };
+                    if let Err(e) = file.write_all(serialized_data.as_bytes()) {
+                        eprintln!("Failed to write to backup file: {}", e);
+                    }
+                },
+                Err(e) => {
+                    eprintln!("Failed to serialize backup data: {}", e);
+                }
+            }
+        });
+    }
+
     /// Runs the task handler in a loop
     pub fn run(mut self) {
+        let backup_interval = Duration::from_secs(SECONDS_TO_BACKUP);
+        let mut last_backup = std::time::Instant::now();
+
         loop {
             match self.client_actions_receiver_channel.recv() {
                 Ok(task) => {
@@ -83,6 +137,11 @@ impl TaskHandler {
                     std::thread::sleep(Duration::from_secs(1));
                     continue;
                 }
+            }
+
+            if last_backup.elapsed() >= backup_interval {
+                self.backup_data();
+                last_backup = Instant::now();
             }
         }
     }

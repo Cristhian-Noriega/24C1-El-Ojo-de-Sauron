@@ -2,11 +2,13 @@ use std::fmt::{self, Display, Formatter};
 
 use crate::Error;
 
+use serde::{Deserialize, Serialize};
+
 const MULTI_LEVEL_WILDCARD: u8 = 0x23;
 const SINGLE_LEVEL_WILDCARD: u8 = 0x2B;
 
 /// Part of a TopicFilter, indicates if the topic contains a wildcard.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub enum TopicLevel {
     Literal(Vec<u8>),
     MultiLevelWildcard,

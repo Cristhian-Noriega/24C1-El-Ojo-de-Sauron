@@ -1,9 +1,10 @@
 use super::{FORWARD_SLASH, SERVER_RESERVED};
 use crate::{EncodedString, Error, Read, TopicLevel};
 use std::fmt;
+use serde::{Serialize, Deserialize};
 
 /// Represents the name of a topic in MQTT.
-#[derive(Debug, PartialEq, Clone, Eq, Hash)]
+#[derive(Debug, PartialEq, Clone, Eq, Hash, Serialize, Deserialize)]
 pub struct TopicName {
     levels: Vec<Vec<u8>>,
     server_reserved: bool,

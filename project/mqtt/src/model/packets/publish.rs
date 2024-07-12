@@ -1,8 +1,10 @@
 use super::{DEFAULT_VARIABLE_HEADER_LENGTH, PUBLISH_PACKET_TYPE};
 use crate::{encrypt, Error, FixedHeader, QoS, Read, RemainingLength, TopicName};
 
+use serde::{Deserialize, Serialize};
+
 /// Represents a PUBLISH packet of MQTT. The client uses it to publish a message to a topic.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Publish {
     dup: bool,
     qos: QoS,

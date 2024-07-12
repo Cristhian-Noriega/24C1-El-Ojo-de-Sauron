@@ -3,8 +3,9 @@ use std::fmt::{self, Display, Formatter};
 use super::{FORWARD_SLASH, SERVER_RESERVED};
 use crate::{EncodedString, Error, Read, TopicLevel, TopicName};
 
+use serde::{Serialize, Deserialize};
 /// An expression contained in a SUBSCRIBE, to indicate an interest in one or more topics. A topic filter may include wildcards.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TopicFilter {
     levels: Vec<TopicLevel>,
     server_reserved: bool,
