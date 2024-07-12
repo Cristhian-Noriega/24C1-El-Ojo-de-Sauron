@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, HashSet, VecDeque}, io::Write, sync::{mpsc, Arc, RwLock}, thread, time::{Duration, Instant}
+    collections::{HashMap, HashSet, VecDeque}, io::{Read, Write}, net::TcpStream, sync::{atomic::AtomicBool, mpsc, Arc, Mutex, RwLock}, thread, time::{Duration, Instant}
 };
 
 use crate::{client::Client, client_manager::ClientManager, error::ServerResult, logfile::Logger};
@@ -66,6 +66,58 @@ impl TaskHandler {
             active_connections: HashSet::new(),
             offline_messages: HashMap::new(),
             retained_messages: HashMap::new(),
+            log_file,
+            client_manager,
+            key,
+        }
+    }
+
+    pub fn new_from_backup(
+        client_actions_receiver_channel: mpsc::Receiver<Task>,
+        log_file: Arc<Logger>,
+        client_manager: Arc<RwLock<ClientManager>>,
+        key: [u8; 32]
+    ) -> Self {
+        let backup_file = "backup_file.json";
+        let backup_data: BackupData = match File::open(backup_file) {
+            Ok(mut file) => {
+                let mut data = String::new();
+                if let Err(e) = file.read_to_string(&mut data) {
+                    eprintln!("Failed to read backup file: {}", e);
+                    return TaskHandler::new(client_actions_receiver_channel, log_file, client_manager, key);
+                }
+                match serde_json::from_str(&data) {
+                    Ok(data) => data,
+                    Err(e) => {
+                        eprintln!("Failed to deserialize backup data: {}", e);
+                        return TaskHandler::new(client_actions_receiver_channel, log_file, client_manager, key);
+                    }
+                }
+            }
+            Err(_) => {
+                eprintln!("Backup file not found, initializing empty TaskHandler.");
+                return TaskHandler::new(client_actions_receiver_channel, log_file, client_manager, key);
+            }
+        };
+
+        let clients: HashMap<Vec<u8>, Client> = backup_data.clients.into_iter().map(|(id, subscriptions)| {
+            (
+                id.clone(),
+                Client {
+                    id,
+                    subscriptions,
+                    alive: AtomicBool::new(false),
+                    stream: Arc::new(Mutex::new(TcpStream::connect("127.0.0.1:0").unwrap())), // Placeholder for actual stream initialization
+                }
+            )
+        }).collect();
+
+        TaskHandler {
+            client_actions_receiver_channel,
+            clients: RwLock::new(clients),
+            active_connections: HashSet::new(),
+            offline_messages: backup_data.offline_messages,
+            retained_messages: backup_data.retained_messages,
             log_file,
             client_manager,
             key,
