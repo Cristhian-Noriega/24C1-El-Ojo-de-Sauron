@@ -1,5 +1,5 @@
 use aws_config::BehaviorVersion;
-use aws_sdk_s3::{Client, primitives::ByteStream};
+use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_rekognition::types::{S3Object, builders::ImageBuilder};
 use std::path::Path;
 
@@ -14,11 +14,53 @@ async fn main() {
     let key = "test.jpg";
     let file_path = "images/test.jpg";
 
-    let _ = upload_file(&s3_client, bucket, key, file_path).await;
-    let _ = scan_file(&rekognition_client, bucket, key).await;
+    let result = is_incident(&s3_client, &rekognition_client, bucket, key, file_path).await;
+
+    if result {
+        println!("The file is an incident");
+    } else {
+        println!("The file is not an incident");
+    }
 }
 
-async fn upload_file(client: &Client, bucket: &str, key: &str, file_path: &str) -> Result<(), aws_sdk_s3::Error> {
+async fn is_incident(s3_client: &aws_sdk_s3::Client, rekognition_client: &aws_sdk_rekognition::Client, bucket: &str, key: &str, file_path: &str) -> bool{
+    let _ = upload_file(&s3_client, bucket, key, file_path).await;
+
+    let incident_labels = vec!["Vandalism", "Weapon", "Gun", "Fighting", "Knife"];
+
+    let s3_image = ImageBuilder::default().s3_object({
+        S3Object::builder()
+            .bucket(bucket.to_string())
+            .name(key.to_string())
+            .build()
+    }).build();
+
+    let request = rekognition_client.detect_labels()
+        .image(s3_image)
+        .max_labels(10)
+        .min_confidence(10.0);
+
+    let response = request.send().await;
+
+    if let Ok(response) = response {
+        for label in response.labels(){
+            match (label.name(), label.confidence()) {
+                (Some(name), Some(confidence)) => {
+                    if incident_labels.contains(&name) && confidence > 50.0 {
+                        return true;
+                    }
+                }
+                _ => return false
+            }
+        }
+        return false;
+    } else {
+        println!("Error: {:?}", response.err().unwrap());
+        return false;
+    }
+}
+
+async fn upload_file(client: &aws_sdk_s3::Client, bucket: &str, key: &str, file_path: &str) -> Result<(), aws_sdk_s3::Error> {
     let body = ByteStream::from_path(Path::new(file_path)).await;
 
     client.put_object()
@@ -29,29 +71,6 @@ async fn upload_file(client: &Client, bucket: &str, key: &str, file_path: &str) 
         .await?;
 
     println!("The file was uploaded successfully");
-
-    Ok(())
-}
-
-async fn scan_file(client: &aws_sdk_rekognition::Client, bucket: &str, key: &str) -> Result<(), aws_sdk_rekognition::Error> {
-    let s3_image = ImageBuilder::default().s3_object({
-        S3Object::builder()
-            .bucket(bucket.to_string())
-            .name(key.to_string())
-            .build()
-    }).build();
-
-    let request = client.detect_labels()
-        .image(s3_image)
-        .max_labels(10)
-        .min_confidence(10.0);
-
-    let response = request.send().await?;
-
-    println!("Detected labels:");
-    for label in response.labels.unwrap() {
-        println!("  {} (confidence: {})", label.name.unwrap(), label.confidence.unwrap());
-    }
 
     Ok(())
 }
