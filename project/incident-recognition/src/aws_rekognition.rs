@@ -1,40 +1,28 @@
-use aws_config::BehaviorVersion;
 use aws_sdk_rekognition::types::{builders::ImageBuilder, S3Object};
 use aws_sdk_s3::primitives::ByteStream;
 use std::path::Path;
 
 const CONFIDENCE_THRESHOLD: f32 = 50.0;
-
-#[tokio::main]
-async fn main() {
-    let config: aws_types::SdkConfig = aws_config::defaults(BehaviorVersion::v2024_03_28())
-        .region("us-east-2")
-        .load()
-        .await;
-    let s3_client = aws_sdk_s3::Client::new(&config);
-    let rekognition_client = aws_sdk_rekognition::Client::new(&config);
-
-    let bucket = "fiuba-sauron";
-    let key = "test.jpg";
-    let file_path = "images/test.jpg";
-
-    is_incident(&s3_client, &rekognition_client, bucket, key, file_path).await;
-}
+const BUCKET: &str = "fiuba-sauron";
 
 pub async fn is_incident(
     s3_client: &aws_sdk_s3::Client,
     rekognition_client: &aws_sdk_rekognition::Client,
-    bucket: &str,
-    key: &str,
     file_path: &str,
 ) -> bool {
-    let _ = upload_file(&s3_client, bucket, key, file_path).await;
+    match upload_file(&s3_client, BUCKET, file_path).await {
+        Ok(_) => {}
+        Err(e) => {
+            println!("Error uploading file: {:?}", e);
+            return false;
+        }
+    }
 
     let s3_image = ImageBuilder::default()
         .s3_object({
             S3Object::builder()
-                .bucket(bucket.to_string())
-                .name(key.to_string())
+                .bucket(BUCKET.to_string())
+                .name(file_path.to_string())
                 .build()
         })
         .build();
@@ -76,7 +64,6 @@ pub async fn is_incident(
 async fn upload_file(
     client: &aws_sdk_s3::Client,
     bucket: &str,
-    key: &str,
     file_path: &str,
 ) -> Result<(), aws_sdk_s3::Error> {
     let body = ByteStream::from_path(Path::new(file_path)).await;
@@ -84,7 +71,7 @@ async fn upload_file(
     client
         .put_object()
         .bucket(bucket)
-        .key(key)
+        .key(file_path)
         .body(body.unwrap())
         .send()
         .await?;

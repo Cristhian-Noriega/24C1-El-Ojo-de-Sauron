@@ -4,9 +4,13 @@ use std::{
     sync::{Arc, Mutex},
     thread,
     time::Duration,
+    vec,
 };
 
+use crate::{camera::Camera, camera_system::CameraSystem, config::Config};
+use aws_config::BehaviorVersion;
 use common::incident::Incident;
+use incident_recognition::aws_rekognition::is_incident;
 use mqtt::model::{
     components::{
         encoded_string::EncodedString, login::Login, qos::QoS, topic_filter::TopicFilter,
@@ -18,16 +22,14 @@ use mqtt::model::{
 };
 use thread_pool::thread_pool::ThreadPool;
 
-use crate::camera_system::CameraSystem;
-
-use crate::{camera::Camera, config::Config};
-
 const NEW_INCIDENT: &[u8] = b"new-incident";
+const DETECTED_INCIDENT: &[u8] = b"detected-incident";
 const CLOSE_INCIDENT: &[u8] = b"close-incident";
 const CAMERA_DATA: &[u8] = b"camera-data";
 
 const UPDATE_DATA_INTERVAL: u64 = 2;
 const READ_MESSAGE_INTERVAL: u64 = 1;
+const ANALYSE_IMAGES_INTERVAL: u64 = 1;
 
 const CAMERA_THREADS_NUMBER: usize = 4;
 
@@ -74,7 +76,7 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
     let camera_system_clone = camera_system.clone();
 
     let thread_image_recognition = thread::spawn(move || {
-        image_recognition(
+        let _ = image_recognition(
             server_stream_clone,
             camera_system_clone,
             images_folder,
@@ -324,13 +326,21 @@ fn subscribe(filter: Vec<TopicFilter>, server_stream: &mut TcpStream, key: &[u8;
     }
 }
 
-fn image_recognition(
+async fn image_recognition(
     server_stream: Arc<Mutex<TcpStream>>,
     camera_system: Arc<Mutex<CameraSystem>>,
     images_folder: String,
     key: &[u8; 32],
 ) {
     let thread_pool = ThreadPool::new(CAMERA_THREADS_NUMBER);
+
+    let config: aws_types::SdkConfig = aws_config::defaults(BehaviorVersion::v2024_03_28())
+        .region("us-east-2")
+        .load()
+        .await;
+
+    let s3_client = aws_sdk_s3::Client::new(&config);
+    let rekognition_client = aws_sdk_rekognition::Client::new(&config);
 
     loop {
         let locked_camera_system = match camera_system.lock() {
@@ -349,19 +359,31 @@ fn image_recognition(
 
         drop(locked_camera_system);
 
-        for camera in sleeping_cameras {
+        for mut camera in sleeping_cameras {
             if let Some(path) = look_for_new_images(images_folder.clone(), camera.clone()) {
                 let server_stream = server_stream.clone();
                 let key = key.clone();
 
+                let s3_client = s3_client.clone();
+                let rekognition_client = rekognition_client.clone();
+
                 thread_pool.execute(move || {
-                    analyze_image(server_stream, camera, path, &key);
+                    let _ = analyze_image(
+                        server_stream,
+                        &mut camera,
+                        path,
+                        &key,
+                        &s3_client,
+                        &rekognition_client,
+                    );
                 });
             }
         }
+
+        thread::sleep(Duration::from_secs(ANALYSE_IMAGES_INTERVAL));
     }
 
-    drop(thread_pool);
+    // drop(thread_pool);
 }
 
 fn look_for_new_images(images_folder: String, camera: Camera) -> Option<String> {
@@ -394,7 +416,7 @@ fn look_for_new_images(images_folder: String, camera: Camera) -> Option<String> 
 
             if !camera.has_already_seen(&path) {
                 let return_path = format!("{}/{}/{}", images_folder, camera.id(), path);
-                return Some(path);
+                return Some(return_path);
             }
         }
     }
@@ -402,11 +424,30 @@ fn look_for_new_images(images_folder: String, camera: Camera) -> Option<String> 
     None
 }
 
-fn analyze_image(
+async fn analyze_image(
     server_stream: Arc<Mutex<TcpStream>>,
-    camera: Camera,
+    camera: &mut Camera,
     path: String,
     key: &[u8; 32],
+    s3_client: &aws_sdk_s3::Client,
+    rekognition_client: &aws_sdk_rekognition::Client,
 ) {
-    todo!();
+    if is_incident(s3_client, rekognition_client, path.as_str()).await {
+        alert_incident(server_stream, camera, key);
+    }
+
+    camera.add_seen_image(&path);
+}
+
+fn alert_incident(server_stream: Arc<Mutex<TcpStream>>, camera: &mut Camera, key: &[u8; 32]) {
+    let topic_name = TopicName::new(
+        vec![
+            DETECTED_INCIDENT.to_vec(),
+            camera.id().to_string().as_bytes().to_vec(),
+        ],
+        false,
+    );
+    let message = vec![];
+
+    publish(topic_name, message, server_stream, key);
 }
