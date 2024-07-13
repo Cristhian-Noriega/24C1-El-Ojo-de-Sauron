@@ -34,11 +34,11 @@ async fn is_incident(s3_client: &aws_sdk_s3::Client, rekognition_client: &aws_sd
     }).build();
 
     let general_labels_input = aws_sdk_rekognition::types::GeneralLabelsSettings::builder()
-        .label_inclusion_filters("Vandalism")
-        .label_inclusion_filters("Weapon")
-        .label_inclusion_filters("Gun")
         .label_inclusion_filters("Fighting")
-        .label_inclusion_filters("Knife")
+        .label_inclusion_filters("Chasing")
+        .label_category_inclusion_filters("Weapons and Military")
+        .label_category_inclusion_filters("Damage Detection")
+        .label_category_inclusion_filters("Public Safety")
         .build();
 
     let settings_input = aws_sdk_rekognition::types::DetectLabelsSettings::builder()
