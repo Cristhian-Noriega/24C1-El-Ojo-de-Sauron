@@ -9,5 +9,5 @@ members = [
     "monitor",
     "common",
     "tests-integration",
-    "aws-demo",
-    "thread-pool"]
+    "thread-pool",
+    "incident-recognition"]
