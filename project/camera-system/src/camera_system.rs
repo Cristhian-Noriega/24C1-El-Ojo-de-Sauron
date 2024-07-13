@@ -71,6 +71,13 @@ impl CameraSystem {
 
         self.active_incidents.remove(incident_id);
     }
+
+    pub fn get_sleeping_cameras(&self) -> Vec<&Camera> {
+        self.cameras
+            .iter()
+            .filter(|camera| camera.is_sleeping())
+            .collect()
+    }
 }
 
 #[cfg(test)]

@@ -1,9 +1,11 @@
+use std::collections::HashSet;
+
 use common::incident::Incident;
 
 use common::camera_status::CameraStatus;
 
 /// Represents a camera in the camera system
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct Camera {
     id: u8,
     x_coordinate: f64,
@@ -11,6 +13,7 @@ pub struct Camera {
     active_range: f64,
     status: CameraStatus,
     active_incidents: usize,
+    seen_images: HashSet<String>,
 }
 
 impl Camera {
@@ -23,7 +26,13 @@ impl Camera {
             active_range,
             status: CameraStatus::Sleep,
             active_incidents: 0,
+            seen_images: HashSet::new(),
         }
+    }
+
+    /// Returns the id of the camera
+    pub fn id(&self) -> u8 {
+        self.id
     }
 
     /// Returns the data of the camera in string format
@@ -70,6 +79,21 @@ impl Camera {
         );
 
         distance < self.active_range
+    }
+
+    /// Return true if the camera is sleeping
+    pub fn is_sleeping(&self) -> bool {
+        self.status == CameraStatus::Sleep
+    }
+
+    /// Returns true if the camera has already seen the image
+    pub fn has_already_seen(&self, image: &str) -> bool {
+        self.seen_images.contains(image)
+    }
+
+    /// Adds an image to the list of seen images
+    pub fn add_seen_image(&mut self, image: &str) {
+        self.seen_images.insert(image.to_string());
     }
 }
 

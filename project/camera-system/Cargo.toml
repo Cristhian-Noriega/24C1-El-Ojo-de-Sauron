@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 mqtt = { path = "../mqtt"} 
 common = { path = "../common"}
+thread-pool = { path = "../thread-pool"}
