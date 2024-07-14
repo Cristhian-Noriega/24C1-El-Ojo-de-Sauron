@@ -30,7 +30,7 @@ const CAMERA_DATA: &[u8] = b"camera-data";
 
 const UPDATE_DATA_INTERVAL: u64 = 2;
 const READ_MESSAGE_INTERVAL: u64 = 1;
-const ANALYSE_IMAGES_INTERVAL: u64 = 1;
+const ANALYSE_IMAGES_INTERVAL: u64 = 3;
 
 const CAMERA_THREADS_NUMBER: usize = 4;
 
@@ -366,10 +366,20 @@ fn image_recognition(
         drop(locked_camera_system);
 
         for mut camera in sleeping_cameras {
-            println!("Looking for new images {:?}", camera.id());
-
             if let Some(path) = look_for_new_images(images_folder.clone(), camera.clone()) {
                 println!("Found new image {:?}", path);
+
+                let mut locked_camera_system = match camera_system.lock() {
+                    Ok(locked_camera_system) => locked_camera_system,
+                    Err(_) => {
+                        println!("Mutex was poisoned");
+                        return;
+                    }
+                };
+
+                locked_camera_system.add_seen_image(camera.id(), path.as_str());
+
+                drop(locked_camera_system);
 
                 let server_stream = server_stream.clone();
                 let key = key.clone();
@@ -378,7 +388,7 @@ fn image_recognition(
                 let rekognition_client = rekognition_client.clone();
 
                 thread_pool.execute(move || {
-                    let _ = analyze_image(
+                    analyze_image(
                         server_stream,
                         &mut camera,
                         path,
@@ -398,6 +408,8 @@ fn image_recognition(
 
 fn look_for_new_images(images_folder: String, camera: Camera) -> Option<String> {
     let folder_path = format!("{}/{}", images_folder, camera.id());
+
+    println!("Looking for new images in {:?}", folder_path);
 
     let folder_entrys = match std::fs::read_dir(folder_path) {
         Ok(folder_entrys) => folder_entrys,
@@ -425,8 +437,7 @@ fn look_for_new_images(images_folder: String, camera: Camera) -> Option<String> 
             };
 
             if !camera.has_already_seen(&path) {
-                let return_path = format!("{}/{}/{}", images_folder, camera.id(), path);
-                return Some(return_path);
+                return Some(path);
             }
         }
     }
@@ -444,11 +455,14 @@ fn analyze_image(
 ) {
     let rt = Runtime::new().unwrap();
 
-    if rt.block_on(is_incident(s3_client, rekognition_client, path.as_str())) {
+    camera.add_seen_image(&path);
+    let image_is_incident = rt.block_on(is_incident(s3_client, rekognition_client, path.as_str()));
+
+    println!("Image is incident: {:?}", image_is_incident);
+
+    if image_is_incident {
         alert_incident(server_stream, camera, key);
     }
-
-    camera.add_seen_image(&path);
 }
 
 fn alert_incident(server_stream: Arc<Mutex<TcpStream>>, camera: &mut Camera, key: &[u8; 32]) {

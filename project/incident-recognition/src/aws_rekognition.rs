@@ -10,7 +10,21 @@ pub async fn is_incident(
     rekognition_client: &aws_sdk_rekognition::Client,
     file_path: &str,
 ) -> bool {
-    match upload_file(&s3_client, BUCKET, file_path).await {
+    let file_name = match Path::new(file_path).file_name() {
+        Some(file_name) => match file_name.to_str() {
+            Some(file_name) => file_name,
+            None => {
+                println!("Error getting file name");
+                return false;
+            }
+        },
+        None => {
+            println!("Error getting file name");
+            return false;
+        }
+    };
+
+    match upload_file(&s3_client, BUCKET, file_path, file_name).await {
         Ok(_) => {}
         Err(e) => {
             println!("Error uploading file: {:?}", e);
@@ -22,7 +36,7 @@ pub async fn is_incident(
         .s3_object({
             S3Object::builder()
                 .bucket(BUCKET.to_string())
-                .name(file_path.to_string())
+                .name(file_name.to_string())
                 .build()
         })
         .build();
@@ -65,13 +79,14 @@ async fn upload_file(
     client: &aws_sdk_s3::Client,
     bucket: &str,
     file_path: &str,
+    file_name: &str,
 ) -> Result<(), aws_sdk_s3::Error> {
     let body = ByteStream::from_path(Path::new(file_path)).await;
 
     client
         .put_object()
         .bucket(bucket)
-        .key(file_path)
+        .key(file_name)
         .body(body.unwrap())
         .send()
         .await?;
