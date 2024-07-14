@@ -462,16 +462,21 @@ fn analyze_image(
     let rt = Runtime::new().unwrap();
 
     camera.add_seen_image(&path);
-    let image_is_incident = rt.block_on(is_incident(s3_client, rekognition_client, path.as_str()));
+    let results = rt.block_on(is_incident(s3_client, rekognition_client, path.as_str()));
+
+    let image_is_incident = results.0;
 
     println!("Image is incident: {:?}", image_is_incident);
 
     if image_is_incident {
-        alert_incident(server_stream, camera, key);
+        if let Some(label) = results.1 {
+            println!("Incident label: {:?}", label);
+            alert_incident(server_stream, camera, key, label);
+        }
     }
 }
 
-fn alert_incident(server_stream: Arc<Mutex<TcpStream>>, camera: &mut Camera, key: &[u8; 32]) {
+fn alert_incident(server_stream: Arc<Mutex<TcpStream>>, camera: &mut Camera, key: &[u8; 32], label: String) {
     let topic_name = TopicName::new(
         vec![
             DETECTED_INCIDENT.to_vec(),
@@ -479,7 +484,11 @@ fn alert_incident(server_stream: Arc<Mutex<TcpStream>>, camera: &mut Camera, key
         ],
         false,
     );
-    let message = camera.position().to_string().as_bytes().to_vec();
+    let mut data = vec![];
+    data.push(camera.position().to_string());
+    data.push(label);
+
+    let message = data.join("|").as_bytes().to_vec();
 
     publish(topic_name, message, server_stream, key);
 }
