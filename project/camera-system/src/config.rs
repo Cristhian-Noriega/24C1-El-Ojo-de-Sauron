@@ -1,9 +1,10 @@
 use common::coordenate::Coordenate;
-use serde_derive::{Deserialize, Serialize};
 use std::{fs::File, io::Read, path::Path};
+use std::collections::HashMap;
+use std::io;
 
 /// Represents the configuration of the camera system
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct Config {
     address: String,
     id: String,
@@ -22,9 +23,59 @@ impl Config {
 
         file.read_to_string(&mut contents)?;
 
-        let config = serde_json::from_str(&contents)?;
+        let json = contents.trim().trim_matches(|c| c == '{' || c == '}');
 
-        Ok(config)
+        let mut config_map = HashMap::new();
+        let mut cameras = Vec::new();
+        let mut inside_cameras = false;
+        let mut current_camera = HashMap::new();
+
+        for line in json.lines().map(str::trim).filter(|line| !line.is_empty()) {
+            if inside_cameras {
+                if line.starts_with('{') {
+                    current_camera.clear();
+                } else if line.starts_with('}') {
+                    if let (Some(x), Some(y)) = (
+                        current_camera.get("x_coordinate").and_then(|v: &String| v.parse::<f64>().ok()),
+                        current_camera.get("y_coordinate").and_then(|v: &String| v.parse::<f64>().ok()),
+                    ) {
+                        cameras.push(Coordenate { x_coordinate: x, y_coordinate: y });
+                    }
+                    current_camera.clear();
+                } else {
+                    let parts: Vec<&str> = line.splitn(2, ':').collect();
+
+                    if parts.len() != 2 {
+                        continue;
+                    }
+
+                    let key = parts[0].trim_matches('"').trim();
+                    let value = parts[1].trim().trim_matches(|c| c == '"' || c == ',');
+                    current_camera.insert(key.to_string(), value.to_string());
+                }
+            } else {
+                let parts: Vec<&str> = line.splitn(2, ':').collect();
+                let key = parts[0].trim_matches('"').trim();
+                let value = parts[1].trim().trim_matches(|c| c == '"' || c == ',');
+
+                if key == "cameras" {
+                    inside_cameras = true;
+                    continue;
+                }
+
+                config_map.insert(key.to_string(), value.to_string());
+            }            
+        }
+
+        Ok(Config {
+            address: config_map.remove("address").ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing address"))?,
+            id: config_map.remove("id").ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing id"))?,
+            username: config_map.remove("username").ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing username"))?,
+            password: config_map.remove("password").ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing password"))?,
+            key: config_map.remove("key").ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing key"))?,
+            active_range: config_map.remove("active_range").ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing active range"))?.parse::<f64>().map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid active_range"))?,
+            cameras,
+        })
     }
 
     /// Returns the address of the server
