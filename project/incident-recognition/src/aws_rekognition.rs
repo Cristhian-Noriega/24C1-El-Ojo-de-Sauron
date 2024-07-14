@@ -5,6 +5,7 @@ use std::path::Path;
 const CONFIDENCE_THRESHOLD: f32 = 50.0;
 const BUCKET: &str = "fiuba-sauron";
 
+/// Uses AWS Rekognition to determine if an image contains an incident
 pub async fn is_incident(
     s3_client: &aws_sdk_s3::Client,
     rekognition_client: &aws_sdk_rekognition::Client,
@@ -84,6 +85,7 @@ pub async fn is_incident(
     }
 }
 
+/// Uploads a file to an S3 bucket
 async fn upload_file(
     client: &aws_sdk_s3::Client,
     bucket: &str,

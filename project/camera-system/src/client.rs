@@ -77,7 +77,6 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
     let camera_system_clone = camera_system.clone();
 
     let thread_image_recognition = thread::spawn(move || {
-        println!("Starting image recognition");
         image_recognition(
             server_stream_clone,
             camera_system_clone,
@@ -328,6 +327,7 @@ fn subscribe(filter: Vec<TopicFilter>, server_stream: &mut TcpStream, key: &[u8;
     }
 }
 
+/// Main loop for image recognition
 fn image_recognition(
     server_stream: Arc<Mutex<TcpStream>>,
     camera_system: Arc<Mutex<CameraSystem>>,
@@ -367,8 +367,6 @@ fn image_recognition(
 
         for mut camera in sleeping_cameras {
             if let Some(path) = look_for_new_images(images_folder.clone(), camera.clone()) {
-                println!("Found new image {:?}", path);
-
                 let mut locked_camera_system = match camera_system.lock() {
                     Ok(locked_camera_system) => locked_camera_system,
                     Err(_) => {
@@ -406,10 +404,9 @@ fn image_recognition(
     // drop(thread_pool);
 }
 
+/// Looks for new images in the images folder
 fn look_for_new_images(images_folder: String, camera: Camera) -> Option<String> {
     let folder_path = format!("{}/{}", images_folder, camera.id());
-
-    println!("Looking for new images in {:?}", folder_path);
 
     let folder_entrys = match std::fs::read_dir(folder_path) {
         Ok(folder_entrys) => folder_entrys,
@@ -451,6 +448,7 @@ fn look_for_new_images(images_folder: String, camera: Camera) -> Option<String> 
     None
 }
 
+/// Analyzes an image using AWS Rekognition
 fn analyze_image(
     server_stream: Arc<Mutex<TcpStream>>,
     camera: &mut Camera,
@@ -466,16 +464,14 @@ fn analyze_image(
 
     let image_is_incident = results.0;
 
-    println!("Image is incident: {:?}", image_is_incident);
-
     if image_is_incident {
         if let Some(label) = results.1 {
-            println!("Incident label: {:?}", label);
             alert_incident(server_stream, camera, key, label);
         }
     }
 }
 
+/// Alerts an incident that was recognized by the cameras
 fn alert_incident(server_stream: Arc<Mutex<TcpStream>>, camera: &mut Camera, key: &[u8; 32], label: String) {
     let topic_name = TopicName::new(
         vec![
