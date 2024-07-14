@@ -460,14 +460,10 @@ fn analyze_image(
     let rt = Runtime::new().unwrap();
 
     camera.add_seen_image(&path);
-    let results = rt.block_on(is_incident(s3_client, rekognition_client, path.as_str()));
+    let posible_label = rt.block_on(is_incident(s3_client, rekognition_client, path.as_str()));
 
-    let image_is_incident = results.0;
-
-    if image_is_incident {
-        if let Some(label) = results.1 {
-            alert_incident(server_stream, camera, key, label);
-        }
+    if let Some(label) = posible_label {
+        alert_incident(server_stream, camera, key, label);
     }
 }
 
@@ -482,7 +478,7 @@ fn alert_incident(server_stream: Arc<Mutex<TcpStream>>, camera: &mut Camera, key
     );
     let data = [camera.position().to_string(), label];
 
-    let message = data.join("|").as_bytes().to_vec();
+    let message = data.join(";").as_bytes().to_vec();
 
     publish(topic_name, message, server_stream, key);
 }

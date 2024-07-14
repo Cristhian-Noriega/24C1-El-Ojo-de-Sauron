@@ -10,18 +10,18 @@ pub async fn is_incident(
     s3_client: &aws_sdk_s3::Client,
     rekognition_client: &aws_sdk_rekognition::Client,
     file_path: &str,
-) -> (bool, Option<String>) {
+) -> Option<String> {
     let file_name = match Path::new(file_path).file_name() {
         Some(file_name) => match file_name.to_str() {
             Some(file_name) => file_name,
             None => {
                 println!("Error getting file name");
-                return (false, None);
+                return None;
             }
         },
         None => {
             println!("Error getting file name");
-            return (false, None);
+            return None;
         }
     };
 
@@ -29,7 +29,7 @@ pub async fn is_incident(
         Ok(_) => {}
         Err(e) => {
             println!("Error uploading file: {:?}", e);
-            return (false, None);
+            return None;
         }
     }
 
@@ -63,7 +63,6 @@ pub async fn is_incident(
 
     let mut best_label: Option<String> = None; 
     let mut best_confidence: f32 = CONFIDENCE_THRESHOLD;
-    let mut is_incident = false;
 
     if let Ok(response) = response {
         for label in response.labels() {
@@ -72,16 +71,15 @@ pub async fn is_incident(
                     if confidence > best_confidence {
                         best_label = Some(name.to_string());
                         best_confidence = confidence;
-                        is_incident = true;
                     }
                 }
                 _ => continue
             }
         }
-        (is_incident, best_label)
+        best_label
     } else {
         println!("Error: {:?}", response.err().unwrap());
-        (false, None)
+        None
     }
 }
 

@@ -518,11 +518,10 @@ fn detected_incident(publish: Publish, monitor_sender: Sender<MonitorAction>) {
 
     let data = String::from_utf8_lossy(publish.message()).to_string();
 
-    let splitted_data: Vec<&str> = data.split(ENUMARATOR).collect();
-    let coordenates: Vec<&str> = splitted_data[0].split(SEPARATOR).collect();
-    let x = coordenates[0].to_string();
-    let y = coordenates[1].to_string();
-    let label = splitted_data[1].to_string();
+    let splitted_data: Vec<&str> = data.split(SEPARATOR).collect();
+    let x = splitted_data[0].to_string();
+    let y = splitted_data[1].to_string();
+    let label = splitted_data[2].to_string();
 
     let name = format!("Autodetected incident ({})", label);
 
