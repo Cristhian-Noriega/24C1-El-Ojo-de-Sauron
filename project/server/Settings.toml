@@ -3,3 +3,6 @@ key="12345678901234567890123456789012"
 log_file="server.log"
 login_file="Login.toml"
 segs_to_disconnect=30
+initialize_with_backup=false
+backup_file="Backup.toml"
+segs_to_backup=10

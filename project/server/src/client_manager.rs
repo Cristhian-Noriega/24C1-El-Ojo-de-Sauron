@@ -181,7 +181,7 @@ impl ClientManager {
                     return None;
                 }
             };
-            Some(Client::new(client_id.clone(), stream, true, 0))
+            Some(Client::new(client_id.clone(), Some(stream), true, 0))
         } else {
             self.failure_connection(stream, ConnectReturnCode::IdentifierRejected, key);
             None

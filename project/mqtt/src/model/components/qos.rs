@@ -1,8 +1,7 @@
 use crate::Error;
-use serde::{Deserialize, Serialize};
 
 /// Represents the different levels of quality of service (QoS) in MQTT.
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone)]
 pub enum QoS {
     /// Messages are delivered at most once.
     AtMost,

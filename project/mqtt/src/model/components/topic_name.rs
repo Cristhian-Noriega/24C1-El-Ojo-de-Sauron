@@ -1,10 +1,9 @@
 use super::{FORWARD_SLASH, SERVER_RESERVED};
 use crate::{EncodedString, Error, Read, TopicLevel};
 use std::fmt;
-use serde::{Serialize, Deserialize};
 
 /// Represents the name of a topic in MQTT.
-#[derive(Debug, PartialEq, Clone, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Eq, Hash)]
 pub struct TopicName {
     levels: Vec<Vec<u8>>,
     server_reserved: bool,
@@ -64,6 +63,29 @@ impl TopicName {
         EncodedString::new(topic_bytes).to_bytes()
     }
 
+    pub fn serialize(&self) -> String {
+        let levels = self
+            .levels
+            .iter()
+            .map(|level| String::from_utf8_lossy(level).into_owned())
+            .collect::<Vec<String>>()
+            .join("/");
+
+        levels
+    }
+
+    pub fn deserialize(serialized: &str) -> Result<TopicName, String> {
+        let levels = serialized
+            .split('/')
+            .map(|level| level.as_bytes().to_vec())
+            .collect::<Vec<Vec<u8>>>();
+
+        Ok(TopicName {
+            levels,
+            server_reserved: false, // Or handle the server_reserved field appropriately if needed
+        })
+    }
+    
     /// Returns the levels of the topic.
     pub fn levels(&self) -> &Vec<Vec<u8>> {
         &self.levels

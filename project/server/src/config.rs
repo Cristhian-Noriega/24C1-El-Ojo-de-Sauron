@@ -8,6 +8,9 @@ pub struct Config {
     log_file: String,
     login_file: String,
     segs_to_disconnect: u32,
+    initialize_with_backup: bool,
+    backup_file: String,
+    segs_to_backup: u32,
 }
 
 impl Config {
@@ -21,6 +24,9 @@ impl Config {
             log_file: String::new(),
             login_file: String::new(),
             segs_to_disconnect: 0,
+            initialize_with_backup: false,
+            backup_file: String::new(),
+            segs_to_backup: 0,
         };
 
         for line in content.lines() {
@@ -52,6 +58,23 @@ impl Config {
                             )
                         })?
                     }
+                    "initialize_with_backup" => {
+                        config.initialize_with_backup = parts[1].parse().map_err(|_| {
+                            io::Error::new(
+                                io::ErrorKind::InvalidData,
+                                "Invalid initialize_with_backup value",
+                            )
+                        })?
+                    }
+                    "backup_file" => config.backup_file = parts[1].trim_matches('"').to_string(),
+                    "segs_to_backup" => {
+                        config.segs_to_backup = parts[1].parse().map_err(|_| {
+                            io::Error::new(
+                                io::ErrorKind::InvalidData,
+                                "Invalid segs_to_backup value",
+                            )
+                        })?
+                    }
                     _ => {}
                 }
             }
@@ -79,4 +102,13 @@ impl Config {
     pub fn get_key(&self) -> &[u8; 32] {
         &self.key
     }
+
+    pub fn get_backup_file(&self) -> &str {
+        &self.backup_file
+    }
+
+    pub fn get_segs_to_backup(&self) -> u32 {
+        self.segs_to_backup
+    }
+
 }

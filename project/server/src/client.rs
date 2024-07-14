@@ -2,7 +2,7 @@ use std::fmt;
 use std::io::Write;
 use std::net::TcpStream;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use mqtt::model::components::topic_filter::TopicFilter;
 use mqtt::model::components::topic_name::TopicName;
@@ -15,16 +15,16 @@ pub struct Client {
     pub id: Vec<u8>,
     pub subscriptions: Vec<TopicFilter>,
     pub alive: AtomicBool,
-    pub stream: Arc<Mutex<TcpStream>>,
+    pub stream: Option<TcpStream>,
 }
 
 impl Client {
-    pub fn new(id: Vec<u8>, stream: TcpStream, _clean_session: bool, _keep_alive: u16) -> Client {
+    pub fn new(id: Vec<u8>, stream: Option<TcpStream>, _clean_session: bool, _keep_alive: u16) -> Client {
         Client {
             id,
             subscriptions: Vec::new(),
             alive: AtomicBool::new(true),
-            stream: Arc::new(Mutex::new(stream)),
+            stream,
         }
     }
 
@@ -55,14 +55,14 @@ impl Client {
         let message_str = String::from_utf8_lossy(publish_packet.message()).to_string();
         let client_id_str = String::from_utf8_lossy(&self.id).to_string();
 
-        let mut locked_stream = match self.stream.lock() {
-            Ok(stream) => stream,
-            Err(_) => {
+        let mut stream = match &self.stream {
+            Some(stream) => stream,
+            None => {
                 logfile.log_sending_message_error(message_str, client_id_str);
                 return;
             }
         };
-        match locked_stream.write_all(publish_packet.to_bytes(key).as_slice()) {
+        match stream.write_all(publish_packet.to_bytes(key).as_slice()) {
             Ok(_) => {
                 logfile.log_sent_message(message_str, client_id_str);
             }
@@ -112,7 +112,7 @@ mod tests {
 
     fn setup_client() -> Client {
         let stream = setup_stream();
-        Client::new(vec![1, 2, 3], stream, true, 60)
+        Client::new(vec![1, 2, 3], Some(stream), true, 60)
     }
 
     fn setup_topic_filter() -> Vec<TopicFilter> {

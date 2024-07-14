@@ -3,9 +3,8 @@ use std::fmt::{self, Display, Formatter};
 use super::{FORWARD_SLASH, SERVER_RESERVED};
 use crate::{EncodedString, Error, Read, TopicLevel, TopicName};
 
-use serde::{Serialize, Deserialize};
 /// An expression contained in a SUBSCRIBE, to indicate an interest in one or more topics. A topic filter may include wildcards.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TopicFilter {
     levels: Vec<TopicLevel>,
     server_reserved: bool,
@@ -71,6 +70,42 @@ impl TopicFilter {
 
         EncodedString::new(topic_bytes).to_bytes()
     }
+
+    pub fn serialize(&self) -> String {
+        let server_reserved_bit = if self.server_reserved { "1" } else { "0" };
+        let levels_bits: String = self.levels.iter()
+            .map(|level| {
+                let bytes = level.to_bytes();
+                bytes.iter()
+                     .map(|b| format!("{:08b}", b)) // Convert byte to binary string
+                     .collect::<Vec<_>>()
+                     .join("") // Join all bits for this level
+            })
+            .collect::<Vec<_>>()
+            .join("");
+
+        format!("{}{}", server_reserved_bit, levels_bits)
+    }
+
+    pub fn deserialize(bit_string: &str) -> Result<Self, Error> {
+        let server_reserved = bit_string.chars().next() == Some('1');
+        let level_bits = &bit_string[1..]; // Skip the first character for levels
+
+        let mut levels = vec![];
+        let level_length = 8; // Assuming each TopicLevel is represented by 8 bits
+
+        for chunk in level_bits.as_bytes().chunks(level_length) {
+            let bytes = chunk.iter()
+                .map(|&b| b - b'0') // Convert '1'/'0' to 1/0
+                .collect::<Vec<u8>>();
+
+            let level = TopicLevel::from_bytes(bytes)?;
+            levels.push(level);
+        }
+
+        Ok(Self::new(levels, server_reserved))
+    }
+
 
     /// Returns whether the topic filter matches a topic name.
     pub fn match_topic_name(&self, topic_name: TopicName) -> bool {
