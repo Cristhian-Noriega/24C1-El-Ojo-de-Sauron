@@ -21,6 +21,7 @@ use mqtt::model::{
     return_codes::connect_return_code::ConnectReturnCode,
 };
 use thread_pool::thread_pool::ThreadPool;
+use tokio::runtime::Runtime;
 
 const NEW_INCIDENT: &[u8] = b"new-incident";
 const DETECTED_INCIDENT: &[u8] = b"detected-incident";
@@ -76,7 +77,8 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
     let camera_system_clone = camera_system.clone();
 
     let thread_image_recognition = thread::spawn(move || {
-        let _ = image_recognition(
+        println!("Starting image recognition");
+        image_recognition(
             server_stream_clone,
             camera_system_clone,
             images_folder,
@@ -326,7 +328,7 @@ fn subscribe(filter: Vec<TopicFilter>, server_stream: &mut TcpStream, key: &[u8;
     }
 }
 
-async fn image_recognition(
+fn image_recognition(
     server_stream: Arc<Mutex<TcpStream>>,
     camera_system: Arc<Mutex<CameraSystem>>,
     images_folder: String,
@@ -334,10 +336,14 @@ async fn image_recognition(
 ) {
     let thread_pool = ThreadPool::new(CAMERA_THREADS_NUMBER);
 
-    let config: aws_types::SdkConfig = aws_config::defaults(BehaviorVersion::v2024_03_28())
-        .region("us-east-2")
-        .load()
-        .await;
+    let rt = Runtime::new().unwrap();
+
+    let config = rt.block_on(async {
+        aws_config::defaults(BehaviorVersion::v2024_03_28())
+            .region("us-east-2")
+            .load()
+            .await
+    });
 
     let s3_client = aws_sdk_s3::Client::new(&config);
     let rekognition_client = aws_sdk_rekognition::Client::new(&config);
@@ -360,7 +366,11 @@ async fn image_recognition(
         drop(locked_camera_system);
 
         for mut camera in sleeping_cameras {
+            println!("Looking for new images {:?}", camera.id());
+
             if let Some(path) = look_for_new_images(images_folder.clone(), camera.clone()) {
+                println!("Found new image {:?}", path);
+
                 let server_stream = server_stream.clone();
                 let key = key.clone();
 
@@ -424,7 +434,7 @@ fn look_for_new_images(images_folder: String, camera: Camera) -> Option<String> 
     None
 }
 
-async fn analyze_image(
+fn analyze_image(
     server_stream: Arc<Mutex<TcpStream>>,
     camera: &mut Camera,
     path: String,
@@ -432,7 +442,9 @@ async fn analyze_image(
     s3_client: &aws_sdk_s3::Client,
     rekognition_client: &aws_sdk_rekognition::Client,
 ) {
-    if is_incident(s3_client, rekognition_client, path.as_str()).await {
+    let rt = Runtime::new().unwrap();
+
+    if rt.block_on(is_incident(s3_client, rekognition_client, path.as_str())) {
         alert_incident(server_stream, camera, key);
     }
 
