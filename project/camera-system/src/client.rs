@@ -430,7 +430,13 @@ fn look_for_new_images(images_folder: String, camera: Camera) -> Option<String> 
 
         if path.is_file() {
             let path = match path.to_str() {
-                Some(path) => path.to_string(),
+                Some(path) => {
+                    if path.ends_with(".jpg") || path.ends_with(".jpeg") || path.ends_with(".png") {
+                        path.to_string()
+                    } else {
+                        continue;
+                    }
+                },
                 None => {
                     continue;
                 }
