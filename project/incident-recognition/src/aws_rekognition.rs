@@ -25,7 +25,7 @@ pub async fn is_incident(
         }
     };
 
-    match upload_file(&s3_client, BUCKET, file_path, file_name).await {
+    match upload_file(s3_client, BUCKET, file_path, file_name).await {
         Ok(_) => {}
         Err(e) => {
             println!("Error uploading file: {:?}", e);
@@ -78,10 +78,10 @@ pub async fn is_incident(
                 _ => continue
             }
         }
-        return (is_incident, best_label);
+        (is_incident, best_label)
     } else {
         println!("Error: {:?}", response.err().unwrap());
-        return (false, None);
+        (false, None)
     }
 }
 

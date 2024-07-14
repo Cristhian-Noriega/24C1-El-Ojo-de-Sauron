@@ -380,7 +380,7 @@ fn image_recognition(
                 drop(locked_camera_system);
 
                 let server_stream = server_stream.clone();
-                let key = key.clone();
+                let key = *key;
 
                 let s3_client = s3_client.clone();
                 let rekognition_client = rekognition_client.clone();
@@ -480,9 +480,7 @@ fn alert_incident(server_stream: Arc<Mutex<TcpStream>>, camera: &mut Camera, key
         ],
         false,
     );
-    let mut data = vec![];
-    data.push(camera.position().to_string());
-    data.push(label);
+    let data = [camera.position().to_string(), label];
 
     let message = data.join("|").as_bytes().to_vec();
 
