@@ -46,4 +46,5 @@ pub enum MonitorAction {
     Drone(Drone),
     Camera(Camera),
     Incident(Incident),
+    DetectedIncident(IncidentRegistration),
 }

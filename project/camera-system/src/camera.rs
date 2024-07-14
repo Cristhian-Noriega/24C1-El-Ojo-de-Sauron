@@ -43,6 +43,11 @@ impl Camera {
         )
     }
 
+    /// Returns the position of the camera as String
+    pub fn position(&self) -> String {
+        format!("{};{}", self.x_coordinate, self.y_coordinate)
+    }
+
     /// Increases the number of active incidents followed by the camera
     pub fn follow_incident(&mut self) {
         if self.active_incidents == 0 {

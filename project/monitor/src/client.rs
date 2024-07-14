@@ -141,6 +141,7 @@ const NEW_INCIDENT: &[u8] = b"new-incident";
 const ATTENDING_INCIDENT: &[u8] = b"attending-incident";
 const READY_INCIDENT: &[u8] = b"ready-incident";
 const CLOSE_INCIDENT: &[u8] = b"close-incident";
+const DETECTED_INCIDENT: &[u8] = b"detected-incident";
 
 const SEPARATOR: char = ';';
 const ENUMARATOR: char = '|';
@@ -190,6 +191,9 @@ fn start_monitor(
                     }
                     READY_INCIDENT => {
                         ready_incident(publish.clone(), &mut monitor, monitor_sender.clone());
+                    }
+                    DETECTED_INCIDENT => {
+                        detected_incident(publish.clone(), monitor_sender.clone());
                     }
                     _ => {
                         println!("Unknown topic");
@@ -505,6 +509,35 @@ fn resolve_incident(
     ))
 }
 
+/// Handles the autodetected incident by the camera system
+fn detected_incident(publish: Publish, monitor_sender: Sender<MonitorAction>) {
+    let topic_levels = publish.topic().levels();
+    let camera_id = String::from_utf8_lossy(topic_levels[1].as_slice()).to_string();
+
+    let name = "Autodetected incident".to_string();
+    let description = format!("By AWS Rekonginition services - Camera {}", camera_id);
+
+    let data = String::from_utf8_lossy(publish.message()).to_string();
+
+    let splitted_data: Vec<&str> = data.split(SEPARATOR).collect();
+    let x = splitted_data[0].to_string();
+    let y = splitted_data[1].to_string();
+
+    let incident_registration = IncidentRegistration {
+        name,
+        description,
+        x,
+        y,
+    };
+
+    match monitor_sender.send(MonitorAction::DetectedIncident(incident_registration)) {
+        Ok(_) => {}
+        Err(_) => {
+            println!("Error sending incident data to UI");
+        }
+    }
+}
+
 /// Subscribes to the topics that the monitor need to work properly
 fn subscribe_to_topics(stream: &mut TcpStream, key: &[u8; 32]) -> std::io::Result<()> {
     let mut topic_filters = vec![];
@@ -515,6 +548,7 @@ fn subscribe_to_topics(stream: &mut TcpStream, key: &[u8; 32]) -> std::io::Resul
         "attending-incident/+",
         "drone-data/+",
         "ready-incident/+",
+        "detected-incident/+",
     ];
 
     for topic in topics {

@@ -479,7 +479,7 @@ fn alert_incident(server_stream: Arc<Mutex<TcpStream>>, camera: &mut Camera, key
         ],
         false,
     );
-    let message = vec![];
+    let message = camera.position().to_string().as_bytes().to_vec();
 
     publish(topic_name, message, server_stream, key);
 }
