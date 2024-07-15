@@ -84,7 +84,10 @@ impl Logger {
                 }
             });
 
-        let message = format!("Client {} subscribed to topics {}", client_id_str, topics_str);
+        let message = format!(
+            "Client {} subscribed to topics {}",
+            client_id_str, topics_str
+        );
         self.info(&message);
     }
 
@@ -106,7 +109,10 @@ impl Logger {
                 }
             });
 
-        let message = format!("Client {} unsubscribed to topics {}", client_id_str, topics_str);
+        let message = format!(
+            "Client {} unsubscribed to topics {}",
+            client_id_str, topics_str
+        );
         self.info(&message);
     }
 

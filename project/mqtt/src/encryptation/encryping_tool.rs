@@ -13,12 +13,11 @@ pub fn encrypt(data: Vec<u8>, key: &[u8]) -> Result<Vec<u8>, String> {
 
     let nonce = Nonce::from_slice(&nonce); // 96-bits; unique per message
 
-
     let ciphertext = match cipher.encrypt(nonce, data.as_ref()) {
         Ok(ciphertext) => ciphertext,
         Err(_) => {
             return Err("Error encrypting data".to_string());
-        },
+        }
     };
 
     let mut encrypted_data = nonce.to_vec();
