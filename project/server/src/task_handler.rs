@@ -619,8 +619,8 @@ impl TaskHandler {
 
             match record_type {
                 OFFLINE_MESSAGES_TAG => {
-                    let publish = match Packet::from_bytes(&mut value_stream, &key).unwrap() {
-                        Packet::Publish(publish) => publish,
+                    let publish = match Packet::from_bytes(&mut value_stream, &key) {
+                        Ok(Packet::Publish(publish)) => publish,
                         _ => continue,
                     };
                     offline_messages
@@ -631,9 +631,16 @@ impl TaskHandler {
                 RETAINED_MESSAGES_TAG => {
                     let mut entry_stream = std::io::Cursor::new(entry_key);
 
-                    let topic_name = TopicName::from_bytes(&mut entry_stream).unwrap();
-                    let message = match Packet::from_bytes(&mut value_stream, &key).unwrap() {
-                        Packet::Publish(publish) => publish,
+                    let topic_name = TopicName::from_bytes(&mut entry_stream);
+                    let topic_name = match topic_name {
+                        Ok(topic_name) => topic_name,
+                        Err(_) => {
+                            println!("Error deserializing topic name");
+                            continue;
+                        },
+                    };
+                    let message = match Packet::from_bytes(&mut value_stream, &key) {
+                        Ok(Packet::Publish(publish)) => publish,
                         _ => continue,
                     };
                     retained_messages
@@ -642,7 +649,14 @@ impl TaskHandler {
                         .push_back(message);
                 }
                 CLIENTS_TAG => {
-                    let subscription = TopicFilter::from_bytes(&mut value_stream).unwrap();
+                    let subscription = TopicFilter::from_bytes(&mut value_stream);
+                    let subscription = match subscription {
+                        Ok(subscription) => subscription,
+                        Err(_) => {
+                            println!("Error deserializing subscription");
+                            continue;
+                        },
+                    };
                     clients
                         .entry(entry_key.clone())
                         .or_insert_with(|| Client::new_from_backup(entry_key.clone(), Vec::new()))
