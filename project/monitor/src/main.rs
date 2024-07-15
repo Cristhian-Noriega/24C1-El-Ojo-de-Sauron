@@ -4,6 +4,7 @@
 
 use std::{env::args, path::Path};
 
+use common::error::Error;
 use config::Config;
 
 mod camera;
@@ -17,14 +18,14 @@ mod ui_application;
 
 const CLIENT_ARGS: usize = 2;
 
-fn main() {
+fn main() -> Result<(), Error> {
     let argv = args().collect::<Vec<String>>();
     if argv.len() != CLIENT_ARGS {
-        println!("Cantidad de argumentos inválidos");
         let app_name = &argv[0];
-        println!("{:?} <toml-file>", app_name);
-
-        return;
+        return Err(Error::new(format!(
+            "Invalid amount of arguments. Usage: {:?} <toml-file>",
+            app_name
+        )));
     }
 
     let path = Path::new(&argv[1]);
@@ -38,6 +39,8 @@ fn main() {
     };
 
     if let Err(e) = client::client_run(config) {
-        println!("Error: {:?}", e);
+        return Err(Error::new(format!("Error running client: {:?}", e)));
     }
+
+    Ok(())
 }

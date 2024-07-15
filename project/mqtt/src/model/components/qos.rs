@@ -1,4 +1,4 @@
-use crate::Error;
+use crate::errors::error::{MqttError, MqttResult};
 
 /// Represents the different levels of quality of service (QoS) in MQTT.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone)]
@@ -22,12 +22,12 @@ impl QoS {
     }
 
     /// Converts a byte into a QoS.
-    pub fn from_byte(byte: u8) -> Result<Self, Error> {
+    pub fn from_byte(byte: u8) -> MqttResult<Self> {
         match byte {
             0x00 => Ok(QoS::AtMost),
             0x01 => Ok(QoS::AtLeast),
             0x02 => Ok(QoS::Exactly),
-            _ => Err(Error::new(format!("Invalid QoS: {}", byte))),
+            _ => Err(MqttError::InvalidQoSLevel),
         }
     }
 }

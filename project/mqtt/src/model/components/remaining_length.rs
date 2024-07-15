@@ -1,4 +1,4 @@
-use crate::{Error, Read};
+use crate::{MqttError, MqttResult, Read};
 
 const MAX_MULTIPLIER: u32 = u32::pow(128, 3);
 const MAX_LENGTH: u32 = u32::pow(128, 4); // 268.435.455 bytes
@@ -18,7 +18,7 @@ impl RemainingLength {
     }
 
     /// Calculates the remaining length of an MQTT packet from a byte stream.
-    pub fn from_bytes(stream: &mut dyn Read) -> Result<Self, Error> {
+    pub fn from_bytes(stream: &mut dyn Read) -> MqttResult<RemainingLength> {
         let mut multiplier = 1;
         let mut value = 0;
 
@@ -32,7 +32,7 @@ impl RemainingLength {
             multiplier *= 128;
 
             if multiplier > MAX_MULTIPLIER {
-                return Err(Error::new("Malformed remaining length".to_string()));
+                return Err(MqttError::InvalidRemainingLength);
             }
 
             if byte & 128 == 0 {

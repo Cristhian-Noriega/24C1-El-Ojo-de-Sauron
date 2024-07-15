@@ -109,8 +109,7 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
     let mut locked_drone = match drone.lock() {
         Ok(drone) => drone,
         Err(_) => {
-            println!("Mutex was poisoned");
-            return Ok(());
+            return Err(std::io::Error::new(ErrorKind::Other, "Mutex was poisoned"));
         }
     };
 
@@ -132,7 +131,10 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
         match thread.join() {
             Ok(_) => {}
             Err(_) => {
-                println!("Error in thread");
+                return Err(std::io::Error::new(
+                    ErrorKind::Other,
+                    "Error joining threads",
+                ));
             }
         }
     }
@@ -181,7 +183,6 @@ fn read_incoming_packets(stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<Drone>>
         let locked_stream = match stream.lock() {
             Ok(stream) => stream,
             Err(_) => {
-                println!("Mutex was poisoned");
                 return;
             }
         };
@@ -189,7 +190,6 @@ fn read_incoming_packets(stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<Drone>>
         let mut cloned_stream = match locked_stream.try_clone() {
             Ok(stream) => stream,
             Err(_) => {
-                println!("Mutex was poisoned");
                 return;
             }
         };
@@ -197,7 +197,6 @@ fn read_incoming_packets(stream: Arc<Mutex<TcpStream>>, drone: Arc<Mutex<Drone>>
         match cloned_stream.set_nonblocking(true) {
             Ok(_) => {}
             Err(_) => {
-                println!("Error setting non-blocking");
                 return;
             }
         }
@@ -240,7 +239,6 @@ fn handle_publish(
     let message = match String::from_utf8(publish.message().to_vec()) {
         Ok(message) => message,
         Err(_) => {
-            println!("Invalid message");
             return;
         }
     };
@@ -248,7 +246,6 @@ fn handle_publish(
     let action = match topic_levels.first() {
         Some(action) => action.as_slice(),
         None => {
-            println!("Invalid topic");
             return;
         }
     };
@@ -285,7 +282,6 @@ fn handle_new_incident(message: String, drone: Arc<Mutex<Drone>>) {
     let incident = match Incident::from_string(message) {
         Ok(incident) => incident,
         Err(_) => {
-            println!("Invalid incident message");
             return;
         }
     };
@@ -293,7 +289,6 @@ fn handle_new_incident(message: String, drone: Arc<Mutex<Drone>>) {
     let mut locked_drone = match drone.lock() {
         Ok(drone) => drone,
         Err(_) => {
-            println!("Mutex was poisoned");
             return;
         }
     };
@@ -310,7 +305,6 @@ fn handle_attending_incident(uuid: String, drone: Arc<Mutex<Drone>>) {
     let mut drone_locked = match drone.lock() {
         Ok(drone) => drone,
         Err(_) => {
-            println!("Mutex was poisoned");
             return;
         }
     };
@@ -399,7 +393,6 @@ fn handle_close_incident(
         let mut locked_drone = match drone.lock() {
             Ok(drone) => drone,
             Err(_) => {
-                println!("Mutex was poisoned");
                 return;
             }
         };
@@ -422,7 +415,6 @@ fn update_drone_status(
         let drone = match drone.lock() {
             Ok(drone) => drone,
             Err(_) => {
-                println!("Mutex was poisoned");
                 return;
             }
         };
@@ -437,7 +429,6 @@ fn update_drone_status(
         let mut stream = match server_stream.lock() {
             Ok(server_stream) => server_stream,
             Err(_) => {
-                println!("Mutex was poisoned");
                 return;
             }
         };
@@ -486,7 +477,6 @@ fn unsubscribe(
     let mut server_stream = match server_stream.try_clone() {
         Ok(stream) => stream,
         Err(_) => {
-            println!("Mutex was poisoned");
             return Err(std::io::Error::new(ErrorKind::Other, "Mutex was poisoned"));
         }
     };
@@ -512,7 +502,6 @@ fn publish(
     let mut server_stream = match server_stream.try_clone() {
         Ok(stream) => stream,
         Err(_) => {
-            println!("Mutex was poisoned");
             return Err(std::io::Error::new(ErrorKind::Other, "Mutex was poisoned"));
         }
     };
@@ -541,7 +530,6 @@ fn travel(drone: Arc<Mutex<Drone>>, x: f64, y: f64, travel_location: TravelLocat
     let mut locked_drone = match drone.lock() {
         Ok(drone) => drone,
         Err(_) => {
-            println!("Mutex was poisoned");
             return;
         }
     };
@@ -553,7 +541,6 @@ fn travel(drone: Arc<Mutex<Drone>>, x: f64, y: f64, travel_location: TravelLocat
         let mut locked_drone = match drone.lock() {
             Ok(drone) => drone,
             Err(_) => {
-                println!("Mutex was poisoned");
                 return;
             }
         };
@@ -581,7 +568,6 @@ fn handle_pending_incidents(
         let locked_drone = match drone.lock() {
             Ok(drone) => drone,
             Err(_) => {
-                println!("Mutex was poisoned");
                 continue;
             }
         };
@@ -636,7 +622,6 @@ fn handle_incident(
     let mut stream_locked = match server_stream.lock() {
         Ok(stream) => stream,
         Err(_) => {
-            println!("Mutex was poisoned");
             return;
         }
     };
@@ -660,7 +645,6 @@ fn handle_incident(
     let mut drone_locked = match drone.lock() {
         Ok(drone) => drone,
         Err(_) => {
-            println!("Mutex was poisoned");
             return;
         }
     };
@@ -677,7 +661,6 @@ fn handle_incident(
         let mut locked_drone = match drone.lock() {
             Ok(drone) => drone,
             Err(_) => {
-                println!("Mutex was poisoned");
                 return;
             }
         };
@@ -696,7 +679,6 @@ fn handle_incident(
     let mut locked_stream = match server_stream.lock() {
         Ok(stream) => stream,
         Err(_) => {
-            println!("Mutex was poisoned");
             return;
         }
     };
@@ -721,7 +703,6 @@ fn handle_incident(
         let locked_drone = match drone.lock() {
             Ok(drone) => drone,
             Err(_) => {
-                println!("Mutex was poisoned");
                 return;
             }
         };
@@ -738,7 +719,6 @@ fn handle_incident(
     let mut locked_stream = match server_stream.lock() {
         Ok(stream) => stream,
         Err(_) => {
-            println!("Mutex was poisoned");
             return;
         }
     };
@@ -787,7 +767,6 @@ fn handle_incident(
     let mut locked_stream = match server_stream.lock() {
         Ok(stream) => stream,
         Err(_) => {
-            println!("Mutex was poisoned");
             return;
         }
     };
@@ -806,7 +785,6 @@ fn discharge_battery(drone: Arc<Mutex<Drone>>) {
         let mut locked_drone = match drone.lock() {
             Ok(drone) => drone,
             Err(_) => {
-                println!("Mutex was poisoned");
                 return;
             }
         };
@@ -824,7 +802,6 @@ fn recharge_battery(drone: Arc<Mutex<Drone>>) {
         let locked_drone = match drone.lock() {
             Ok(drone) => drone,
             Err(_) => {
-                println!("Mutex was poisoned");
                 return;
             }
         };
@@ -844,7 +821,6 @@ fn recharge_battery(drone: Arc<Mutex<Drone>>) {
         let mut locked_drone = match drone.lock() {
             Ok(drone) => drone,
             Err(_) => {
-                println!("Mutex was poisoned");
                 return;
             }
         };
@@ -856,7 +832,6 @@ fn recharge_battery(drone: Arc<Mutex<Drone>>) {
             let mut locked_drone = match drone.lock() {
                 Ok(drone) => drone,
                 Err(_) => {
-                    println!("Mutex was poisoned");
                     return;
                 }
             };
@@ -874,7 +849,6 @@ fn recharge_battery(drone: Arc<Mutex<Drone>>) {
         let locked_drone = match drone.lock() {
             Ok(drone) => drone,
             Err(_) => {
-                println!("Mutex was poisoned");
                 return;
             }
         };
@@ -888,7 +862,6 @@ fn recharge_battery(drone: Arc<Mutex<Drone>>) {
         let mut locked_drone = match drone.lock() {
             Ok(drone) => drone,
             Err(_) => {
-                println!("Mutex was poisoned");
                 return;
             }
         };

@@ -353,23 +353,23 @@ impl TaskHandler {
             let username = split[1].to_vec();
             let password = split[2].to_vec();
 
-            let client_manager = match self.client_manager.write() {
-                Ok(client_manager) => client_manager,
-                Err(_) => {
-                    self.log_file
-                        .error("Error getting client manager for client registration");
-                    return;
-                }
-            };
-            if client_manager.authenticate_client(
+            let client_manager = self.client_manager.write().unwrap();
+
+            match client_manager.authenticate_client(
                 client_id.clone(),
                 username.clone(),
                 password.clone(),
             ) {
-                self.log_file.info("Client already registered");
-            } else {
-                self.log_file.log_client_registrated(&client_id.clone());
-                client_manager.register_client(client_id, username, password);
+                Ok(true) => {
+                    self.log_file.info("Client already registered");
+                }
+                Ok(false) => {
+                    self.log_file.log_client_registrated(&client_id.clone());
+                    let _ = client_manager.register_client(client_id, username, password);
+                }
+                Err(e) => {
+                    self.log_file.error(e.to_string().as_str());
+                }
             }
         } else {
             self.log_file
@@ -560,7 +560,7 @@ impl TaskHandler {
         self.active_connections.remove(&client_id);
         self.client_manager
             .write()?
-            .disconnect_client(client_id.clone());
+            .disconnect_client(client_id.clone())?;
         Ok(())
     }
 

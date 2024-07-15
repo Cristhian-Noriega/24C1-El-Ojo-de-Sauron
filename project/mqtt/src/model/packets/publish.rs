@@ -1,5 +1,5 @@
 use super::{DEFAULT_VARIABLE_HEADER_LENGTH, PUBLISH_PACKET_TYPE};
-use crate::{encrypt, Error, FixedHeader, QoS, Read, RemainingLength, TopicName};
+use crate::{encrypt, FixedHeader, MqttResult, QoS, Read, RemainingLength, TopicName};
 
 /// Represents a PUBLISH packet of MQTT. The client uses it to publish a message to a topic.
 #[derive(Debug, Clone)]
@@ -32,7 +32,7 @@ impl Publish {
     }
 
     /// Converts a stream of bytes into a Publish.
-    pub fn from_bytes(fixed_header: FixedHeader, stream: &mut dyn Read) -> Result<Self, Error> {
+    pub fn from_bytes(fixed_header: FixedHeader, stream: &mut dyn Read) -> MqttResult<Self> {
         // Fixed Header
 
         let fixed_header_flags = fixed_header.first_byte() & 0b0000_1111;

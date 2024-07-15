@@ -1,8 +1,10 @@
-use mqtt::errors::error::Error as MqttError;
 use std::fmt;
 use std::io;
+use std::string::FromUtf8Error;
 use std::sync::mpsc::SendError;
 use std::sync::PoisonError;
+
+use mqtt::errors::error::MqttError;
 
 pub type ServerResult<T> = Result<T, ServerError>;
 
@@ -15,6 +17,9 @@ pub enum ServerError {
     UnsupportedPacket,
     ChannelSend(String),
     PoisonedLock,
+    Utf8Error(FromUtf8Error),
+    NoLoginProvided,
+    NoPasswordProvided,
 }
 
 impl fmt::Display for ServerError {
@@ -27,6 +32,9 @@ impl fmt::Display for ServerError {
             ServerError::UnsupportedPacket => write!(f, "Unsupported packet error"),
             ServerError::ChannelSend(msg) => write!(f, "Channel send error: {}", msg),
             ServerError::PoisonedLock => write!(f, "Poisoned lock error"),
+            ServerError::Utf8Error(err) => write!(f, "UTF-8 error: {}", err),
+            ServerError::NoLoginProvided => write!(f, "No login provided"),
+            ServerError::NoPasswordProvided => write!(f, "No password provided"),
         }
     }
 }
@@ -52,5 +60,11 @@ impl<T> From<SendError<T>> for ServerError {
 impl<T> From<PoisonError<T>> for ServerError {
     fn from(_: PoisonError<T>) -> Self {
         ServerError::PoisonedLock
+    }
+}
+
+impl From<FromUtf8Error> for ServerError {
+    fn from(err: FromUtf8Error) -> Self {
+        ServerError::Utf8Error(err)
     }
 }

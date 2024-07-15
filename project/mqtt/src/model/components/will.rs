@@ -1,4 +1,4 @@
-use crate::{EncodedString, Error, QoS, Read, TopicName};
+use crate::{errors::error::MqttResult, EncodedString, QoS, Read, TopicName};
 
 /// Represents a message that will be published in case the client disconnects unexpectedly.
 #[derive(Debug, PartialEq)]
@@ -20,7 +20,7 @@ impl Will {
     }
 
     /// Converts a stream of bytes into a Will.
-    pub fn from_bytes(stream: &mut dyn Read, qos: QoS, retain: bool) -> Result<Will, Error> {
+    pub fn from_bytes(stream: &mut dyn Read, qos: QoS, retain: bool) -> MqttResult<Will> {
         let topic = TopicName::from_bytes(stream)?;
         let message = EncodedString::from_bytes(stream)?;
 

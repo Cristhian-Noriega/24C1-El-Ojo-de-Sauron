@@ -1,5 +1,5 @@
 use super::{PINGREQ_PACKET_TYPE, RESERVED_FIXED_HEADER_FLAGS};
-use crate::{Error, FixedHeader, RemainingLength};
+use crate::{FixedHeader, MqttError, MqttResult, RemainingLength};
 
 /// Represents a PINGREQ packet from MQTT. The client sends a PING request to the server.
 #[derive(Debug, Default, PartialEq)]
@@ -11,12 +11,12 @@ impl Pingreq {
     }
 
     /// Converts a stream of bytes into a Pingreq.
-    pub fn from_bytes(fixed_header: FixedHeader) -> Result<Self, Error> {
+    pub fn from_bytes(fixed_header: FixedHeader) -> MqttResult<Self> {
         // Fixed Header
         let fixed_header_flags = fixed_header.first_byte() & 0b0000_1111;
 
         if fixed_header_flags != RESERVED_FIXED_HEADER_FLAGS {
-            return Err(Error::new("Invalid reserved header flags".to_string()));
+            return Err(MqttError::InvalidFixedHeaderFlags);
         }
 
         Ok(Pingreq::new())

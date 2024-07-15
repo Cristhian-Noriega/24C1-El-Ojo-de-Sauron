@@ -202,7 +202,7 @@ fn start_monitor(
             }
 
             Ok(_) => {}
-            Err(_) => {} // println!("Error reading packet from server");
+            Err(_) => {}
         }
 
         let publish = match ui_reciver.try_recv() {

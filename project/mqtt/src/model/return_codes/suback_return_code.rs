@@ -1,4 +1,4 @@
-use crate::Error;
+use crate::{MqttError, MqttResult};
 
 /// Represents the different return codes of a Suback in MQTT.
 #[derive(PartialEq, Debug)]
@@ -21,13 +21,16 @@ impl SubackReturnCode {
     }
 
     /// Converts a byte into a Suback return code.
-    pub fn from_byte(byte: u8) -> Result<Self, Error> {
+    pub fn from_byte(byte: u8) -> MqttResult<Self> {
         match byte {
             0x00 => Ok(SubackReturnCode::SuccessMaximumQoS0),
             0x01 => Ok(SubackReturnCode::SuccessMaximumQoS1),
             0x02 => Ok(SubackReturnCode::SuccessMaximumQoS2),
             0x80 => Ok(SubackReturnCode::Failure),
-            _ => Err(Error::new(format!("Invalid SubackReturnCode: {}", byte))),
+            _ => Err(MqttError::InvalidReturnCode(format!(
+                "Invalid SubackReturnCode: {}",
+                byte
+            ))),
         }
     }
 }

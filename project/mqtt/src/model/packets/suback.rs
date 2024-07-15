@@ -1,5 +1,8 @@
 use super::{DEFAULT_VARIABLE_HEADER_LENGTH, RESERVED_FIXED_HEADER_FLAGS, SUBACK_PACKET_TYPE};
-use crate::{encrypt, Error, FixedHeader, Read, RemainingLength, SubackReturnCode};
+use crate::{
+    encrypt, errors::error::MqttResult, FixedHeader, MqttError, Read, RemainingLength,
+    SubackReturnCode,
+};
 
 /// Represents a SUBACK packet of MQTT. The server uses it to confirm the subscription to one or more topics.
 #[derive(Debug)]
@@ -17,12 +20,12 @@ impl Suback {
     }
 
     /// Converts a stream of bytes into a Suback.
-    pub fn from_bytes(fixed_header: FixedHeader, stream: &mut dyn Read) -> Result<Self, Error> {
+    pub fn from_bytes(fixed_header: FixedHeader, stream: &mut dyn Read) -> MqttResult<Self> {
         // Fixed Header
         let fixed_header_flags = fixed_header.first_byte() & 0b0000_1111;
 
         if fixed_header_flags != RESERVED_FIXED_HEADER_FLAGS {
-            return Err(Error::new("Invalid flags".to_string()));
+            return Err(MqttError::InvalidFixedHeaderFlags);
         }
 
         let remaining_length = fixed_header.remaining_length().value();

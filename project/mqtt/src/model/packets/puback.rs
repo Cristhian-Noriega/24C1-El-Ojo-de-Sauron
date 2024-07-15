@@ -1,7 +1,7 @@
 use std::fmt::{self, Display, Formatter};
 
 use super::{PUBACK_PACKET_TYPE, RESERVED_FIXED_HEADER_FLAGS};
-use crate::{encrypt, Error, FixedHeader, Read, RemainingLength};
+use crate::{encrypt, FixedHeader, MqttError, MqttResult, Read, RemainingLength};
 
 const PACKAGE_IDENTIFIER_LENGTH: usize = 2;
 
@@ -17,12 +17,12 @@ impl Puback {
     }
 
     /// Converts a stream of bytes into a Puback.
-    pub fn from_bytes(fixed_header: FixedHeader, stream: &mut dyn Read) -> Result<Self, Error> {
+    pub fn from_bytes(fixed_header: FixedHeader, stream: &mut dyn Read) -> MqttResult<Self> {
         // Fixed Header
         let fixed_header_flags = fixed_header.first_byte() & 0b0000_1111;
 
         if fixed_header_flags != RESERVED_FIXED_HEADER_FLAGS {
-            return Err(Error::new("Invalid fixed header flags".to_string()));
+            return Err(MqttError::InvalidFixedHeaderFlags);
         }
 
         // Variable Header

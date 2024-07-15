@@ -1,4 +1,4 @@
-use crate::{EncodedString, Error, Read};
+use crate::{EncodedString, MqttResult, Read};
 
 /// Represents a login in MQTT.
 #[derive(Debug, PartialEq)]
@@ -13,7 +13,7 @@ impl Login {
     }
 
     /// Converts a stream of bytes into a Login.
-    pub fn from_bytes(stream: &mut dyn Read, has_password: bool) -> Result<Login, Error> {
+    pub fn from_bytes(stream: &mut dyn Read, has_password: bool) -> MqttResult<Login> {
         let username = EncodedString::from_bytes(stream)?;
 
         let password = if has_password {

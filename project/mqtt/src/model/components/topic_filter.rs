@@ -1,7 +1,7 @@
 use std::fmt::{self, Display, Formatter};
 
 use super::{FORWARD_SLASH, SERVER_RESERVED};
-use crate::{EncodedString, Error, Read, TopicLevel, TopicName};
+use crate::{EncodedString, MqttError, MqttResult, Read, TopicLevel, TopicName};
 
 /// An expression contained in a SUBSCRIBE, to indicate an interest in one or more topics. A topic filter may include wildcards.
 #[derive(Debug, Clone, PartialEq)]
@@ -19,12 +19,12 @@ impl TopicFilter {
     }
 
     /// Converts a stream of bytes into a TopicFilter.
-    pub fn from_bytes(stream: &mut dyn Read) -> Result<Self, Error> {
+    pub fn from_bytes(stream: &mut dyn Read) -> MqttResult<Self> {
         let encoded_string_topic_filter = EncodedString::from_bytes(stream)?;
         let bytes = encoded_string_topic_filter.content();
 
         if bytes.is_empty() {
-            return Err(Error::new("Invalid topic name".to_string()));
+            return Err(MqttError::InvalidTopicName);
         }
 
         let server_reserved = matches!(bytes.first(), Some(&SERVER_RESERVED));
@@ -41,7 +41,7 @@ impl TopicFilter {
 
             if let TopicLevel::MultiLevelWildcard = topic_level {
                 if level_index != levels_bytes.len() - 1 {
-                    return Err(Error::new(
+                    return Err(MqttError::InvalidWildcard(
                         "Multi-level wildcard must be the last level".to_string(),
                     ));
                 }

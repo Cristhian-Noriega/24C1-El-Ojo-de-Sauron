@@ -1,8 +1,8 @@
 use std::io::{Cursor, Read};
 
 use crate::{
-    decrypt, Connack, Connect, Disconnect, Error, FixedHeader, Pingreq, Pingresp, Puback, Publish,
-    Suback, Subscribe, Unsuback, Unsubscribe,
+    decrypt, Connack, Connect, Disconnect, FixedHeader, MqttError, MqttResult, Pingreq, Pingresp,
+    Puback, Publish, Suback, Subscribe, Unsuback, Unsubscribe,
 };
 
 use super::packets::*;
@@ -25,7 +25,7 @@ pub enum Packet {
 
 impl Packet {
     /// Converts a byte stream into an MQTT packet.
-    pub fn from_bytes(stream: &mut dyn Read, key: &[u8]) -> Result<Self, Error> {
+    pub fn from_bytes(stream: &mut dyn Read, key: &[u8]) -> MqttResult<Self> {
         let fixed_header = FixedHeader::from_bytes(stream)?;
 
         let packet_type = fixed_header.first_byte() >> 4;
@@ -36,7 +36,7 @@ impl Packet {
 
         let content = match decrypt(encrypted_content, key) {
             Ok(content) => content,
-            Err(error) => return Err(Error::new(format!("Error decrypting content: {}", error))),
+            Err(err) => return Err(MqttError::ErrorDecryption(err.to_string())),
         };
         let stream = &mut Cursor::new(content);
 
@@ -92,12 +92,12 @@ impl Packet {
                 let unsuback_packet = Unsuback::from_bytes(fixed_header, stream)?;
                 Packet::Unsuback(unsuback_packet)
             }
-            _ => return Err(Error::new(format!("Invalid packet type: {}", packet_type))),
+            _ => return Err(MqttError::InvalidPacketType(packet_type.to_string())),
         };
 
         if let Ok(remaining_length) = stream.read(&mut [0; 1]) {
             if remaining_length != 0 {
-                return Err(Error::new("Invalid remaining length".to_string()));
+                return Err(MqttError::InvalidRemainingLength);
             }
         }
 

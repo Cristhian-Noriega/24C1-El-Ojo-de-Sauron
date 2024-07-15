@@ -1,6 +1,6 @@
 use std::fmt::{self, Display, Formatter};
 
-use crate::{Error, Read};
+use crate::{errors::error::MqttResult, Read};
 
 const LENGTH_SIZE: usize = 2;
 
@@ -20,7 +20,7 @@ impl EncodedString {
     }
 
     /// Converts a byte stream into an EncodedString.
-    pub fn from_bytes(stream: &mut dyn Read) -> Result<Self, Error> {
+    pub fn from_bytes(stream: &mut dyn Read) -> MqttResult<Self> {
         let mut length_buffer = [0; LENGTH_SIZE];
         stream.read_exact(&mut length_buffer)?;
 
