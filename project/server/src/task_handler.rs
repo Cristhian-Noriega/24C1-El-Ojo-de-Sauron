@@ -1,12 +1,13 @@
-use core::task;
 use std::{
-    collections::{HashMap, HashSet, VecDeque}, io::{Read, Write}, sync::{atomic::AtomicBool, mpsc, Arc, RwLock}, thread, time::{Duration, Instant}
+    collections::{HashMap, HashSet, VecDeque}, io::{Read, Write}, sync::{mpsc, Arc, RwLock}, thread, time::{Duration, Instant}
 };
 
-use crate::{client::{self, Client}, client_manager::ClientManager, config::Config, error::ServerResult, logfile::Logger};
+use crate::{client::Client, client_manager::ClientManager, config::Config, error::ServerResult, logfile::Logger};
+
+use mqtt::errors::error::Error;
 
 use mqtt::model::{
-    components::{qos::QoS, topic_name::TopicName},
+    components::{qos::QoS, topic_filter::TopicFilter, topic_name::TopicName},
     packets::{
         connack::Connack, pingresp::Pingresp, puback::Puback, publish::Publish, suback::Suback,
         subscribe::Subscribe, unsuback::Unsuback, unsubscribe::Unsubscribe,
@@ -54,6 +55,7 @@ impl TaskHandler {
         client_manager: Arc<RwLock<ClientManager>>,
         key: [u8; 32],
         segs_to_backup: u32,
+        backup_file: Option<String>,
     ) -> Self {
         TaskHandler {
             client_actions_receiver_channel: receiver_channel,
@@ -64,7 +66,7 @@ impl TaskHandler {
             log_file,
             client_manager,
             key,
-            backup_file: None,
+            backup_file,
             segs_to_backup
         }
     }
@@ -80,204 +82,34 @@ impl TaskHandler {
         let key = *config.get_key();
         let segs_to_backup = config.get_segs_to_backup();
         
-        let new_task_handler = match File::open(backup_file) {
-            Ok(mut file) => {
-                let mut data = String::new();
-                if let Err(e) = file.read_to_string(&mut data) {
-                    eprintln!("Failed to read backup file: {}", e);
-                    return TaskHandler::default(client_actions_receiver_channel, log_file, client_manager, key, segs_to_backup);
-                }
-
-                match TaskHandler::deserialize(&data, client_manager) {
-                    Ok(task_handler) => task_handler,
-                    Err(e) => {
-                        eprintln!("Failed to deserialize backup data: {}", e);
-                        return TaskHandler::default(client_actions_receiver_channel, log_file, client_manager, key, segs_to_backup);
+        match backup_file {
+            Some(backup_file_string) => {
+                let new_task_handler = match File::open(backup_file_string.clone()) {
+                    Ok(mut file) => {
+                        let mut data = String::new();
+                        if let Err(e) = file.read_to_string(&mut data) {
+                            eprintln!("Failed to read backup file: {}", e);
+                            return TaskHandler::default(client_actions_receiver_channel, log_file, client_manager, key, segs_to_backup, Some(backup_file_string.clone()));
+                        }
+        
+                        TaskHandler::deserialize(&data, client_manager.clone(), log_file.clone(), config, client_actions_receiver_channel, Some(backup_file_string.clone()))
                     }
-                }
+                    Err(_) => {
+                        eprintln!("Backup file not found, initializing empty TaskHandler.");
+                        return TaskHandler::default(client_actions_receiver_channel, log_file, client_manager, key, segs_to_backup, Some(backup_file_string.clone()));
+                    }
+                };
+        
+                new_task_handler
             }
-            Err(_) => {
-                eprintln!("Backup file not found, initializing empty TaskHandler.");
-                return TaskHandler::default(client_actions_receiver_channel, log_file, client_manager, key, segs_to_backup);
-            }
-        };
-
-        new_task_handler
+            None => TaskHandler::default(client_actions_receiver_channel, log_file, client_manager, key, segs_to_backup, backup_file),
+        }
     }
 
     /// Initializes the task handler thread
     pub fn initialize_task_handler_thread(self) {
         std::thread::spawn(move || {
             self.run();
-        });
-    }
-
-    fn serialize(&self) -> String {
-        let mut serialized_data = String::new();
-
-        serialized_data.push_str("{\n");
-
-        serialized_data.push_str("  \"offline_messages\": {\n");
-        for (client, queue) in &self.offline_messages {
-            serialized_data.push_str(&format!(
-                "    \"{}\": [{}],\n",
-                client.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(""),
-                queue.iter().map(|publish| publish.serialize()).collect::<Vec<_>>().join(", ")
-            ));
-        }
-        serialized_data.push_str("  },\n");
-
-        serialized_data.push_str("  \"retained_messages\": {\n");
-        for (topic_name, messages) in &self.retained_messages {
-            serialized_data.push_str(&format!(
-                "    \"{}\": [{}],\n",
-                topic_name.serialize(),
-                messages.iter().map(|mes| mes.serialize()).collect::<Vec<_>>().join(", ")
-            ));
-        }
-        
-        serialized_data.push_str("  }\n");
-
-        // Serialize clients
-        serialized_data.push_str("  \"clients\": {\n");
-        let clients_read = self.clients.read().unwrap(); // Acquiring a read lock
-        for (id, client) in clients_read.iter() {
-            serialized_data.push_str(&format!(
-                "    \"{}\": [{}],\n",
-                id.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(""),
-                client.subscriptions.iter().map(|sub| sub.serialize()).collect::<Vec<_>>().join(", ")
-            ));
-        }
-
-        serialized_data.push_str("}\n");
-
-        serialized_data
-    }
-
-    fn deserialize(serialized_data: &str, client_manager: Arc<RwLock<ClientManager>>) -> Result<TaskHandler, String> {
-        let mut offline_messages = HashMap::new();
-        let mut retained_messages = HashMap::new();
-
-        let serialized_data = serialized_data.trim().trim_start_matches('{').trim_end_matches('}');
-        let sections: Vec<&str> = serialized_data.split("},\n  ").collect();
-
-        if sections.len() < 3 {
-            return Err("Invalid serialized data format".to_string());
-        }
-
-        // Parse offline_messages
-        if let Some(offline_messages_section) = sections.get(0) {
-            let offline_messages_str = offline_messages_section.trim().trim_start_matches("\"offline_messages\": {\n").trim_end_matches("  ");
-            for client_queue in offline_messages_str.split("],\n    ") {
-                let client_queue = client_queue.trim();
-                let client_queue_parts: Vec<&str> = client_queue.split(": [").collect();
-
-                if client_queue_parts.len() < 2 {
-                    continue;
-                }
-
-                let client_str = client_queue_parts[0].trim().trim_start_matches("\"").trim_end_matches("\"");
-                let client = (0..client_str.len())
-                    .step_by(2)
-                    .map(|i| u8::from_str_radix(&client_str[i..i + 2], 16).map_err(|e| e.to_string()))
-                    .collect::<Result<Vec<u8>, String>>()?;
-
-                let queue_str = client_queue_parts[1].trim().trim_end_matches("]");
-                let queue = queue_str.split(", ").map(Publish::deserialize).collect::<Result<VecDeque<Publish>, String>>()?;
-
-                offline_messages.insert(client, queue);
-            }
-        }
-
-        // Parse retained_messages
-        if let Some(retained_messages_section) = sections.get(1) {
-            let retained_messages_str = retained_messages_section.trim().trim_start_matches("\"retained_messages\": {\n").trim_end_matches("  ");
-            for topic_queue in retained_messages_str.split("],\n    ") {
-                let topic_queue = topic_queue.trim();
-                let topic_queue_parts: Vec<&str> = topic_queue.split(": [").collect();
-
-                if topic_queue_parts.len() < 2 {
-                    continue;
-                }
-
-                let topic_str = topic_queue_parts[0].trim().trim_start_matches("\"").trim_end_matches("\"");
-                let topic = TopicName::deserialize(topic_str)?;
-
-                let queue_str = topic_queue_parts[1].trim().trim_end_matches("]");
-                let queue = queue_str.split(", ").map(Publish::deserialize).collect::<Result<VecDeque<Publish>, String>>()?;
-
-                retained_messages.insert(topic, queue);
-            }
-        }
-
-        if let Some(clients_section) = sections.get(2) {
-            let clients_str = clients_section.trim().trim_start_matches("\"clients\": {\n").trim_end_matches("}");
-            let mut clients = HashMap::new();
-            for client_queue in clients_str.split("],\n    ") {
-                let client_queue = client_queue.trim();
-                let client_queue_parts: Vec<&str> = client_queue.split(": [").collect();
-
-                if client_queue_parts.len() < 2 {
-                    continue;
-                }
-
-                let client_str = client_queue_parts[0].trim().trim_start_matches("\"").trim_end_matches("\"");
-                let client = (0..client_str.len())
-                    .step_by(2)
-                    .map(|i| u8::from_str_radix(&client_str[i..i + 2], 16).map_err(|e| e.to_string()))
-                    .collect::<Result<Vec<u8>, String>>()?;
-
-                let queue_str = client_queue_parts[1].trim().trim_end_matches("]");
-                let queue = queue_str.split(", ").map(Subscribe::deserialize).collect::<Result<Vec<Subscribe>, String>>()?;
-
-                let client = Client::new(client, client_manager.clone());
-                for sub in queue {
-                    client.add_subscription(sub.topic_filter);
-                }
-
-                clients.insert(client.id(), client);
-            }
-        }
-
-        Ok(TaskHandler {
-            client_actions_receiver_channel: mpsc::channel().1,
-            clients,
-            active_connections: HashSet::new(),
-            offline_messages,
-            retained_messages,
-            log_file: Arc::new(Logger::new("log.txt")),
-            client_manager,
-            key: [0; 32],
-            backup_file: None,
-            segs_to_backup: 0,
-        })
-    }
-
-    pub fn backup_data(&self) {
-        let backup_file_path_copy = match &self.backup_file{
-            Some(file) => file.clone(),
-            None => return,
-        };
-
-        let serialized_data = self.serialize();
-
-        // Spawn a thread to serialize and write the data to a file as I/O operations are blocking
-        thread::spawn(move || {
-            let mut file = match File::create(backup_file_path_copy) {
-                Ok(file) => file,
-                Err(e) => {
-                    eprintln!("Failed to create backup file: {}", e);
-                    return;
-                }
-            };
-            if let Err(e) = file.write_all(serialized_data.as_bytes()) {
-                eprintln!("Failed to write to backup file: {}", e);
-            }
-
-            match file.write_all(serialized_data.as_bytes()) {
-                Ok(_) => {}
-                Err(e) => eprintln!("Failed to write to backup file: {}", e),
-            }
         });
     }
 
@@ -299,7 +131,8 @@ impl TaskHandler {
                 }
             }
 
-            if last_backup.elapsed() >= backup_interval {
+            if self.backup_file != None && last_backup.elapsed() >= backup_interval {
+                println!("Backing up server data");
                 self.backup_data();
                 last_backup = Instant::now();
             }
@@ -663,4 +496,169 @@ impl TaskHandler {
             .disconnect_client(client_id.clone());
         Ok(())
     }
+
+    fn serialize(&self, key: [u8; 32]) -> Vec<u8> {
+        let mut serialized_data = Vec::new();
+
+        // Serialize offline_messages
+        serialized_data.extend_from_slice(&(self.offline_messages.len() as u32).to_be_bytes());
+        for (client, queue) in &self.offline_messages {
+            serialized_data.extend_from_slice(&(client.len() as u32).to_be_bytes());
+            serialized_data.extend_from_slice(client);
+            serialized_data.extend_from_slice(&(queue.len() as u32).to_be_bytes());
+            for publish in queue {
+                let publish_bytes = publish.to_bytes(&key);
+                serialized_data.extend_from_slice(&(publish_bytes.len() as u32).to_be_bytes());
+                serialized_data.extend_from_slice(&publish_bytes);
+            }
+        }
+
+        // Serialize retained_messages
+        serialized_data.extend_from_slice(&(self.retained_messages.len() as u32).to_be_bytes());
+        for (topic_name, messages) in &self.retained_messages {
+            let topic_name_bytes = topic_name.to_bytes();
+            serialized_data.extend_from_slice(&(topic_name_bytes.len() as u32).to_be_bytes());
+            serialized_data.extend_from_slice(&topic_name_bytes);
+            serialized_data.extend_from_slice(&(messages.len() as u32).to_be_bytes());
+            for message in messages {
+                let message_bytes = message.to_bytes(&key);
+                serialized_data.extend_from_slice(&(message_bytes.len() as u32).to_be_bytes());
+                serialized_data.extend_from_slice(&message_bytes);
+            }
+        }
+
+        // Serialize clients
+        let clients_read = self.clients.read().unwrap(); // Acquiring a read lock
+        serialized_data.extend_from_slice(&(clients_read.len() as u32).to_be_bytes());
+        for (id, client) in clients_read.iter() {
+            serialized_data.extend_from_slice(&(id.len() as u32).to_be_bytes());
+            serialized_data.extend_from_slice(id);
+            serialized_data.extend_from_slice(&(client.subscriptions.len() as u32).to_be_bytes());
+            for sub in &client.subscriptions {
+                let sub_bytes = sub.to_bytes();
+                serialized_data.extend_from_slice(&(sub_bytes.len() as u32).to_be_bytes());
+                serialized_data.extend_from_slice(&sub_bytes);
+            }
+        }
+
+        serialized_data
+    }
+
+    fn deserialize(
+        serialized_data: &[u8],
+        client_manager: Arc<RwLock<ClientManager>>,
+        log_file: Arc<Logger>,
+        config: &Config,
+        receiver_channel: mpsc::Receiver<Task>,
+        backup_file: Option<String>,
+    ) -> TaskHandler {
+        let mut cursor = std::io::Cursor::new(serialized_data);
+
+        let mut offline_messages = HashMap::new();
+        let offline_messages_len = read_u32(&mut cursor);
+        for _ in 0..offline_messages_len {
+            let client_len = read_u32(&mut cursor);
+            let mut client = vec![0; client_len as usize];
+            cursor.read_exact(&mut client).unwrap();
+
+            let queue_len = read_u32(&mut cursor);
+            let mut queue = VecDeque::new();
+            for _ in 0..queue_len {
+                let publish_len = read_u32(&mut cursor);
+                let mut publish_bytes = vec![0; publish_len as usize];
+                cursor.read_exact(&mut publish_bytes).unwrap();
+                let publish = Publish::from_bytes(&publish_bytes).unwrap();
+                queue.push_back(publish);
+            }
+
+            offline_messages.insert(client, queue);
+        }
+
+        let mut retained_messages = HashMap::new();
+        let retained_messages_len = read_u32(&mut cursor);
+        for _ in 0..retained_messages_len {
+            let topic_name_len = read_u32(&mut cursor);
+            let mut topic_name_bytes = vec![0; topic_name_len as usize];
+            cursor.read_exact(&mut topic_name_bytes).unwrap();
+            let topic_name = TopicName::from_bytes(&topic_name_bytes).unwrap();
+
+            let messages_len = read_u32(&mut cursor);
+            let mut messages = VecDeque::new();
+            for _ in 0..messages_len {
+                let message_len = read_u32(&mut cursor);
+                let mut message_bytes = vec![0; message_len as usize];
+                cursor.read_exact(&mut message_bytes).unwrap();
+                let message = Publish::from_bytes(&message_bytes).unwrap();
+                messages.push_back(message);
+            }
+
+            retained_messages.insert(topic_name, messages);
+        }
+
+        let mut clients = HashMap::new();
+        let clients_len = read_u32(&mut cursor);
+        for _ in 0..clients_len {
+            let id_len = read_u32(&mut cursor);
+            let mut id = vec![0; id_len as usize];
+            cursor.read_exact(&mut id).unwrap();
+
+            let subscriptions_len = read_u32(&mut cursor);
+            let mut subscriptions = Vec::new();
+            for _ in 0..subscriptions_len {
+                let sub_len = read_u32(&mut cursor);
+                let mut sub_bytes = vec![0; sub_len as usize];
+                cursor.read_exact(&mut sub_bytes).unwrap();
+                let subscription = TopicFilter::from_bytes(&sub_bytes).unwrap();
+                subscriptions.push(subscription);
+            }
+
+            let client = Client::new_from_backup(id.clone(), subscriptions);
+            clients.insert(id, client);
+        }
+
+        let clients_lock = RwLock::new(clients);
+
+        TaskHandler {
+            client_actions_receiver_channel: receiver_channel,
+            clients: clients_lock,
+            active_connections: HashSet::new(),
+            offline_messages,
+            retained_messages,
+            log_file,
+            client_manager,
+            key: config.get_key().clone(),
+            backup_file: config.get_backup_file(),
+            segs_to_backup: config.get_segs_to_backup(),
+        }
+    }
+
+    pub fn backup_data(&self) {
+        let backup_file_path_copy = match &self.backup_file{
+            Some(file) => file.clone(),
+            None => return,
+        };
+
+        let serialized_data = self.serialize(self.key);
+
+        // Spawn a thread to serialize and write the data to a file as I/O operations are blocking
+        thread::spawn(move || {
+            let mut file = match File::create(backup_file_path_copy) {
+                Ok(file) => file,
+                Err(e) => {
+                    eprintln!("Failed to create/open backup file: {}", e);
+                    return;
+                }
+            };
+            if let Err(e) = file.write_all(serialized_data.as_slice()) {
+                eprintln!("Failed to write to backup file: {}", e);
+            }
+
+        });
+    }
+}
+
+fn read_u32(cursor: &mut std::io::Cursor<&[u8]>) -> u32 {
+    let mut buf = [0u8; 4];
+    cursor.read_exact(&mut buf).unwrap();
+    u32::from_be_bytes(buf)
 }

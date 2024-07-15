@@ -103,8 +103,12 @@ impl Config {
         &self.key
     }
 
-    pub fn get_backup_file(&self) -> &str {
-        &self.backup_file
+    pub fn get_backup_file(&self) -> Option<String> {
+        if self.backup_file.is_empty() {
+            None
+        } else {
+            Some(self.backup_file.clone())
+        }
     }
 
     pub fn get_segs_to_backup(&self) -> u32 {

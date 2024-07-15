@@ -28,6 +28,15 @@ impl Client {
         }
     }
 
+    pub fn new_from_backup(id: Vec<u8>, subscriptions: Vec<TopicFilter>) -> Client {
+        Client {
+            id,
+            subscriptions,
+            alive: AtomicBool::new(true),
+            stream: None,
+        }
+    }
+
     /// Adds a subscription to a client
     pub fn add_subscription(&mut self, topic: TopicFilter) {
         self.subscriptions.push(topic);
