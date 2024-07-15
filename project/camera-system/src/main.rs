@@ -37,5 +37,3 @@ fn main() {
         println!("Error: {:?}", e);
     }
 }
-
-//the client receives a connack packet from the server
