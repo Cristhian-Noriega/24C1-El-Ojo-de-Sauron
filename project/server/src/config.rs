@@ -59,16 +59,8 @@ impl Config {
                         })?
                     }
                     "initialize_with_backup" => {
-                        config.initialize_with_backup = match parts[1].to_lowercase().as_str() {
-                            "true" => true,
-                            "false" => false,
-                            _ => {
-                                return Err(io::Error::new(
-                                    io::ErrorKind::InvalidData,
-                                    "Invalid initialize_with_backup value",
-                                ))
-                            }
-                        }
+                        config.initialize_with_backup =
+                            matches!(parts[1].to_lowercase().as_str(), "true")
                     }
                     "backup_file" => config.backup_file = parts[1].trim_matches('"').to_string(),
                     "segs_to_backup" => {

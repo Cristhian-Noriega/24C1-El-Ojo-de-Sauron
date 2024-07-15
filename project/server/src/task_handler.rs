@@ -713,7 +713,6 @@ impl TaskHandler {
             Some(file) => file.clone(),
             None => return,
         };
-
         let serialized_data = self.serialize();
 
         // Spawn a thread to serialize and write the data to a file as I/O operations are blocking
