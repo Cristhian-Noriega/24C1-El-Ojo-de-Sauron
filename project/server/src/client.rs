@@ -19,7 +19,12 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new(id: Vec<u8>, stream: Option<TcpStream>, _clean_session: bool, _keep_alive: u16) -> Client {
+    pub fn new(
+        id: Vec<u8>,
+        stream: Option<TcpStream>,
+        _clean_session: bool,
+        _keep_alive: u16,
+    ) -> Client {
         Client {
             id,
             subscriptions: Vec::new(),

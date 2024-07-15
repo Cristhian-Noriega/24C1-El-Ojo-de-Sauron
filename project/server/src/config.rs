@@ -115,8 +115,11 @@ impl Config {
         }
     }
 
+    pub fn get_initialize_with_backup(&self) -> bool {
+        self.initialize_with_backup
+    }
+
     pub fn get_segs_to_backup(&self) -> u32 {
         self.segs_to_backup
     }
-
 }

@@ -85,7 +85,7 @@ impl TopicName {
             server_reserved: false, // Or handle the server_reserved field appropriately if needed
         })
     }
-    
+
     /// Returns the levels of the topic.
     pub fn levels(&self) -> &Vec<Vec<u8>> {
         &self.levels

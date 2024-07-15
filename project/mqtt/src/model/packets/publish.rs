@@ -118,53 +118,6 @@ impl Publish {
         packet_bytes
     }
 
-    pub fn serialize(&self) -> String {
-        let mut serialized = String::new();
-        serialized.push_str(&format!("{{\"dup\":{},", self.dup));
-        serialized.push_str(&format!("\"qos\":{},", self.qos.to_byte()));
-        serialized.push_str(&format!("\"retain\":{},", self.retain));
-        serialized.push_str(&format!("\"topic\":\"{}\",", String::from_utf8_lossy(&self.topic.to_bytes())));
-        serialized.push_str(&format!("\"package_identifier\":{},", self.package_identifier.unwrap_or(0)));
-        serialized.push_str(&format!("\"message\":\"{}\"}}", String::from_utf8_lossy(&self.message)));
-        serialized
-    }
-
-    pub fn deserialize(s: &str) -> Result<Publish, String> {
-        let s = s.trim().trim_start_matches('{').trim_end_matches('}');
-        let parts: Vec<&str> = s.split(',').collect();
-
-        let dup_str = parts[0].trim().trim_start_matches("\"dup\":");
-        let dup = dup_str.parse::<bool>().map_err(|e| e.to_string())?;
-
-        let qos_str = parts[1].trim().trim_start_matches("\"qos\":");
-        let qos = match qos_str.parse::<u8>().map_err(|e| e.to_string())? {
-            0 => QoS::AtMost,
-            1 => QoS::AtLeast,
-            2 => QoS::Exactly,
-            _ => return Err("Invalid QoS value".to_string()),
-        };
-
-        let retain_str = parts[2].trim().trim_start_matches("\"retain\":");
-        let retain = retain_str.parse::<bool>().map_err(|e| e.to_string())?;
-
-        let topic_str = parts[3].trim().trim_start_matches("\"topic\":\"").trim_end_matches("\"");
-        let topic = TopicName::deserialize(topic_str)?;
-
-        let package_identifier_str = parts[4].trim().trim_start_matches("\"package_identifier\":");
-        let package_identifier = package_identifier_str.parse::<u16>().ok();
-
-        let message_str = parts[5].trim().trim_start_matches("\"message\":\"").trim_end_matches("\"");
-        let message = message_str.as_bytes().to_vec();
-
-        Ok(Publish {
-            dup,
-            qos,
-            retain,
-            topic,
-            package_identifier,
-            message,
-        })
-    }
     /// Returns whether the packet is duplicated.
     pub fn dup(&self) -> bool {
         self.dup

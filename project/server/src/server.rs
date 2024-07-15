@@ -47,15 +47,14 @@ impl Server {
         let client_manager = ClientManager::new(config.get_login_file());
         // let backup_file = config.get_backup_file();
         let client_manager = Arc::new(RwLock::new(client_manager));
-        
-        
+
         let task_handler = TaskHandler::new(
             client_actions_receiver,
             &config,
             client_manager.clone(),
             log_file.clone(),
         );
-        
+
         task_handler.initialize_task_handler_thread();
 
         Ok(Server {

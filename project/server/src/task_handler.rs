@@ -1,8 +1,15 @@
 use std::{
-    collections::{HashMap, HashSet, VecDeque}, io::{Read, Write}, sync::{mpsc, Arc, RwLock}, thread, time::{Duration, Instant}
+    collections::{HashMap, HashSet, VecDeque},
+    io::{Read, Write},
+    sync::{mpsc, Arc, RwLock},
+    thread,
+    time::{Duration, Instant},
 };
 
-use crate::{client::Client, client_manager::ClientManager, config::Config, error::ServerResult, logfile::Logger};
+use crate::{
+    client::Client, client_manager::ClientManager, config::Config, error::ServerResult,
+    logfile::Logger,
+};
 
 use mqtt::model::packet::Packet;
 
@@ -31,6 +38,10 @@ const ADMIN_ID: &[u8] = b"admin";
 const CLIENT_REGISTER: &[u8] = b"$client-register";
 const SEPARATOR: u8 = b';';
 
+const RETAINED_MESSAGES_TAG: &str = "R";
+const OFFLINE_MESSAGES_TAG: &str = "O";
+const CLIENTS_TAG: &str = "C";
+
 /// Represents the task handler that will handle all the tasks that the server needs to process
 #[derive(Debug)]
 pub struct TaskHandler {
@@ -45,7 +56,6 @@ pub struct TaskHandler {
     backup_file: Option<String>,
     segs_to_backup: u32,
 }
-
 
 impl TaskHandler {
     /// Creates a new task handler with the specified receiver channel, logger and client manager
@@ -67,7 +77,7 @@ impl TaskHandler {
             client_manager,
             key,
             backup_file,
-            segs_to_backup
+            segs_to_backup,
         }
     }
 
@@ -77,32 +87,69 @@ impl TaskHandler {
         client_manager: Arc<RwLock<ClientManager>>,
         log_file: Arc<Logger>,
     ) -> Self {
-
         let backup_file = config.get_backup_file();
+        let initialize_with_backup = config.get_initialize_with_backup();
         let key = *config.get_key();
         let segs_to_backup = config.get_segs_to_backup();
-        
+
+        if !initialize_with_backup {
+            log_file.info("Initializing server without backup");
+            return TaskHandler::default(
+                client_actions_receiver_channel,
+                log_file,
+                client_manager,
+                key,
+                segs_to_backup,
+                backup_file,
+            );
+        }
+
         match backup_file {
-            Some(backup_file_string) => {
-                let new_task_handler = match File::open(backup_file_string.clone()) {
-                    Ok(mut file) => {
-                        let mut data = String::new();
-                        if let Err(e) = file.read_to_string(&mut data) {
-                            eprintln!("Failed to read backup file: {}", e);
-                            return TaskHandler::default(client_actions_receiver_channel, log_file, client_manager, key, segs_to_backup, Some(backup_file_string.clone()));
-                        }
-        
-                        TaskHandler::deserialize(&data, client_manager.clone(), log_file.clone(), config, client_actions_receiver_channel)
+            Some(backup_file_string) => match File::open(backup_file_string.clone()) {
+                Ok(mut file) => {
+                    let mut data = String::new();
+                    if file.read_to_string(&mut data).is_err() {
+                        log_file
+                            .info("Error reading backup file. Initializing server without backup");
+                        return TaskHandler::default(
+                            client_actions_receiver_channel,
+                            log_file,
+                            client_manager,
+                            key,
+                            segs_to_backup,
+                            Some(backup_file_string.clone()),
+                        );
                     }
-                    Err(_) => {
-                        eprintln!("Backup file not found, initializing empty TaskHandler.");
-                        return TaskHandler::default(client_actions_receiver_channel, log_file, client_manager, key, segs_to_backup, Some(backup_file_string.clone()));
-                    }
-                };
-        
-                new_task_handler
-            }
-            None => TaskHandler::default(client_actions_receiver_channel, log_file, client_manager, key, segs_to_backup, backup_file),
+
+                    log_file.info("Initializing server with backup");
+                    TaskHandler::deserialize(
+                        &data,
+                        client_manager.clone(),
+                        log_file.clone(),
+                        config,
+                        client_actions_receiver_channel,
+                    )
+                }
+                Err(_) => {
+                    log_file.info("Error opening backup file. Initializing server without backup");
+                    TaskHandler::default(
+                        client_actions_receiver_channel,
+                        log_file,
+                        client_manager,
+                        key,
+                        segs_to_backup,
+                        Some(backup_file_string.clone()),
+                    )
+                }
+            },
+            None => TaskHandler::default(
+                client_actions_receiver_channel,
+                log_file,
+                client_manager,
+                key,
+                segs_to_backup,
+                backup_file,
+            ),
         }
     }
 
@@ -131,8 +178,8 @@ impl TaskHandler {
                 }
             }
 
-            if self.backup_file != None && last_backup.elapsed() >= backup_interval {
-                println!("Backing up server data");
+            if self.backup_file.is_some() && last_backup.elapsed() >= backup_interval {
+                self.log_file.info("Backing up server data");
                 self.backup_data();
                 last_backup = Instant::now();
             }
@@ -504,7 +551,8 @@ impl TaskHandler {
         for (client, queue) in &self.offline_messages {
             for publish in queue {
                 serialized_data.push_str(&format!(
-                    "O;{};{}\n",
+                    "{};{};{}\n",
+                    OFFLINE_MESSAGES_TAG,
                     bytes_to_hex(client),
                     bytes_to_hex(&publish.to_bytes(&self.key))
                 ));
@@ -515,7 +563,8 @@ impl TaskHandler {
         for (topic_name, messages) in &self.retained_messages {
             for message in messages {
                 serialized_data.push_str(&format!(
-                    "R;{};{}\n",
+                    "{};{};{}\n",
+                    RETAINED_MESSAGES_TAG,
                     bytes_to_hex(&topic_name.to_bytes()),
                     bytes_to_hex(&message.to_bytes(&self.key))
                 ));
@@ -527,17 +576,13 @@ impl TaskHandler {
         for (id, client) in clients_read.iter() {
             for sub in &client.subscriptions {
                 serialized_data.push_str(&format!(
-                    "C;{};{}\n",
+                    "{};{};{}\n",
+                    CLIENTS_TAG,
                     bytes_to_hex(id),
                     bytes_to_hex(&sub.to_bytes())
                 ));
             }
         }
-
-        println!("Serialized data");
-        println!("Offline messages: {:?}", &self.offline_messages);
-        println!("Retained messages: {:?}", &self.retained_messages);
-        println!("Clients: {:?}", &self.clients);
 
         serialized_data
     }
@@ -549,7 +594,7 @@ impl TaskHandler {
         config: &Config,
         receiver_channel: mpsc::Receiver<Task>,
     ) -> TaskHandler {
-        let key = config.get_key().clone();
+        let key = *config.get_key();
         let mut offline_messages = HashMap::new();
         let mut retained_messages = HashMap::new();
         let mut clients = HashMap::new();
@@ -571,37 +616,42 @@ impl TaskHandler {
             };
 
             let mut value_stream = std::io::Cursor::new(value);
-            
+
             match record_type {
-                "O" => {
-                    let publish = match Packet::from_bytes(&mut value_stream, &key).unwrap(){
+                OFFLINE_MESSAGES_TAG => {
+                    let publish = match Packet::from_bytes(&mut value_stream, &key).unwrap() {
                         Packet::Publish(publish) => publish,
                         _ => continue,
                     };
-                    offline_messages.entry(entry_key).or_insert_with(VecDeque::new).push_back(publish);
+                    offline_messages
+                        .entry(entry_key)
+                        .or_insert_with(VecDeque::new)
+                        .push_back(publish);
                 }
-                "R" => {
+                RETAINED_MESSAGES_TAG => {
                     let mut entry_stream = std::io::Cursor::new(entry_key);
 
                     let topic_name = TopicName::from_bytes(&mut entry_stream).unwrap();
-                    let message = match Packet::from_bytes(&mut value_stream, &key).unwrap(){
+                    let message = match Packet::from_bytes(&mut value_stream, &key).unwrap() {
                         Packet::Publish(publish) => publish,
                         _ => continue,
                     };
-                    retained_messages.entry(topic_name).or_insert_with(VecDeque::new).push_back(message);
+                    retained_messages
+                        .entry(topic_name)
+                        .or_insert_with(VecDeque::new)
+                        .push_back(message);
                 }
-                "C" => {
+                CLIENTS_TAG => {
                     let subscription = TopicFilter::from_bytes(&mut value_stream).unwrap();
-                    clients.entry(entry_key.clone()).or_insert_with(|| Client::new_from_backup(entry_key.clone(), Vec::new())).subscriptions.push(subscription);
+                    clients
+                        .entry(entry_key.clone())
+                        .or_insert_with(|| Client::new_from_backup(entry_key.clone(), Vec::new()))
+                        .subscriptions
+                        .push(subscription);
                 }
                 _ => {}
             }
         }
-
-        println!("Deserialized data");
-        println!("Offline messages: {:?}", offline_messages);
-        println!("Retained messages: {:?}", retained_messages);
-        println!("Clients: {:?}", clients);
 
         let clients_lock = RwLock::new(clients);
 
@@ -620,7 +670,7 @@ impl TaskHandler {
     }
 
     pub fn backup_data(&self) {
-        let backup_file_path_copy = match &self.backup_file{
+        let backup_file_path_copy = match &self.backup_file {
             Some(file) => file.clone(),
             None => return,
         };
@@ -639,13 +689,16 @@ impl TaskHandler {
             if let Err(e) = file.write_all(serialized_data.as_bytes()) {
                 eprintln!("Failed to write to backup file: {}", e);
             }
-
         });
     }
 }
 
 fn bytes_to_hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join("")
+    bytes
+        .iter()
+        .map(|b| format!("{:02X}", b))
+        .collect::<Vec<_>>()
+        .join("")
 }
 
 fn hex_to_bytes(hex: &str) -> Result<Vec<u8>, String> {
