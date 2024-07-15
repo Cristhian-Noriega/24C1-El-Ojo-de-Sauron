@@ -370,13 +370,7 @@ fn image_recognition(
 
                 // println!("Image found: {}", path);
                 thread_pool.execute(move || {
-                    analyze_image(
-                        server_stream,
-                        &mut camera,
-                        path,
-                        &key,
-                        &config
-                    );
+                    analyze_image(server_stream, &mut camera, path, &key, &config);
                 });
                 // println!("Image analyzed");
             }
@@ -448,7 +442,6 @@ fn analyze_image(
             return;
         }
     };
-
 
     camera.add_seen_image(&path);
     let posible_label = rt.block_on(is_incident(config, path.as_str()));

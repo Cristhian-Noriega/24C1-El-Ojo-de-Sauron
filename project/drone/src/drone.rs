@@ -158,7 +158,6 @@ impl Drone {
         self.status.clone()
     }
 
-
     /// Increments the attending counter of the drone
     pub fn increment_attending_counter(&mut self) {
         self.current_incident_count += 1;
@@ -201,7 +200,6 @@ impl Drone {
             || self.status == DroneStatus::Travelling(TravelLocation::Anchor)
     }
 }
-
 
 #[cfg(test)]
 mod tests {
