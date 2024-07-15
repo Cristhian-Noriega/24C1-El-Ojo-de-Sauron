@@ -1,7 +1,7 @@
 use common::coordenate::Coordenate;
-use std::{fs::File, io::Read, path::Path};
 use std::collections::HashMap;
 use std::io;
+use std::{fs::File, io::Read, path::Path};
 
 /// Represents the configuration of the camera system
 #[derive(Debug, Clone)]
@@ -12,6 +12,7 @@ pub struct Config {
     password: String,
     key: String,
     active_range: f64,
+    images_folder: String,
     cameras: Vec<Coordenate>,
 }
 
@@ -36,10 +37,17 @@ impl Config {
                     current_camera.clear();
                 } else if line.starts_with('}') {
                     if let (Some(x), Some(y)) = (
-                        current_camera.get("x_coordinate").and_then(|v: &String| v.parse::<f64>().ok()),
-                        current_camera.get("y_coordinate").and_then(|v: &String| v.parse::<f64>().ok()),
+                        current_camera
+                            .get("x_coordinate")
+                            .and_then(|v: &String| v.parse::<f64>().ok()),
+                        current_camera
+                            .get("y_coordinate")
+                            .and_then(|v: &String| v.parse::<f64>().ok()),
                     ) {
-                        cameras.push(Coordenate { x_coordinate: x, y_coordinate: y });
+                        cameras.push(Coordenate {
+                            x_coordinate: x,
+                            y_coordinate: y,
+                        });
                     }
                     current_camera.clear();
                 } else {
@@ -64,16 +72,33 @@ impl Config {
                 }
 
                 config_map.insert(key.to_string(), value.to_string());
-            }            
+            }
         }
 
         Ok(Config {
-            address: config_map.remove("address").ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing address"))?,
-            id: config_map.remove("id").ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing id"))?,
-            username: config_map.remove("username").ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing username"))?,
-            password: config_map.remove("password").ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing password"))?,
-            key: config_map.remove("key").ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing key"))?,
-            active_range: config_map.remove("active_range").ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing active range"))?.parse::<f64>().map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid active_range"))?,
+            address: config_map
+                .remove("address")
+                .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing address"))?,
+            id: config_map
+                .remove("id")
+                .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing id"))?,
+            username: config_map
+                .remove("username")
+                .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing username"))?,
+            password: config_map
+                .remove("password")
+                .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing password"))?,
+            key: config_map
+                .remove("key")
+                .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing key"))?,
+            active_range: config_map
+                .remove("active_range")
+                .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing active range"))?
+                .parse::<f64>()
+                .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid active_range"))?,
+            images_folder: config_map.remove("images_folder").ok_or_else(|| {
+                io::Error::new(io::ErrorKind::InvalidData, "Missing images folder")
+            })?,
             cameras,
         })
     }
@@ -111,5 +136,10 @@ impl Config {
     /// Returns the cameras of the camera system
     pub fn get_cameras(&self) -> Vec<Coordenate> {
         self.cameras.clone()
+    }
+
+    /// Returns the path of the root images folder
+    pub fn get_images_folder(&self) -> String {
+        self.images_folder.clone()
     }
 }

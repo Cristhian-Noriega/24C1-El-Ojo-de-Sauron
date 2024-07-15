@@ -151,6 +151,14 @@ fn update_cameras(cameras: &mut Vec<Camera>, camera: Camera) {
     cameras.push(camera);
 }
 
+/// Handles the incident detection and sends it to the monitor
+fn detected_incident(incident_registration: IncidentRegistration, sender: &Sender<UIAction>) {
+    match sender.send(UIAction::RegistrateIncident(incident_registration)) {
+        Ok(_) => {}
+        Err(_) => println!("Error creating incident"),
+    }
+}
+
 /// Handles the right clicks in the map to open the incident registration menu with coordenates selected
 fn handle_right_clicks(
     ui: &mut Ui,
@@ -608,6 +616,9 @@ impl eframe::App for UIApplication {
                 Ok(MonitorAction::Camera(camera)) => {
                     update_cameras(&mut self.cameras, camera);
                 }
+                Ok(MonitorAction::DetectedIncident(incident_registration)) => {
+                    detected_incident(incident_registration, &self.sender);
+                }
                 Err(_) => break,
             }
         }
@@ -720,6 +731,7 @@ fn update_places(
             DroneStatus::Travelling(TravelLocation::Anchor) => Color32::BLACK,
             DroneStatus::Travelling(TravelLocation::Incident) => Color32::from_rgb(255, 79, 0),
             DroneStatus::Recharging => Color32::GREEN,
+            DroneStatus::Interrupted => Color32::BLACK,
         };
 
         if activity_cordenates.contains(&(drone.x_coordinate, drone.y_coordinate)) {

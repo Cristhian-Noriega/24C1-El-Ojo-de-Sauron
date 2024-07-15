@@ -15,6 +15,19 @@ Para ver la documentación se recomienda utilizar el siguiente comando:
 cargo doc --no-deps --open
 ```
 
+## Preparación
+Para poder utilizar la función de reconocimiento de imagenes en el sistema de camaras es necesario tener configuradas las credenciales de AWS
+
+```sh
+aws configure
+```
+
+Podemos comprobar nuestras credenciales con
+
+```sh
+cat ~/.aws/credentials 
+```
+
 ## Como usar
 
 Una manera rápida de ejecutar todo el sistema es utilizando el ejecutable run.sh siendo n la cantidad de drones.

@@ -1,20 +1,28 @@
 use std::{
     collections::{HashMap, HashSet, VecDeque},
-    io::Write,
+    io::{Read, Write},
     sync::{mpsc, Arc, RwLock},
-    time::Duration,
+    thread,
+    time::{Duration, Instant},
 };
 
-use crate::{client::Client, client_manager::ClientManager, error::ServerResult, logfile::Logger};
+use crate::{
+    client::Client, client_manager::ClientManager, config::Config, error::ServerResult,
+    logfile::Logger,
+};
+
+use mqtt::model::packet::Packet;
 
 use mqtt::model::{
-    components::{qos::QoS, topic_name::TopicName},
+    components::{qos::QoS, topic_filter::TopicFilter, topic_name::TopicName},
     packets::{
         connack::Connack, pingresp::Pingresp, puback::Puback, publish::Publish, suback::Suback,
         subscribe::Subscribe, unsuback::Unsuback, unsubscribe::Unsubscribe,
     },
     return_codes::{connect_return_code::ConnectReturnCode, suback_return_code::SubackReturnCode},
 };
+
+use std::fs::File;
 
 /// Represents the different tasks that the task handler can perform
 pub enum Task {
@@ -30,6 +38,10 @@ const ADMIN_ID: &[u8] = b"admin";
 const CLIENT_REGISTER: &[u8] = b"$client-register";
 const SEPARATOR: u8 = b';';
 
+const RETAINED_MESSAGES_TAG: &str = "R";
+const OFFLINE_MESSAGES_TAG: &str = "O";
+const CLIENTS_TAG: &str = "C";
+
 /// Represents the task handler that will handle all the tasks that the server needs to process
 #[derive(Debug)]
 pub struct TaskHandler {
@@ -41,15 +53,19 @@ pub struct TaskHandler {
     log_file: Arc<Logger>,
     client_manager: Arc<RwLock<ClientManager>>,
     key: [u8; 32],
+    backup_file: Option<String>,
+    segs_to_backup: u32,
 }
 
 impl TaskHandler {
     /// Creates a new task handler with the specified receiver channel, logger and client manager
-    pub fn new(
+    pub fn default(
         receiver_channel: mpsc::Receiver<Task>,
         log_file: Arc<Logger>,
         client_manager: Arc<RwLock<ClientManager>>,
         key: [u8; 32],
+        segs_to_backup: u32,
+        backup_file: Option<String>,
     ) -> Self {
         TaskHandler {
             client_actions_receiver_channel: receiver_channel,
@@ -60,6 +76,80 @@ impl TaskHandler {
             log_file,
             client_manager,
             key,
+            backup_file,
+            segs_to_backup,
+        }
+    }
+
+    pub fn new(
+        client_actions_receiver_channel: mpsc::Receiver<Task>,
+        config: &Config,
+        client_manager: Arc<RwLock<ClientManager>>,
+        log_file: Arc<Logger>,
+    ) -> Self {
+        let backup_file = config.get_backup_file();
+        let initialize_with_backup = config.get_initialize_with_backup();
+        let key = *config.get_key();
+        let segs_to_backup = config.get_segs_to_backup();
+
+        if !initialize_with_backup {
+            log_file.info("Initializing server without backup");
+            return TaskHandler::default(
+                client_actions_receiver_channel,
+                log_file,
+                client_manager,
+                key,
+                segs_to_backup,
+                backup_file,
+            );
+        }
+
+        match backup_file {
+            Some(backup_file_string) => match File::open(backup_file_string.clone()) {
+                Ok(mut file) => {
+                    let mut data = String::new();
+                    if file.read_to_string(&mut data).is_err() {
+                        log_file
+                            .info("Error reading backup file. Initializing server without backup");
+                        return TaskHandler::default(
+                            client_actions_receiver_channel,
+                            log_file,
+                            client_manager,
+                            key,
+                            segs_to_backup,
+                            Some(backup_file_string.clone()),
+                        );
+                    }
+
+                    log_file.info("Initializing server with backup");
+                    TaskHandler::deserialize(
+                        &data,
+                        client_manager.clone(),
+                        log_file.clone(),
+                        config,
+                        client_actions_receiver_channel,
+                    )
+                }
+                Err(_) => {
+                    log_file.info("Error opening backup file. Initializing server without backup");
+                    TaskHandler::default(
+                        client_actions_receiver_channel,
+                        log_file,
+                        client_manager,
+                        key,
+                        segs_to_backup,
+                        Some(backup_file_string.clone()),
+                    )
+                }
+            },
+            None => TaskHandler::default(
+                client_actions_receiver_channel,
+                log_file,
+                client_manager,
+                key,
+                segs_to_backup,
+                backup_file,
+            ),
         }
     }
 
@@ -72,6 +162,9 @@ impl TaskHandler {
 
     /// Runs the task handler in a loop
     pub fn run(mut self) {
+        let backup_interval = Duration::from_secs(self.segs_to_backup as u64);
+        let mut last_backup = std::time::Instant::now();
+
         loop {
             match self.client_actions_receiver_channel.recv() {
                 Ok(task) => {
@@ -83,6 +176,12 @@ impl TaskHandler {
                     std::thread::sleep(Duration::from_secs(1));
                     continue;
                 }
+            }
+
+            if self.backup_file.is_some() && last_backup.elapsed() >= backup_interval {
+                self.log_file.info("Backing up server data");
+                self.backup_data();
+                last_backup = Instant::now();
             }
         }
     }
@@ -314,9 +413,9 @@ impl TaskHandler {
             }
         };
 
-        let mut stream = match client.stream.lock() {
-            Ok(stream) => stream,
-            Err(_) => {
+        let mut stream = match &client.stream {
+            Some(stream) => stream,
+            None => {
                 self.log_file
                     .log_error_getting_stream(&client_id, "Connack");
                 return Ok(());
@@ -342,7 +441,6 @@ impl TaskHandler {
 
     /// Send a suback packet to a client
     pub fn suback(&self, package_identifier: u16, client: &mut Client) {
-        //return code hardcodeado
         let suback_packet = Suback::new(
             package_identifier,
             vec![SubackReturnCode::SuccessMaximumQoS0],
@@ -350,11 +448,11 @@ impl TaskHandler {
         let suback_packet_vec = suback_packet.to_bytes(&self.key);
         let suback_packet_bytes = suback_packet_vec.as_slice();
 
-        let mut stream = match client.stream.lock() {
-            Ok(stream) => stream,
-            Err(_) => {
+        let mut stream = match &client.stream {
+            Some(stream) => stream,
+            None => {
                 self.log_file
-                    .log_error_getting_stream(&client.id(), "suback");
+                    .log_error_getting_stream(&client.id, "Connack");
                 return;
             }
         };
@@ -373,11 +471,11 @@ impl TaskHandler {
         let puback_packet_vec = puback_packet.to_bytes(&self.key);
         let puback_packet_bytes = puback_packet_vec.as_slice();
 
-        let mut stream = match client.stream.lock() {
-            Ok(stream) => stream,
-            Err(_) => {
+        let mut stream = match &client.stream {
+            Some(stream) => stream,
+            None => {
                 self.log_file
-                    .log_error_getting_stream(&client.id(), "puback");
+                    .log_error_getting_stream(&client.id, "Connack");
                 return;
             }
         };
@@ -396,11 +494,11 @@ impl TaskHandler {
         let unsuback_packet_vec = unsuback_packet.to_bytes(&self.key);
         let unsuback_packet_bytes = unsuback_packet_vec.as_slice();
 
-        let mut stream = match client.stream.lock() {
-            Ok(stream) => stream,
-            Err(_) => {
+        let mut stream = match &client.stream {
+            Some(stream) => stream,
+            None => {
                 self.log_file
-                    .log_error_getting_stream(&client.id(), "Unsuback");
+                    .log_error_getting_stream(&client.id, "Connack");
                 return;
             }
         };
@@ -428,11 +526,11 @@ impl TaskHandler {
         let pingresp_packet_vec = pingresp_packet.to_bytes(&self.key);
         let pingresp_packet_bytes = pingresp_packet_vec.as_slice();
 
-        let mut stream = match client.stream.lock() {
-            Ok(stream) => stream,
-            Err(_) => {
+        let mut stream = match &client.stream {
+            Some(stream) => stream,
+            None => {
                 self.log_file
-                    .log_error_getting_stream(&client_id, "Ping response");
+                    .log_error_getting_stream(&client.id, "Connack");
                 return Ok(());
             }
         };
@@ -458,4 +556,167 @@ impl TaskHandler {
             .disconnect_client(client_id.clone())?;
         Ok(())
     }
+
+    fn serialize(&self) -> String {
+        let mut serialized_data = String::new();
+
+        // Serialize offline_messages
+        for (client, queue) in &self.offline_messages {
+            for publish in queue {
+                serialized_data.push_str(&format!(
+                    "{};{};{}\n",
+                    OFFLINE_MESSAGES_TAG,
+                    bytes_to_hex(client),
+                    bytes_to_hex(&publish.to_bytes(&self.key))
+                ));
+            }
+        }
+
+        // Serialize retained_messages
+        for (topic_name, messages) in &self.retained_messages {
+            for message in messages {
+                serialized_data.push_str(&format!(
+                    "{};{};{}\n",
+                    RETAINED_MESSAGES_TAG,
+                    bytes_to_hex(&topic_name.to_bytes()),
+                    bytes_to_hex(&message.to_bytes(&self.key))
+                ));
+            }
+        }
+
+        // Serialize clients
+        let clients_read = self.clients.read().unwrap(); // Acquiring a read lock
+        for (id, client) in clients_read.iter() {
+            for sub in &client.subscriptions {
+                serialized_data.push_str(&format!(
+                    "{};{};{}\n",
+                    CLIENTS_TAG,
+                    bytes_to_hex(id),
+                    bytes_to_hex(&sub.to_bytes())
+                ));
+            }
+        }
+
+        serialized_data
+    }
+
+    fn deserialize(
+        serialized_data: &str,
+        client_manager: Arc<RwLock<ClientManager>>,
+        log_file: Arc<Logger>,
+        config: &Config,
+        receiver_channel: mpsc::Receiver<Task>,
+    ) -> TaskHandler {
+        let key = *config.get_key();
+        let mut offline_messages = HashMap::new();
+        let mut retained_messages = HashMap::new();
+        let mut clients = HashMap::new();
+
+        for line in serialized_data.lines() {
+            let parts: Vec<&str> = line.split(';').collect();
+            if parts.len() != 3 {
+                continue;
+            }
+
+            let record_type = parts[0];
+            let entry_key = match hex_to_bytes(parts[1]) {
+                Ok(k) => k,
+                Err(_) => continue,
+            };
+            let value = match hex_to_bytes(parts[2]) {
+                Ok(v) => v,
+                Err(_) => continue,
+            };
+
+            let mut value_stream = std::io::Cursor::new(value);
+
+            match record_type {
+                OFFLINE_MESSAGES_TAG => {
+                    let publish = match Packet::from_bytes(&mut value_stream, &key).unwrap() {
+                        Packet::Publish(publish) => publish,
+                        _ => continue,
+                    };
+                    offline_messages
+                        .entry(entry_key)
+                        .or_insert_with(VecDeque::new)
+                        .push_back(publish);
+                }
+                RETAINED_MESSAGES_TAG => {
+                    let mut entry_stream = std::io::Cursor::new(entry_key);
+
+                    let topic_name = TopicName::from_bytes(&mut entry_stream).unwrap();
+                    let message = match Packet::from_bytes(&mut value_stream, &key).unwrap() {
+                        Packet::Publish(publish) => publish,
+                        _ => continue,
+                    };
+                    retained_messages
+                        .entry(topic_name)
+                        .or_insert_with(VecDeque::new)
+                        .push_back(message);
+                }
+                CLIENTS_TAG => {
+                    let subscription = TopicFilter::from_bytes(&mut value_stream).unwrap();
+                    clients
+                        .entry(entry_key.clone())
+                        .or_insert_with(|| Client::new_from_backup(entry_key.clone(), Vec::new()))
+                        .subscriptions
+                        .push(subscription);
+                }
+                _ => {}
+            }
+        }
+
+        let clients_lock = RwLock::new(clients);
+
+        TaskHandler {
+            client_actions_receiver_channel: receiver_channel,
+            clients: clients_lock,
+            active_connections: HashSet::new(),
+            offline_messages,
+            retained_messages,
+            log_file,
+            client_manager,
+            key,
+            backup_file: config.get_backup_file(),
+            segs_to_backup: config.get_segs_to_backup(),
+        }
+    }
+
+    pub fn backup_data(&self) {
+        let backup_file_path_copy = match &self.backup_file {
+            Some(file) => file.clone(),
+            None => return,
+        };
+
+        let serialized_data = self.serialize();
+
+        // Spawn a thread to serialize and write the data to a file as I/O operations are blocking
+        thread::spawn(move || {
+            let mut file = match File::create(backup_file_path_copy) {
+                Ok(file) => file,
+                Err(e) => {
+                    eprintln!("Failed to create/open backup file: {}", e);
+                    return;
+                }
+            };
+            if let Err(e) = file.write_all(serialized_data.as_bytes()) {
+                eprintln!("Failed to write to backup file: {}", e);
+            }
+        });
+    }
+}
+
+fn bytes_to_hex(bytes: &[u8]) -> String {
+    bytes
+        .iter()
+        .map(|b| format!("{:02X}", b))
+        .collect::<Vec<_>>()
+        .join("")
+}
+
+fn hex_to_bytes(hex: &str) -> Result<Vec<u8>, String> {
+    (0..hex.len())
+        .step_by(2)
+        .map(|i| u8::from_str_radix(&hex[i..i + 2], 16).map_err(|e| e.to_string()))
+        .collect()
 }

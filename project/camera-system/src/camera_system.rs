@@ -71,6 +71,24 @@ impl CameraSystem {
 
         self.active_incidents.remove(incident_id);
     }
+
+    /// Mutable reference to the cameras
+    pub fn sleeping_cameras(&mut self) -> Vec<Camera> {
+        self.cameras
+            .iter_mut()
+            .filter(|camera| camera.is_sleeping())
+            .map(|camera| camera.clone())
+            .collect()
+    }
+
+    /// Adds a seen image to the camera by camera id
+    pub fn add_seen_image(&mut self, camera_id: u8, image: &str) {
+        for camera in &mut self.cameras {
+            if camera.id() == camera_id {
+                camera.add_seen_image(image);
+            }
+        }
+    }
 }
 
 #[cfg(test)]
