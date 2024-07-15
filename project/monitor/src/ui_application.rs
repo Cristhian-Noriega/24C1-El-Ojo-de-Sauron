@@ -120,7 +120,7 @@ fn update_drones(drones: &mut Vec<Drone>, drone: Drone) {
         let drone_id_num = drone.id.parse::<usize>().unwrap_or(0);
         id_num.cmp(&drone_id_num)
     };
-    
+
     match drones.binary_search_by(compare_drones) {
         Ok(pos) => drones[pos] = drone, // If the drone exists, update it
         Err(pos) => drones.insert(pos, drone), // If the drone doesn't exist, insert it at the correct position
@@ -316,7 +316,7 @@ fn display_edit_incident(
                             .clicked()
                         {
                             // Actualizar el UUID seleccionado en edit_incident
-                            edit_incident.uuid = uuid.clone();
+                            edit_incident.uuid.clone_from(uuid);
                         }
                     }
                 });

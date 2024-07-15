@@ -1,15 +1,15 @@
+use aws_config::SdkConfig;
 use aws_sdk_rekognition::types::{builders::ImageBuilder, S3Object};
 use aws_sdk_s3::primitives::ByteStream;
-use aws_config::SdkConfig;
 use std::path::Path;
 
-const CONFIDENCE_THRESHOLD: f32 = 50.0;
 const BUCKET: &str = "fiuba-sauron";
 
 /// Uses AWS Rekognition to determine if an image contains an incident
 pub async fn is_incident(
     config: &SdkConfig,
     file_path: &str,
+    confidence_threshold: f32,
 ) -> Option<String> {
     let s3_client = aws_sdk_s3::Client::new(config);
     let rekognition_client = aws_sdk_rekognition::Client::new(config);
@@ -64,8 +64,8 @@ pub async fn is_incident(
 
     let response = request.send().await;
 
-    let mut best_label: Option<String> = None; 
-    let mut best_confidence: f32 = CONFIDENCE_THRESHOLD;
+    let mut best_label: Option<String> = None;
+    let mut best_confidence: f32 = confidence_threshold;
 
     if let Ok(response) = response {
         for label in response.labels() {
@@ -76,7 +76,7 @@ pub async fn is_incident(
                         best_confidence = confidence;
                     }
                 }
-                _ => continue
+                _ => continue,
             }
         }
         best_label

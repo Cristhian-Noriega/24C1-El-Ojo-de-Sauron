@@ -1,33 +1,3 @@
-const MINIMUM_BATTERY_LEVEL: usize = 20;
-const MAXIMUM_BATTERY_LEVEL: usize = 100;
-
-const BATTERY_DISCHARGE_TRAVELLING: usize = 2;
-const BATTERY_DISCHARGE_ATTENDING: usize = 2;
-const BATTERY_DISCHARGE_IDLE: usize = 1;
-const BATTERY_RECHARGE: usize = 5;
-
-pub struct BatteryConfig {
-    pub minimum_level: usize,
-    pub maximum_level: usize,
-    pub discharge_travelling: usize,
-    pub discharge_attending: usize,
-    pub discharge_idle: usize,
-    pub recharge_rate: usize,
-}
-
-impl Default for BatteryConfig {
-    fn default() -> Self {
-        BatteryConfig {
-            minimum_level: MINIMUM_BATTERY_LEVEL,
-            maximum_level: MAXIMUM_BATTERY_LEVEL,
-            discharge_travelling: BATTERY_DISCHARGE_TRAVELLING,
-            discharge_attending: BATTERY_DISCHARGE_ATTENDING,
-            discharge_idle: BATTERY_DISCHARGE_IDLE,
-            recharge_rate: BATTERY_RECHARGE,
-        }
-    }
-}
-
 /// Represents a position in the 2D space
 #[derive(Debug, Clone, Copy)]
 pub struct Position {

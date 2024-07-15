@@ -1,6 +1,6 @@
-use std::{fs::File, io::Read, path::Path};
 use std::collections::HashMap;
 use std::io;
+use std::{fs::File, io::Read, path::Path};
 
 /// Represents the configuration of a drone
 #[derive(Debug, Clone)]
@@ -39,21 +39,73 @@ impl Config {
                 continue;
             }
 
-            config_map.insert(key.to_string(), value.to_string());           
+            config_map.insert(key.to_string(), value.to_string());
         }
 
         Ok(Config {
-            address: config_map.remove("address").ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing address"))?,
-            key: config_map.remove("key").ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing key"))?,
-            id: config_map.remove("id").ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing id"))?.parse::<u8>().map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid id"))?,
-            username: config_map.remove("username").ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing username"))?,
-            password: config_map.remove("password").ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing password"))?,
-            x_central_position: config_map.remove("x_central_position").ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing x_central_position"))?.parse::<f64>().map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid x_central_position"))?,
-            y_central_position: config_map.remove("y_central_position").ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing y_central_position"))?.parse::<f64>().map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid y_central_position"))?,
-            x_anchor_position: config_map.remove("x_anchor_position").ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing x_anchor_position"))?.parse::<f64>().map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid x_anchor_position"))?,
-            y_anchor_position: config_map.remove("y_anchor_position").ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing y_anchor_position"))?.parse::<f64>().map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid y_anchor_position"))?,
-            velocity: config_map.remove("velocity").ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing velocity"))?.parse::<f64>().map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid velocity"))?,
-            active_range: config_map.remove("active_range").ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing active_range"))?.parse::<f64>().map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid active_range"))?,
+            address: config_map
+                .remove("address")
+                .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing address"))?,
+            key: config_map
+                .remove("key")
+                .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing key"))?,
+            id: config_map
+                .remove("id")
+                .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing id"))?
+                .parse::<u8>()
+                .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid id"))?,
+            username: config_map
+                .remove("username")
+                .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing username"))?,
+            password: config_map
+                .remove("password")
+                .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing password"))?,
+            x_central_position: config_map
+                .remove("x_central_position")
+                .ok_or_else(|| {
+                    io::Error::new(io::ErrorKind::InvalidData, "Missing x_central_position")
+                })?
+                .parse::<f64>()
+                .map_err(|_| {
+                    io::Error::new(io::ErrorKind::InvalidData, "Invalid x_central_position")
+                })?,
+            y_central_position: config_map
+                .remove("y_central_position")
+                .ok_or_else(|| {
+                    io::Error::new(io::ErrorKind::InvalidData, "Missing y_central_position")
+                })?
+                .parse::<f64>()
+                .map_err(|_| {
+                    io::Error::new(io::ErrorKind::InvalidData, "Invalid y_central_position")
+                })?,
+            x_anchor_position: config_map
+                .remove("x_anchor_position")
+                .ok_or_else(|| {
+                    io::Error::new(io::ErrorKind::InvalidData, "Missing x_anchor_position")
+                })?
+                .parse::<f64>()
+                .map_err(|_| {
+                    io::Error::new(io::ErrorKind::InvalidData, "Invalid x_anchor_position")
+                })?,
+            y_anchor_position: config_map
+                .remove("y_anchor_position")
+                .ok_or_else(|| {
+                    io::Error::new(io::ErrorKind::InvalidData, "Missing y_anchor_position")
+                })?
+                .parse::<f64>()
+                .map_err(|_| {
+                    io::Error::new(io::ErrorKind::InvalidData, "Invalid y_anchor_position")
+                })?,
+            velocity: config_map
+                .remove("velocity")
+                .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing velocity"))?
+                .parse::<f64>()
+                .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid velocity"))?,
+            active_range: config_map
+                .remove("active_range")
+                .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing active_range"))?
+                .parse::<f64>()
+                .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid active_range"))?,
         })
     }
 

@@ -82,6 +82,7 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
             camera_system_clone,
             images_folder,
             &key,
+            config.get_confidence_threshold(),
         );
     });
 
@@ -333,6 +334,7 @@ fn image_recognition(
     camera_system: Arc<Mutex<CameraSystem>>,
     images_folder: String,
     key: &[u8; 32],
+    confidence_threshold: f32,
 ) {
     let thread_pool = ThreadPool::new(CAMERA_THREADS_NUMBER);
 
@@ -375,7 +377,8 @@ fn image_recognition(
                         &mut camera,
                         path,
                         &key,
-                        &config
+                        &config,
+                        confidence_threshold,
                     );
                 });
                 // println!("Image analyzed");
@@ -440,6 +443,7 @@ fn analyze_image(
     path: String,
     key: &[u8; 32],
     config: &aws_config::SdkConfig,
+    confidence_threshold: f32,
 ) {
     let rt = match Runtime::new() {
         Ok(rt) => rt,
@@ -449,9 +453,8 @@ fn analyze_image(
         }
     };
 
-
     camera.add_seen_image(&path);
-    let posible_label = rt.block_on(is_incident(config, path.as_str()));
+    let posible_label = rt.block_on(is_incident(config, path.as_str(), confidence_threshold));
 
     if let Some(label) = posible_label {
         alert_incident(server_stream, camera, key, label);
