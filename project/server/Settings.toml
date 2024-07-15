@@ -4,5 +4,5 @@ log_file="server.log"
 login_file="Login.toml"
 segs_to_disconnect=30
 initialize_with_backup=false
-backup_file="Backup.toml"
+backup_file=""
 segs_to_backup=30

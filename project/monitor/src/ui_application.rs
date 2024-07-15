@@ -782,6 +782,26 @@ fn update_places(
             CameraStatus::Active => Color32::RED,
         };
 
+        if activity_cordenates.contains(&(camera.x_coordinate, camera.y_coordinate)) {
+            let overlapping_activities = places
+                .iter_mut()
+                .filter(|activity| {
+                    activity.position.lon() == camera.x_coordinate
+                        && activity.position.lat() == camera.y_coordinate
+                })
+                .collect::<Vec<&mut Place>>();
+            for overlapping_activity in overlapping_activities {
+                overlapping_activity.style.label_color = Color32::from_rgb(83, 0, 0);
+                overlapping_activity.label = format!(
+                    "{}, {}{}",
+                    overlapping_activity.label,
+                    CAMERA_SYMBOL,
+                    camera.id.clone()
+                );
+            }
+            continue;
+        }
+
         let place = Place {
             position: Position::from_lon_lat(camera.x_coordinate, camera.y_coordinate),
             label: format!(" {}", camera.id.clone()),
