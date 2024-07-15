@@ -534,6 +534,11 @@ impl TaskHandler {
             }
         }
 
+        println!("Serialized data");
+        println!("Offline messages: {:?}", &self.offline_messages);
+        println!("Retained messages: {:?}", &self.retained_messages);
+        println!("Clients: {:?}", &self.clients);
+
         serialized_data
     }
 
@@ -592,6 +597,11 @@ impl TaskHandler {
                 _ => {}
             }
         }
+
+        println!("Deserialized data");
+        println!("Offline messages: {:?}", offline_messages);
+        println!("Retained messages: {:?}", retained_messages);
+        println!("Clients: {:?}", clients);
 
         let clients_lock = RwLock::new(clients);
 
