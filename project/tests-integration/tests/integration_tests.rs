@@ -24,8 +24,8 @@ fn test_new_incident() {
     // Drone
     let mut drone = Drone::new(1, 1.0, 1.0, 1.0, 1.0, 1.0, 5.0);
     assert_eq!(drone.data(), "1;1;3;100");
-    drone.set_incident(Some(incident.clone()));
-    assert_eq!(drone.incident().unwrap(), incident);
+    drone.add_incident(incident.clone());
+    assert_eq!(drone.current_incident().unwrap(), incident);
     drone.set_status(DroneStatus::Travelling(TravelLocation::Incident));
     assert_eq!(
         drone.status(),
@@ -63,13 +63,13 @@ fn test_new_incident_gets_attended() {
 
     // Drone 1
     let mut drone = Drone::new(1, 1.0, 1.0, 1.0, 1.0, 1.0, 5.0);
-    drone.set_incident(Some(incident.clone()));
+    drone.add_incident(incident.clone());
     drone.set_status(DroneStatus::Travelling(TravelLocation::Incident));
     drone.travel_to(incident.x_coordinate, incident.y_coordinate);
 
     // Drone 2
     let mut drone2 = Drone::new(1, 2.0, 2.0, 1.0, 1.0, 1.0, 5.0);
-    drone2.set_incident(Some(incident.clone()));
+    drone2.add_incident(incident.clone());
     drone2.set_status(DroneStatus::Travelling(TravelLocation::Incident));
     drone2.travel_to(incident.x_coordinate, incident.y_coordinate);
 

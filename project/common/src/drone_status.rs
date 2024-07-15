@@ -5,6 +5,7 @@ pub enum DroneStatus {
     Travelling(TravelLocation),
     AttendingIncident,
     Recharging,
+    Interrupted,
 }
 
 /// Represents the location of the drone when travelling
@@ -24,6 +25,7 @@ impl std::fmt::Display for DroneStatus {
             DroneStatus::Travelling(TravelLocation::Anchor) => write!(f, "3"),
             DroneStatus::Travelling(TravelLocation::Incident) => write!(f, "4"),
             DroneStatus::Recharging => write!(f, "5"),
+            DroneStatus::Interrupted => write!(f, "6"),
         }
     }
 }
@@ -37,6 +39,7 @@ impl DroneStatus {
             DroneStatus::Travelling(TravelLocation::Anchor) => "Travelling to Anchor",
             DroneStatus::Travelling(TravelLocation::Incident) => "Travelling to Incident",
             DroneStatus::Recharging => "Charging",
+            DroneStatus::Interrupted => "Interrupted",
         }
     }
     pub fn get_status_from_str(string: &str) -> Self {
@@ -47,6 +50,7 @@ impl DroneStatus {
             "3" => DroneStatus::Travelling(TravelLocation::Anchor),
             "4" => DroneStatus::Travelling(TravelLocation::Incident),
             "5" => DroneStatus::Recharging,
+            "6" => DroneStatus::Interrupted,
             _ => DroneStatus::Free,
         }
     }
