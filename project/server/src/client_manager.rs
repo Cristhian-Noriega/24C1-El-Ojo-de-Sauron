@@ -187,18 +187,7 @@ impl ClientManager {
             Err(err) => {
                 println!("Error authenticating client: {:?}", err);
                 None
-            } // if self.authenticate_client(client_id.clone(), username, password) {
-              //     let stream = match stream.try_clone() {
-              //         Ok(stream) => stream,
-              //         Err(err) => {
-              //             println!("Error cloning stream: {:?}", err);
-              //             return None;
-              //         }
-              //     };
-              //     Some(Client::new(client_id.clone(), Some(stream), true, 0))
-              // } else {
-              //     self.failure_connection(stream, ConnectReturnCode::IdentifierRejected, key);
-              //     None
+            } 
         }
     }
 
