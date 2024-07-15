@@ -307,10 +307,22 @@ impl TaskHandler {
         }
 
         let clients_retained_messages = self.offline_messages.get(&client_id);
-        let client = clients.get_mut(&client_id).unwrap();
+        let client = match clients.get_mut(&client_id) {
+            Some(client) => client,
+            None => {
+                self.log_file.log_client_does_not_exist(&client_id);
+                return Ok(());
+            }
+        };
+
         if let Some(clients_retained_messages) = clients_retained_messages {
             self.handle_retained_messages(client, clients_retained_messages);
-            self.offline_messages.get_mut(&client_id).unwrap().clear();
+            match self.offline_messages.get_mut(&client_id) {
+                Some(queue) => queue.clear(),
+                None => {
+                    self.log_file.error("Error clearing offline messages");
+                }
+            }
         }
 
         Ok(())
@@ -355,22 +367,13 @@ impl TaskHandler {
                     self.log_file.error(e.to_string().as_str());
                 }
             }
-            // if client_manager.authenticate_client(
-            //     client_id.clone(),
-            //     username.clone(),
-            //     password.clone(),
-            // ) {
-            //     self.log_file.info("Client already registered");
-            // } else {
-            //     self.log_file.log_client_registrated(&client_id.clone());
-            //     client_manager.register_client(client_id, username, password);
-            // }
         } else {
             self.log_file
                 .error("Invalid topic for server reserved topic");
         }
     }
 
+    /// Handle retained messages for a client
     pub fn handle_retained_messages(
         &self,
         client: &mut Client,
@@ -557,6 +560,7 @@ impl TaskHandler {
         Ok(())
     }
 
+    /// Serialize the task handler data to a string
     fn serialize(&self) -> String {
         let mut serialized_data = String::new();
 
@@ -585,7 +589,15 @@ impl TaskHandler {
         }
 
         // Serialize clients
-        let clients_read = self.clients.read().unwrap(); // Acquiring a read lock
+        let clients_read = match self.clients.read() {
+            Ok(clients) => clients,
+            Err(_) => {
+                self.log_file
+                    .error("Error reading clients for serialization");
+                return serialized_data;
+            }
+        };
+
         for (id, client) in clients_read.iter() {
             for sub in &client.subscriptions {
                 serialized_data.push_str(&format!(
@@ -600,6 +612,7 @@ impl TaskHandler {
         serialized_data
     }
 
+    /// Builds a TaskHandler from a backup file string
     fn deserialize(
         serialized_data: &str,
         client_manager: Arc<RwLock<ClientManager>>,
@@ -632,8 +645,8 @@ impl TaskHandler {
 
             match record_type {
                 OFFLINE_MESSAGES_TAG => {
-                    let publish = match Packet::from_bytes(&mut value_stream, &key).unwrap() {
-                        Packet::Publish(publish) => publish,
+                    let publish = match Packet::from_bytes(&mut value_stream, &key) {
+                        Ok(Packet::Publish(publish)) => publish,
                         _ => continue,
                     };
                     offline_messages
@@ -644,9 +657,16 @@ impl TaskHandler {
                 RETAINED_MESSAGES_TAG => {
                     let mut entry_stream = std::io::Cursor::new(entry_key);
 
-                    let topic_name = TopicName::from_bytes(&mut entry_stream).unwrap();
-                    let message = match Packet::from_bytes(&mut value_stream, &key).unwrap() {
-                        Packet::Publish(publish) => publish,
+                    let topic_name = TopicName::from_bytes(&mut entry_stream);
+                    let topic_name = match topic_name {
+                        Ok(topic_name) => topic_name,
+                        Err(_) => {
+                            println!("Error deserializing topic name");
+                            continue;
+                        }
+                    };
+                    let message = match Packet::from_bytes(&mut value_stream, &key) {
+                        Ok(Packet::Publish(publish)) => publish,
                         _ => continue,
                     };
                     retained_messages
@@ -655,7 +675,14 @@ impl TaskHandler {
                         .push_back(message);
                 }
                 CLIENTS_TAG => {
-                    let subscription = TopicFilter::from_bytes(&mut value_stream).unwrap();
+                    let subscription = TopicFilter::from_bytes(&mut value_stream);
+                    let subscription = match subscription {
+                        Ok(subscription) => subscription,
+                        Err(_) => {
+                            println!("Error deserializing subscription");
+                            continue;
+                        }
+                    };
                     clients
                         .entry(entry_key.clone())
                         .or_insert_with(|| Client::new_from_backup(entry_key.clone(), Vec::new()))
@@ -705,6 +732,7 @@ impl TaskHandler {
     }
 }
 
+/// Convert a slice of bytes to a hexadecimal string
 fn bytes_to_hex(bytes: &[u8]) -> String {
     bytes
         .iter()
@@ -713,6 +741,7 @@ fn bytes_to_hex(bytes: &[u8]) -> String {
         .join("")
 }
 
+/// Convert a hexadecimal string to a vector of bytes
 fn hex_to_bytes(hex: &str) -> Result<Vec<u8>, String> {
     (0..hex.len())
         .step_by(2)

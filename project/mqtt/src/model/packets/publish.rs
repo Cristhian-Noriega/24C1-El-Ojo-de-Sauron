@@ -108,7 +108,10 @@ impl Publish {
         data_bytes.extend(variable_header_bytes);
         data_bytes.extend(payload_bytes);
 
-        let encrypted_bytes = encrypt(data_bytes, key);
+        let encrypted_bytes = match encrypt(data_bytes, key) {
+            Ok(bytes) => bytes,
+            Err(_) => return vec![],
+        };
 
         let mut packet_bytes = vec![];
 
