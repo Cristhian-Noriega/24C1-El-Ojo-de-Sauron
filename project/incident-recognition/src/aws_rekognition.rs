@@ -81,7 +81,7 @@ pub async fn is_incident(
         }
         best_label
     } else {
-        println!("Error: {:?}", response.err().unwrap());
+        println!("Error: {:?}", response.err());
         None
     }
 }
@@ -92,16 +92,26 @@ async fn upload_file(
     bucket: &str,
     file_path: &str,
     file_name: &str,
-) -> Result<(), aws_sdk_s3::Error> {
+) -> Result<(), String> {
     let body = ByteStream::from_path(Path::new(file_path)).await;
 
-    client
+    let body = match body {
+        Ok(body) => body,
+        Err(_) => {
+            return Err("Error reading file".to_string());
+        }
+    };
+
+    let result = client
         .put_object()
         .bucket(bucket)
         .key(file_name)
-        .body(body.unwrap())
+        .body(body)
         .send()
-        .await?;
+        .await;
 
-    Ok(())
+    match result {
+        Ok(_) => Ok(()),
+        Err(_) => Err("Error uploading file".to_string()),
+    }
 }

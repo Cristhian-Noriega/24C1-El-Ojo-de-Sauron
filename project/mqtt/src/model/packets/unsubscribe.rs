@@ -80,7 +80,10 @@ impl Unsubscribe {
         fixed_header_bytes.extend(remaining_length_bytes);
 
         let data_bytes = [&variable_header_bytes[..], &payload_bytes[..]].concat();
-        let encrypted_bytes = encrypt(data_bytes, key);
+        let encrypted_bytes = match encrypt(data_bytes, key) {
+            Ok(bytes) => bytes,
+            Err(_) => return vec![],
+        };
 
         let mut packet_bytes = vec![];
 
