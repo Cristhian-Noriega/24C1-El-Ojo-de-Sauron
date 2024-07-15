@@ -351,9 +351,6 @@ fn image_recognition(
             .await
     });
 
-    let s3_client = aws_sdk_s3::Client::new(&config);
-    let rekognition_client = aws_sdk_rekognition::Client::new(&config);
-
     loop {
         let mut locked_camera_system = match camera_system.lock() {
             Ok(locked_camera_system) => locked_camera_system,
@@ -369,8 +366,7 @@ fn image_recognition(
 
                 let server_stream = server_stream.clone();
                 let key = *key;
-                let s3_client = s3_client.clone();
-                let rekognition_client = rekognition_client.clone();
+                let config = config.clone();
 
                 // println!("Image found: {}", path);
                 thread_pool.execute(move || {
@@ -379,8 +375,7 @@ fn image_recognition(
                         &mut camera,
                         path,
                         &key,
-                        &s3_client,
-                        &rekognition_client,
+                        &config
                     );
                 });
                 // println!("Image analyzed");
@@ -444,13 +439,19 @@ fn analyze_image(
     camera: &mut Camera,
     path: String,
     key: &[u8; 32],
-    s3_client: &aws_sdk_s3::Client,
-    rekognition_client: &aws_sdk_rekognition::Client,
+    config: &aws_config::SdkConfig,
 ) {
-    let rt = Runtime::new().unwrap();
+    let rt = match Runtime::new() {
+        Ok(rt) => rt,
+        Err(_) => {
+            println!("Error creating runtime");
+            return;
+        }
+    };
+
 
     camera.add_seen_image(&path);
-    let posible_label = rt.block_on(is_incident(s3_client, rekognition_client, path.as_str()));
+    let posible_label = rt.block_on(is_incident(config, path.as_str()));
 
     if let Some(label) = posible_label {
         alert_incident(server_stream, camera, key, label);

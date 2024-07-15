@@ -1,5 +1,6 @@
 use aws_sdk_rekognition::types::{builders::ImageBuilder, S3Object};
 use aws_sdk_s3::primitives::ByteStream;
+use aws_config::SdkConfig;
 use std::path::Path;
 
 const CONFIDENCE_THRESHOLD: f32 = 50.0;
@@ -7,10 +8,12 @@ const BUCKET: &str = "fiuba-sauron";
 
 /// Uses AWS Rekognition to determine if an image contains an incident
 pub async fn is_incident(
-    s3_client: &aws_sdk_s3::Client,
-    rekognition_client: &aws_sdk_rekognition::Client,
+    config: &SdkConfig,
     file_path: &str,
 ) -> Option<String> {
+    let s3_client = aws_sdk_s3::Client::new(config);
+    let rekognition_client = aws_sdk_rekognition::Client::new(config);
+
     let file_name = match Path::new(file_path).file_name() {
         Some(file_name) => match file_name.to_str() {
             Some(file_name) => file_name,
@@ -85,7 +88,7 @@ pub async fn is_incident(
 
 /// Uploads a file to an S3 bucket
 async fn upload_file(
-    client: &aws_sdk_s3::Client,
+    client: aws_sdk_s3::Client,
     bucket: &str,
     file_path: &str,
     file_name: &str,
