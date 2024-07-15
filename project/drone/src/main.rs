@@ -8,7 +8,6 @@ use std::path::Path;
 mod client;
 mod config;
 mod drone;
-mod error;
 mod utils;
 
 static CLIENT_ARGS: usize = 2;
