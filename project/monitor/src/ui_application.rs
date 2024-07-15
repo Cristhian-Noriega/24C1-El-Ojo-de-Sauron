@@ -120,7 +120,7 @@ fn update_drones(drones: &mut Vec<Drone>, drone: Drone) {
         let drone_id_num = drone.id.parse::<usize>().unwrap_or(0);
         id_num.cmp(&drone_id_num)
     };
-    
+
     match drones.binary_search_by(compare_drones) {
         Ok(pos) => drones[pos] = drone, // If the drone exists, update it
         Err(pos) => drones.insert(pos, drone), // If the drone doesn't exist, insert it at the correct position
@@ -316,7 +316,7 @@ fn display_edit_incident(
                             .clicked()
                         {
                             // Actualizar el UUID seleccionado en edit_incident
-                            edit_incident.uuid = uuid.clone();
+                            edit_incident.uuid.clone_from(uuid);
                         }
                     }
                 });
@@ -781,6 +781,26 @@ fn update_places(
             CameraStatus::Sleep => Color32::BLACK,
             CameraStatus::Active => Color32::RED,
         };
+
+        if activity_cordenates.contains(&(camera.x_coordinate, camera.y_coordinate)) {
+            let overlapping_activities = places
+                .iter_mut()
+                .filter(|activity| {
+                    activity.position.lon() == camera.x_coordinate
+                        && activity.position.lat() == camera.y_coordinate
+                })
+                .collect::<Vec<&mut Place>>();
+            for overlapping_activity in overlapping_activities {
+                overlapping_activity.style.label_color = Color32::from_rgb(83, 0, 0);
+                overlapping_activity.label = format!(
+                    "{}, {}{}",
+                    overlapping_activity.label,
+                    CAMERA_SYMBOL,
+                    camera.id.clone()
+                );
+            }
+            continue;
+        }
 
         let place = Place {
             position: Position::from_lon_lat(camera.x_coordinate, camera.y_coordinate),

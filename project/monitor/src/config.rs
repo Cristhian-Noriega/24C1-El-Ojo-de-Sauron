@@ -1,7 +1,7 @@
 use common::coordenate::Coordenate;
 use std::collections::HashMap;
-use std::{fs::File, io::Read, path::Path};
 use std::io;
+use std::{fs::File, io::Read, path::Path};
 
 /// Represents the configuration of the server
 #[derive(Debug, Clone)]
@@ -35,10 +35,17 @@ impl Config {
                     current_station.clear();
                 } else if line.starts_with('}') {
                     if let (Some(x), Some(y)) = (
-                        current_station.get("x_coordinate").and_then(|v: &String| v.parse::<f64>().ok()),
-                        current_station.get("y_coordinate").and_then(|v: &String| v.parse::<f64>().ok()),
+                        current_station
+                            .get("x_coordinate")
+                            .and_then(|v: &String| v.parse::<f64>().ok()),
+                        current_station
+                            .get("y_coordinate")
+                            .and_then(|v: &String| v.parse::<f64>().ok()),
                     ) {
-                        charging_stations.push(Coordenate { x_coordinate: x, y_coordinate: y });
+                        charging_stations.push(Coordenate {
+                            x_coordinate: x,
+                            y_coordinate: y,
+                        });
                     }
                     current_station.clear();
                 } else {
@@ -63,15 +70,25 @@ impl Config {
                 }
 
                 config_map.insert(key.to_string(), value.to_string());
-            }            
+            }
         }
 
         Ok(Config {
-            address: config_map.remove("address").ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing address"))?,
-            key: config_map.remove("key").ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing key"))?,
-            id: config_map.remove("id").ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing id"))?,
-            username: config_map.remove("username").ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing username"))?,
-            password: config_map.remove("password").ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing password"))?,
+            address: config_map
+                .remove("address")
+                .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing address"))?,
+            key: config_map
+                .remove("key")
+                .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing key"))?,
+            id: config_map
+                .remove("id")
+                .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing id"))?,
+            username: config_map
+                .remove("username")
+                .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing username"))?,
+            password: config_map
+                .remove("password")
+                .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing password"))?,
             charging_stations,
         })
     }
