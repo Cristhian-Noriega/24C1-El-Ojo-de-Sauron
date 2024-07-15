@@ -336,7 +336,13 @@ fn image_recognition(
 ) {
     let thread_pool = ThreadPool::new(CAMERA_THREADS_NUMBER);
 
-    let rt = Runtime::new().unwrap();
+    let rt = match Runtime::new() {
+        Ok(rt) => rt,
+        Err(_) => {
+            println!("Error creating runtime");
+            return;
+        }
+    };
 
     let config = rt.block_on(async {
         aws_config::defaults(BehaviorVersion::v2024_03_28())
@@ -349,42 +355,24 @@ fn image_recognition(
     let rekognition_client = aws_sdk_rekognition::Client::new(&config);
 
     loop {
-        let locked_camera_system = match camera_system.lock() {
+        let mut locked_camera_system = match camera_system.lock() {
             Ok(locked_camera_system) => locked_camera_system,
             Err(_) => {
                 println!("Mutex was poisoned");
-                return;
+                break;
             }
         };
 
-        let mut sleeping_cameras = vec![];
-
-        for camera in locked_camera_system.get_sleeping_cameras() {
-            sleeping_cameras.push(camera.clone());
-        }
-
-        drop(locked_camera_system);
-
-        for mut camera in sleeping_cameras {
+        for mut camera in locked_camera_system.sleeping_cameras() {
             if let Some(path) = look_for_new_images(images_folder.clone(), camera.clone()) {
-                let mut locked_camera_system = match camera_system.lock() {
-                    Ok(locked_camera_system) => locked_camera_system,
-                    Err(_) => {
-                        println!("Mutex was poisoned");
-                        return;
-                    }
-                };
-
                 locked_camera_system.add_seen_image(camera.id(), path.as_str());
-
-                drop(locked_camera_system);
 
                 let server_stream = server_stream.clone();
                 let key = *key;
-
                 let s3_client = s3_client.clone();
                 let rekognition_client = rekognition_client.clone();
 
+                // println!("Image found: {}", path);
                 thread_pool.execute(move || {
                     analyze_image(
                         server_stream,
@@ -395,13 +383,15 @@ fn image_recognition(
                         &rekognition_client,
                     );
                 });
+                // println!("Image analyzed");
             }
         }
 
+        drop(locked_camera_system);
         thread::sleep(Duration::from_secs(ANALYSE_IMAGES_INTERVAL));
     }
 
-    // drop(thread_pool);
+    drop(thread_pool);
 }
 
 /// Looks for new images in the images folder
@@ -433,7 +423,7 @@ fn look_for_new_images(images_folder: String, camera: Camera) -> Option<String> 
                     } else {
                         continue;
                     }
-                },
+                }
                 None => {
                     continue;
                 }
@@ -468,7 +458,12 @@ fn analyze_image(
 }
 
 /// Alerts an incident that was recognized by the cameras
-fn alert_incident(server_stream: Arc<Mutex<TcpStream>>, camera: &mut Camera, key: &[u8; 32], label: String) {
+fn alert_incident(
+    server_stream: Arc<Mutex<TcpStream>>,
+    camera: &mut Camera,
+    key: &[u8; 32],
+    label: String,
+) {
     let topic_name = TopicName::new(
         vec![
             DETECTED_INCIDENT.to_vec(),

@@ -1,5 +1,5 @@
 use std::{
-    sync::{mpsc, Arc, Mutex},
+    sync::{mpsc::Receiver, Arc, Mutex},
     thread,
 };
 
@@ -11,7 +11,7 @@ pub struct Worker {
 }
 
 impl Worker {
-    pub fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Message>>>) -> Worker {
+    pub fn new(id: usize, receiver: Arc<Mutex<Receiver<Message>>>) -> Worker {
         let thread = thread::spawn(move || loop {
             let locked_receiver = match receiver.lock() {
                 Ok(receiver) => receiver,
@@ -28,6 +28,8 @@ impl Worker {
                     break;
                 }
             };
+
+            drop(locked_receiver);
 
             match message {
                 Message::NewJob(job) => {

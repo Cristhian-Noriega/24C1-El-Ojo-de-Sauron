@@ -27,7 +27,12 @@ impl ThreadPool {
         F: FnOnce() + Send + 'static,
     {
         let job = Box::new(f);
-        self.sender.send(Message::NewJob(job)).unwrap();
+        match self.sender.send(Message::NewJob(job)) {
+            Ok(_) => {}
+            Err(_) => {
+                println!("Failed to send job to worker.");
+            }
+        }
     }
 }
 
@@ -46,7 +51,12 @@ impl Drop for ThreadPool {
             if let Some(thread) = worker.thread.take() {
                 println!("Shutting down worker {}", worker.id);
 
-                thread.join().unwrap();
+                match thread.join() {
+                    Ok(_) => {}
+                    Err(_) => {
+                        println!("Failed to join worker {}", worker.id);
+                    }
+                }
             }
         }
     }
