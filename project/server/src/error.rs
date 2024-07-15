@@ -1,8 +1,8 @@
 use std::fmt;
 use std::io;
+use std::string::FromUtf8Error;
 use std::sync::mpsc::SendError;
 use std::sync::PoisonError;
-use std::string::FromUtf8Error;
 
 use mqtt::errors::error::MqttError;
 

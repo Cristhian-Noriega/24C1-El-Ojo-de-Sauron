@@ -1,5 +1,5 @@
 use super::{DISCONNECT_PACKET_TYPE, RESERVED_FIXED_HEADER_FLAGS};
-use crate::{MqttResult, MqttError, FixedHeader, RemainingLength};
+use crate::{FixedHeader, MqttError, MqttResult, RemainingLength};
 
 /// Represents a DISCONNECT packet in MQTT. The client uses it to disconnect from the server.
 #[derive(Debug, Default, PartialEq)]
@@ -16,7 +16,7 @@ impl Disconnect {
         let fixed_header_flags = fixed_header.first_byte() & 0b0000_1111;
 
         if fixed_header_flags != RESERVED_FIXED_HEADER_FLAGS {
-            return Err(MqttError::InvalidFixedHeaderFlags)
+            return Err(MqttError::InvalidFixedHeaderFlags);
         }
 
         Ok(Disconnect::new())

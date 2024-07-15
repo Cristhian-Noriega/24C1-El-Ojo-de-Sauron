@@ -1,8 +1,8 @@
 use std::io::{Cursor, Read};
 
 use crate::{
-    decrypt, Connack, Connect, Disconnect, MqttResult, MqttError, FixedHeader, Pingreq, Pingresp, Puback, Publish,
-    Suback, Subscribe, Unsuback, Unsubscribe,
+    decrypt, Connack, Connect, Disconnect, FixedHeader, MqttError, MqttResult, Pingreq, Pingresp,
+    Puback, Publish, Suback, Subscribe, Unsuback, Unsubscribe,
 };
 
 use super::packets::*;
@@ -92,12 +92,12 @@ impl Packet {
                 let unsuback_packet = Unsuback::from_bytes(fixed_header, stream)?;
                 Packet::Unsuback(unsuback_packet)
             }
-            _ => return Err(MqttError::InvalidPacketType(packet_type.to_string()))
+            _ => return Err(MqttError::InvalidPacketType(packet_type.to_string())),
         };
 
         if let Ok(remaining_length) = stream.read(&mut [0; 1]) {
             if remaining_length != 0 {
-                return Err(MqttError::InvalidRemainingLength)
+                return Err(MqttError::InvalidRemainingLength);
             }
         }
 

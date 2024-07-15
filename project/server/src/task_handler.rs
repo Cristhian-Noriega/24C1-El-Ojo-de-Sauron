@@ -354,15 +354,19 @@ impl TaskHandler {
             let password = split[2].to_vec();
 
             let client_manager = self.client_manager.write().unwrap();
-            
-            match client_manager.authenticate_client(client_id.clone(), username.clone(), password.clone()) {
+
+            match client_manager.authenticate_client(
+                client_id.clone(),
+                username.clone(),
+                password.clone(),
+            ) {
                 Ok(true) => {
                     self.log_file.info("Client already registered");
-                },
+                }
                 Ok(false) => {
                     self.log_file.log_client_registrated(&client_id.clone());
                     let _ = client_manager.register_client(client_id, username, password);
-                },
+                }
                 Err(e) => {
                     self.log_file.error(e.to_string().as_str());
                 }

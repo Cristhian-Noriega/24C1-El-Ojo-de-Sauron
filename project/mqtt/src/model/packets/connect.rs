@@ -1,6 +1,7 @@
 use super::{CONNECT_PACKET_TYPE, RESERVED_FIXED_HEADER_FLAGS};
 use crate::{
-    encrypt, errors::error::MqttResult, EncodedString, MqttError, FixedHeader, Login, QoS, Read, RemainingLength, Will, PROTOCOL_LEVEL, PROTOCOL_NAME
+    encrypt, errors::error::MqttResult, EncodedString, FixedHeader, Login, MqttError, QoS, Read,
+    RemainingLength, Will, PROTOCOL_LEVEL, PROTOCOL_NAME,
 };
 
 /// Represents a MQTT CONNECT packet used to initialize a connection with the server.

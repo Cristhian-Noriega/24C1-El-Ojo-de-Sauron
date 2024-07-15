@@ -18,11 +18,14 @@ mod ui_application;
 
 const CLIENT_ARGS: usize = 2;
 
-fn main() -> Result<(), Error>{
+fn main() -> Result<(), Error> {
     let argv = args().collect::<Vec<String>>();
     if argv.len() != CLIENT_ARGS {
         let app_name = &argv[0];
-        return Err(Error::new(format!("Invalid amount of arguments. Usage: {:?} <toml-file>", app_name)));
+        return Err(Error::new(format!(
+            "Invalid amount of arguments. Usage: {:?} <toml-file>",
+            app_name
+        )));
     }
 
     let path = Path::new(&argv[1]);

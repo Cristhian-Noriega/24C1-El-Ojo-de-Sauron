@@ -202,7 +202,7 @@ fn start_monitor(
             }
 
             Ok(_) => {}
-            Err(_) => {} 
+            Err(_) => {}
         }
 
         let publish = match ui_reciver.try_recv() {

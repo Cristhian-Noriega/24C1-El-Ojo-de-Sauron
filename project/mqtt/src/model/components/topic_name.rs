@@ -1,5 +1,5 @@
 use super::{FORWARD_SLASH, SERVER_RESERVED};
-use crate::{EncodedString, MqttResult, MqttError, Read, TopicLevel};
+use crate::{EncodedString, MqttError, MqttResult, Read, TopicLevel};
 use std::fmt;
 
 /// Represents the name of a topic in MQTT.
@@ -23,7 +23,7 @@ impl TopicName {
         let bytes = encoded_string_topic_name.content();
 
         if bytes.is_empty() {
-            return Err(MqttError::InvalidTopicName)
+            return Err(MqttError::InvalidTopicName);
         }
 
         let server_reserved = matches!(bytes.first(), Some(&SERVER_RESERVED));
@@ -38,7 +38,11 @@ impl TopicName {
         for level in levels_bytes {
             match TopicLevel::from_bytes(level)? {
                 TopicLevel::Literal(level) => levels.push(level),
-                _ => return Err(MqttError::InvalidWildcard("Wildcard not allowed in topic name".to_string())),
+                _ => {
+                    return Err(MqttError::InvalidWildcard(
+                        "Wildcard not allowed in topic name".to_string(),
+                    ))
+                }
             }
         }
 

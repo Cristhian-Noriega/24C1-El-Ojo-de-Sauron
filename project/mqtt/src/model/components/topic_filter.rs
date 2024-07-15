@@ -41,7 +41,9 @@ impl TopicFilter {
 
             if let TopicLevel::MultiLevelWildcard = topic_level {
                 if level_index != levels_bytes.len() - 1 {
-                    return Err(MqttError::InvalidWildcard("Multi-level wildcard must be the last level".to_string()))
+                    return Err(MqttError::InvalidWildcard(
+                        "Multi-level wildcard must be the last level".to_string(),
+                    ));
                 }
             }
 

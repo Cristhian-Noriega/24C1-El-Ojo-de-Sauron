@@ -1,5 +1,8 @@
 use super::{DEFAULT_VARIABLE_HEADER_LENGTH, RESERVED_FIXED_HEADER_FLAGS, SUBACK_PACKET_TYPE};
-use crate::{encrypt, errors::error::MqttResult, MqttError, FixedHeader, Read, RemainingLength, SubackReturnCode};
+use crate::{
+    encrypt, errors::error::MqttResult, FixedHeader, MqttError, Read, RemainingLength,
+    SubackReturnCode,
+};
 
 /// Represents a SUBACK packet of MQTT. The server uses it to confirm the subscription to one or more topics.
 #[derive(Debug)]

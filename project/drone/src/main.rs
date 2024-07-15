@@ -17,7 +17,10 @@ fn main() -> Result<(), Error> {
     let argv = args().collect::<Vec<String>>();
     if argv.len() != CLIENT_ARGS {
         let app_name = &argv[0];
-        return Err(Error::new(format!("Invalid amount of arguments. Usage: {:?} <config-path>", app_name)));
+        return Err(Error::new(format!(
+            "Invalid amount of arguments. Usage: {:?} <config-path>",
+            app_name
+        )));
     }
 
     let path = Path::new(&argv[1]);

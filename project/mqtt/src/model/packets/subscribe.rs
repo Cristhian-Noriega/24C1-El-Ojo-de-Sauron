@@ -1,5 +1,5 @@
 use super::{DEFAULT_VARIABLE_HEADER_LENGTH, RESERVED_FIXED_HEADER_FLAGS, SUBSCRIBE_PACKET_TYPE};
-use crate::{encrypt, MqttResult, MqttError, FixedHeader, QoS, Read, RemainingLength, TopicFilter};
+use crate::{encrypt, FixedHeader, MqttError, MqttResult, QoS, Read, RemainingLength, TopicFilter};
 
 /// Represents a SUBSCRIBE packet of MQTT. The client uses it to subscribe to one or more topics.
 #[derive(Debug)]

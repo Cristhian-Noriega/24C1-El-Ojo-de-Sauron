@@ -1,5 +1,5 @@
 use super::{DEFAULT_VARIABLE_HEADER_LENGTH, RESERVED_FIXED_HEADER_FLAGS, UNSUBSCRIBE_PACKET_TYPE};
-use crate::{encrypt, MqttResult, MqttError, FixedHeader, Read, RemainingLength, TopicFilter};
+use crate::{encrypt, FixedHeader, MqttError, MqttResult, Read, RemainingLength, TopicFilter};
 
 /// Represents an UNSUBSCRIBE packet from MQTT. The client uses it to unsubscribe from one or more topics.
 #[derive(Debug)]

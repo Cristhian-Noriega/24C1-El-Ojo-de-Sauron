@@ -1,4 +1,4 @@
-use crate::{MqttResult,MqttError};
+use crate::{MqttError, MqttResult};
 
 /// Represents the different connection return codes in MQTT.
 #[derive(PartialEq, Debug)]
@@ -33,7 +33,10 @@ impl ConnectReturnCode {
             0x03 => Ok(ConnectReturnCode::ServerUnavailable),
             0x04 => Ok(ConnectReturnCode::BadUsernameOrPassword),
             0x05 => Ok(ConnectReturnCode::NotAuthorized),
-            _ => Err(MqttError::InvalidReturnCode(format!("Invalid ConnackReturnCode: {}", byte))),
+            _ => Err(MqttError::InvalidReturnCode(format!(
+                "Invalid ConnackReturnCode: {}",
+                byte
+            ))),
         }
     }
 }

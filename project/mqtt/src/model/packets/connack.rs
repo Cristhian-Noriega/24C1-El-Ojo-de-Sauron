@@ -1,7 +1,9 @@
 use std::fmt::{Display, Formatter};
 
 use super::{CONNACK_PACKET_TYPE, DEFAULT_VARIABLE_HEADER_LENGTH, RESERVED_FIXED_HEADER_FLAGS};
-use crate::{encrypt, ConnectReturnCode, MqttResult, MqttError, FixedHeader, Read, RemainingLength};
+use crate::{
+    encrypt, ConnectReturnCode, FixedHeader, MqttError, MqttResult, Read, RemainingLength,
+};
 
 /// Represents a CONNECT packet of MQTT that is used to accept a connection from a client.
 #[derive(Debug)]

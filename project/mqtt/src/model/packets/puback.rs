@@ -1,7 +1,7 @@
 use std::fmt::{self, Display, Formatter};
 
 use super::{PUBACK_PACKET_TYPE, RESERVED_FIXED_HEADER_FLAGS};
-use crate::{encrypt, MqttResult, MqttError, FixedHeader, Read, RemainingLength};
+use crate::{encrypt, FixedHeader, MqttError, MqttResult, Read, RemainingLength};
 
 const PACKAGE_IDENTIFIER_LENGTH: usize = 2;
 

@@ -131,7 +131,10 @@ pub fn client_run(config: Config) -> std::io::Result<()> {
         match thread.join() {
             Ok(_) => {}
             Err(_) => {
-                return Err(std::io::Error::new(ErrorKind::Other, "Error joining threads"));
+                return Err(std::io::Error::new(
+                    ErrorKind::Other,
+                    "Error joining threads",
+                ));
             }
         }
     }

@@ -15,7 +15,10 @@ use mqtt::model::{
     return_codes::connect_return_code::ConnectReturnCode,
 };
 
-use crate::{client::Client, error::{ServerError, ServerResult}};
+use crate::{
+    client::Client,
+    error::{ServerError, ServerResult},
+};
 
 /// Represents a client ID
 type ClientId = Vec<u8>;
@@ -67,7 +70,12 @@ impl ClientManager {
     }
 
     /// Registers a client with the specified client ID, username, and password
-    pub fn register_client(&self, client_id: Vec<u8>, username: Vec<u8>, password: Vec<u8>) -> ServerResult<()> {
+    pub fn register_client(
+        &self,
+        client_id: Vec<u8>,
+        username: Vec<u8>,
+        password: Vec<u8>,
+    ) -> ServerResult<()> {
         self.add_client(client_id.clone(), username.clone(), password.clone())?;
         self.save_client(client_id, username, password)?;
 
@@ -75,7 +83,12 @@ impl ClientManager {
     }
 
     /// Adds a client to the registered clients map
-    fn add_client(&self, client_id: Vec<u8>, username: Vec<u8>, password: Vec<u8>) -> ServerResult<()>  {
+    fn add_client(
+        &self,
+        client_id: Vec<u8>,
+        username: Vec<u8>,
+        password: Vec<u8>,
+    ) -> ServerResult<()> {
         let mut registered_clients = self.registered_clients.lock()?;
         registered_clients.insert(
             client_id.clone(),
@@ -86,10 +99,15 @@ impl ClientManager {
     }
 
     /// Saves a client to the login file
-    fn save_client(&self, client_id: Vec<u8>, username: Vec<u8>, password: Vec<u8>) -> ServerResult<()>{
+    fn save_client(
+        &self,
+        client_id: Vec<u8>,
+        username: Vec<u8>,
+        password: Vec<u8>,
+    ) -> ServerResult<()> {
         let client_id = String::from_utf8(client_id)?;
 
-        let username =  String::from_utf8(username)?;
+        let username = String::from_utf8(username)?;
 
         let password = String::from_utf8(password)?;
 
@@ -107,7 +125,7 @@ impl ClientManager {
         username: Vec<u8>,
         password: Vec<u8>,
     ) -> ServerResult<bool> {
-        let mut registered_clients =  self.registered_clients.lock()?;
+        let mut registered_clients = self.registered_clients.lock()?;
 
         if let Some((stored_username, stored_password, is_connected)) =
             registered_clients.get_mut(&client_id)
@@ -130,7 +148,7 @@ impl ClientManager {
         if let Some((_, _, is_connected)) = registered_clients.get_mut(&client_id) {
             *is_connected = false;
         }
-        
+
         Ok(())
     }
 
@@ -169,21 +187,18 @@ impl ClientManager {
             Err(err) => {
                 println!("Error authenticating client: {:?}", err);
                 None
-            }
-
-        // if self.authenticate_client(client_id.clone(), username, password) {
-        //     let stream = match stream.try_clone() {
-        //         Ok(stream) => stream,
-        //         Err(err) => {
-        //             println!("Error cloning stream: {:?}", err);
-        //             return None;
-        //         }
-        //     };
-        //     Some(Client::new(client_id.clone(), Some(stream), true, 0))
-        // } else {
-        //     self.failure_connection(stream, ConnectReturnCode::IdentifierRejected, key);
-        //     None
-
+            } // if self.authenticate_client(client_id.clone(), username, password) {
+              //     let stream = match stream.try_clone() {
+              //         Ok(stream) => stream,
+              //         Err(err) => {
+              //             println!("Error cloning stream: {:?}", err);
+              //             return None;
+              //         }
+              //     };
+              //     Some(Client::new(client_id.clone(), Some(stream), true, 0))
+              // } else {
+              //     self.failure_connection(stream, ConnectReturnCode::IdentifierRejected, key);
+              //     None
         }
     }
 
@@ -204,9 +219,7 @@ impl ClientManager {
 
     /// Gets the login information from a connect packet
     pub fn get_login_info(&self, connect_packet: &Connect) -> ServerResult<(Vec<u8>, Vec<u8>)> {
-        let login = connect_packet
-            .login()
-            .ok_or(ServerError::NoLoginProvided)?;
+        let login = connect_packet.login().ok_or(ServerError::NoLoginProvided)?;
         let username = login.username().content().to_vec();
         let password = login
             .password()
@@ -250,7 +263,8 @@ mod tests {
         let username = b"username".to_vec();
         let password = b"password".to_vec();
 
-        let _ = client_manager.register_client(client_id.clone(), username.clone(), password.clone());
+        let _ =
+            client_manager.register_client(client_id.clone(), username.clone(), password.clone());
 
         let registered_clients = client_manager.registered_clients.lock().unwrap();
         let logins = registered_clients.get(&client_id).unwrap();
@@ -258,7 +272,6 @@ mod tests {
         assert_eq!(logins.1, password);
         assert!(!logins.2);
     }
-    
 
     #[test]
     fn test_authenticate_client() {
@@ -267,22 +280,17 @@ mod tests {
         let username = b"username".to_vec();
         let password = b"password".to_vec();
 
-        let _ = client_manager.register_client(client_id.clone(), username.clone(), password.clone());
+        let _ =
+            client_manager.register_client(client_id.clone(), username.clone(), password.clone());
 
-        assert!(client_manager.authenticate_client(
-            client_id.clone(),
-            username.clone(),
-            password.clone()
-        ).unwrap());
-        assert!(!client_manager.authenticate_client(
-            client_id.clone(),
-            b"wrong".to_vec(),
-            password.clone()
-        ).unwrap());
-        assert!(!client_manager.authenticate_client(
-            client_id.clone(),
-            username.clone(),
-            b"wrong".to_vec()
-        ).unwrap());
+        assert!(client_manager
+            .authenticate_client(client_id.clone(), username.clone(), password.clone())
+            .unwrap());
+        assert!(!client_manager
+            .authenticate_client(client_id.clone(), b"wrong".to_vec(), password.clone())
+            .unwrap());
+        assert!(!client_manager
+            .authenticate_client(client_id.clone(), username.clone(), b"wrong".to_vec())
+            .unwrap());
     }
 }

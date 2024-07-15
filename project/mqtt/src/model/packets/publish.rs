@@ -1,5 +1,5 @@
 use super::{DEFAULT_VARIABLE_HEADER_LENGTH, PUBLISH_PACKET_TYPE};
-use crate::{encrypt, MqttResult, FixedHeader, QoS, Read, RemainingLength, TopicName};
+use crate::{encrypt, FixedHeader, MqttResult, QoS, Read, RemainingLength, TopicName};
 
 /// Represents a PUBLISH packet of MQTT. The client uses it to publish a message to a topic.
 #[derive(Debug, Clone)]

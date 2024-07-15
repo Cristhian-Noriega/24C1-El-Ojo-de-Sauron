@@ -1,5 +1,5 @@
 use super::{DEFAULT_VARIABLE_HEADER_LENGTH, RESERVED_FIXED_HEADER_FLAGS, UNSUBACK_PACKET_TYPE};
-use crate::{encrypt, MqttResult, MqttError, FixedHeader, Read, RemainingLength};
+use crate::{encrypt, FixedHeader, MqttError, MqttResult, Read, RemainingLength};
 
 /// Represents an UNSUBACK packet from MQTT. The server uses it to confirm the unsubscription of one or more topics.
 #[derive(Debug)]
