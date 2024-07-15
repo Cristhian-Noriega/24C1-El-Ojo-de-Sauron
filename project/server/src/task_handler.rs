@@ -4,7 +4,7 @@ use std::{
 
 use crate::{client::Client, client_manager::ClientManager, config::Config, error::ServerResult, logfile::Logger};
 
-use mqtt::errors::error::Error;
+use mqtt::model::packet::Packet;
 
 use mqtt::model::{
     components::{qos::QoS, topic_filter::TopicFilter, topic_name::TopicName},
@@ -92,7 +92,7 @@ impl TaskHandler {
                             return TaskHandler::default(client_actions_receiver_channel, log_file, client_manager, key, segs_to_backup, Some(backup_file_string.clone()));
                         }
         
-                        TaskHandler::deserialize(&data, client_manager.clone(), log_file.clone(), config, client_actions_receiver_channel, Some(backup_file_string.clone()))
+                        TaskHandler::deserialize(&data, client_manager.clone(), log_file.clone(), config, client_actions_receiver_channel)
                     }
                     Err(_) => {
                         eprintln!("Backup file not found, initializing empty TaskHandler.");
@@ -497,47 +497,40 @@ impl TaskHandler {
         Ok(())
     }
 
-    fn serialize(&self, key: [u8; 32]) -> Vec<u8> {
-        let mut serialized_data = Vec::new();
+    fn serialize(&self) -> String {
+        let mut serialized_data = String::new();
 
         // Serialize offline_messages
-        serialized_data.extend_from_slice(&(self.offline_messages.len() as u32).to_be_bytes());
         for (client, queue) in &self.offline_messages {
-            serialized_data.extend_from_slice(&(client.len() as u32).to_be_bytes());
-            serialized_data.extend_from_slice(client);
-            serialized_data.extend_from_slice(&(queue.len() as u32).to_be_bytes());
             for publish in queue {
-                let publish_bytes = publish.to_bytes(&key);
-                serialized_data.extend_from_slice(&(publish_bytes.len() as u32).to_be_bytes());
-                serialized_data.extend_from_slice(&publish_bytes);
+                serialized_data.push_str(&format!(
+                    "O;{};{}\n",
+                    bytes_to_hex(client),
+                    bytes_to_hex(&publish.to_bytes(&self.key))
+                ));
             }
         }
 
         // Serialize retained_messages
-        serialized_data.extend_from_slice(&(self.retained_messages.len() as u32).to_be_bytes());
         for (topic_name, messages) in &self.retained_messages {
-            let topic_name_bytes = topic_name.to_bytes();
-            serialized_data.extend_from_slice(&(topic_name_bytes.len() as u32).to_be_bytes());
-            serialized_data.extend_from_slice(&topic_name_bytes);
-            serialized_data.extend_from_slice(&(messages.len() as u32).to_be_bytes());
             for message in messages {
-                let message_bytes = message.to_bytes(&key);
-                serialized_data.extend_from_slice(&(message_bytes.len() as u32).to_be_bytes());
-                serialized_data.extend_from_slice(&message_bytes);
+                serialized_data.push_str(&format!(
+                    "R;{};{}\n",
+                    bytes_to_hex(&topic_name.to_bytes()),
+                    bytes_to_hex(&message.to_bytes(&self.key))
+                ));
             }
         }
 
         // Serialize clients
         let clients_read = self.clients.read().unwrap(); // Acquiring a read lock
-        serialized_data.extend_from_slice(&(clients_read.len() as u32).to_be_bytes());
         for (id, client) in clients_read.iter() {
-            serialized_data.extend_from_slice(&(id.len() as u32).to_be_bytes());
-            serialized_data.extend_from_slice(id);
-            serialized_data.extend_from_slice(&(client.subscriptions.len() as u32).to_be_bytes());
             for sub in &client.subscriptions {
-                let sub_bytes = sub.to_bytes();
-                serialized_data.extend_from_slice(&(sub_bytes.len() as u32).to_be_bytes());
-                serialized_data.extend_from_slice(&sub_bytes);
+                serialized_data.push_str(&format!(
+                    "C;{};{}\n",
+                    bytes_to_hex(id),
+                    bytes_to_hex(&sub.to_bytes())
+                ));
             }
         }
 
@@ -545,75 +538,59 @@ impl TaskHandler {
     }
 
     fn deserialize(
-        serialized_data: &[u8],
+        serialized_data: &str,
         client_manager: Arc<RwLock<ClientManager>>,
         log_file: Arc<Logger>,
         config: &Config,
         receiver_channel: mpsc::Receiver<Task>,
-        backup_file: Option<String>,
     ) -> TaskHandler {
-        let mut cursor = std::io::Cursor::new(serialized_data);
-
+        let key = config.get_key().clone();
         let mut offline_messages = HashMap::new();
-        let offline_messages_len = read_u32(&mut cursor);
-        for _ in 0..offline_messages_len {
-            let client_len = read_u32(&mut cursor);
-            let mut client = vec![0; client_len as usize];
-            cursor.read_exact(&mut client).unwrap();
-
-            let queue_len = read_u32(&mut cursor);
-            let mut queue = VecDeque::new();
-            for _ in 0..queue_len {
-                let publish_len = read_u32(&mut cursor);
-                let mut publish_bytes = vec![0; publish_len as usize];
-                cursor.read_exact(&mut publish_bytes).unwrap();
-                let publish = Publish::from_bytes(&publish_bytes).unwrap();
-                queue.push_back(publish);
-            }
-
-            offline_messages.insert(client, queue);
-        }
-
         let mut retained_messages = HashMap::new();
-        let retained_messages_len = read_u32(&mut cursor);
-        for _ in 0..retained_messages_len {
-            let topic_name_len = read_u32(&mut cursor);
-            let mut topic_name_bytes = vec![0; topic_name_len as usize];
-            cursor.read_exact(&mut topic_name_bytes).unwrap();
-            let topic_name = TopicName::from_bytes(&topic_name_bytes).unwrap();
-
-            let messages_len = read_u32(&mut cursor);
-            let mut messages = VecDeque::new();
-            for _ in 0..messages_len {
-                let message_len = read_u32(&mut cursor);
-                let mut message_bytes = vec![0; message_len as usize];
-                cursor.read_exact(&mut message_bytes).unwrap();
-                let message = Publish::from_bytes(&message_bytes).unwrap();
-                messages.push_back(message);
-            }
-
-            retained_messages.insert(topic_name, messages);
-        }
-
         let mut clients = HashMap::new();
-        let clients_len = read_u32(&mut cursor);
-        for _ in 0..clients_len {
-            let id_len = read_u32(&mut cursor);
-            let mut id = vec![0; id_len as usize];
-            cursor.read_exact(&mut id).unwrap();
 
-            let subscriptions_len = read_u32(&mut cursor);
-            let mut subscriptions = Vec::new();
-            for _ in 0..subscriptions_len {
-                let sub_len = read_u32(&mut cursor);
-                let mut sub_bytes = vec![0; sub_len as usize];
-                cursor.read_exact(&mut sub_bytes).unwrap();
-                let subscription = TopicFilter::from_bytes(&sub_bytes).unwrap();
-                subscriptions.push(subscription);
+        for line in serialized_data.lines() {
+            let parts: Vec<&str> = line.split(';').collect();
+            if parts.len() != 3 {
+                continue;
             }
 
-            let client = Client::new_from_backup(id.clone(), subscriptions);
-            clients.insert(id, client);
+            let record_type = parts[0];
+            let entry_key = match hex_to_bytes(parts[1]) {
+                Ok(k) => k,
+                Err(_) => continue,
+            };
+            let value = match hex_to_bytes(parts[2]) {
+                Ok(v) => v,
+                Err(_) => continue,
+            };
+
+            let mut value_stream = std::io::Cursor::new(value);
+            
+            match record_type {
+                "O" => {
+                    let publish = match Packet::from_bytes(&mut value_stream, &key).unwrap(){
+                        Packet::Publish(publish) => publish,
+                        _ => continue,
+                    };
+                    offline_messages.entry(entry_key).or_insert_with(VecDeque::new).push_back(publish);
+                }
+                "R" => {
+                    let mut entry_stream = std::io::Cursor::new(entry_key);
+
+                    let topic_name = TopicName::from_bytes(&mut entry_stream).unwrap();
+                    let message = match Packet::from_bytes(&mut value_stream, &key).unwrap(){
+                        Packet::Publish(publish) => publish,
+                        _ => continue,
+                    };
+                    retained_messages.entry(topic_name).or_insert_with(VecDeque::new).push_back(message);
+                }
+                "C" => {
+                    let subscription = TopicFilter::from_bytes(&mut value_stream).unwrap();
+                    clients.entry(entry_key.clone()).or_insert_with(|| Client::new_from_backup(entry_key.clone(), Vec::new())).subscriptions.push(subscription);
+                }
+                _ => {}
+            }
         }
 
         let clients_lock = RwLock::new(clients);
@@ -626,7 +603,7 @@ impl TaskHandler {
             retained_messages,
             log_file,
             client_manager,
-            key: config.get_key().clone(),
+            key,
             backup_file: config.get_backup_file(),
             segs_to_backup: config.get_segs_to_backup(),
         }
@@ -638,7 +615,7 @@ impl TaskHandler {
             None => return,
         };
 
-        let serialized_data = self.serialize(self.key);
+        let serialized_data = self.serialize();
 
         // Spawn a thread to serialize and write the data to a file as I/O operations are blocking
         thread::spawn(move || {
@@ -649,7 +626,7 @@ impl TaskHandler {
                     return;
                 }
             };
-            if let Err(e) = file.write_all(serialized_data.as_slice()) {
+            if let Err(e) = file.write_all(serialized_data.as_bytes()) {
                 eprintln!("Failed to write to backup file: {}", e);
             }
 
@@ -657,8 +634,13 @@ impl TaskHandler {
     }
 }
 
-fn read_u32(cursor: &mut std::io::Cursor<&[u8]>) -> u32 {
-    let mut buf = [0u8; 4];
-    cursor.read_exact(&mut buf).unwrap();
-    u32::from_be_bytes(buf)
+fn bytes_to_hex(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join("")
+}
+
+fn hex_to_bytes(hex: &str) -> Result<Vec<u8>, String> {
+    (0..hex.len())
+        .step_by(2)
+        .map(|i| u8::from_str_radix(&hex[i..i + 2], 16).map_err(|e| e.to_string()))
+        .collect()
 }
