@@ -113,7 +113,7 @@ async fn upload_file(
     match result {
         Ok(_) => Ok(()),
         Err(_) => {
-            return Err("Error uploading file".to_string());
+            Err("Error uploading file".to_string())
         }
     }
 }

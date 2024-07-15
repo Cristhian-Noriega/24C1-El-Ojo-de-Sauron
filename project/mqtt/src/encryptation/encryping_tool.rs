@@ -3,7 +3,7 @@ use aes_gcm::{Aes256Gcm, Nonce}; // Or `Aes128Gcm`
 use rand::RngCore;
 
 /// To encrypt data, ignore the first 2 bytes corresponding to the fixed header
-pub fn encrypt(data: Vec<u8>, key: &[u8]) -> Vec<u8> {
+pub fn encrypt(data: Vec<u8>, key: &[u8]) -> Result<Vec<u8>, String> {
     let key = aes_gcm::Key::<Aes256Gcm>::from_slice(key);
     let cipher = Aes256Gcm::new(key);
 
@@ -13,12 +13,18 @@ pub fn encrypt(data: Vec<u8>, key: &[u8]) -> Vec<u8> {
 
     let nonce = Nonce::from_slice(&nonce); // 96-bits; unique per message
 
-    let ciphertext = cipher.encrypt(nonce, data.as_ref()).unwrap();
+
+    let ciphertext = match cipher.encrypt(nonce, data.as_ref()) {
+        Ok(ciphertext) => ciphertext,
+        Err(_) => {
+            return Err("Error encrypting data".to_string());
+        },
+    };
 
     let mut encrypted_data = nonce.to_vec();
     encrypted_data.extend_from_slice(&ciphertext);
 
-    encrypted_data
+    Ok(encrypted_data)
 }
 
 /// To decrypt data
@@ -46,7 +52,7 @@ mod tests {
         let data = b"Hello world!";
 
         let encrypted_data = encrypt(data.to_vec(), key);
-        let decrypted_data = decrypt(&encrypted_data, key).unwrap();
+        let decrypted_data = decrypt(&encrypted_data.unwrap(), key).unwrap();
 
         assert_eq!(data.to_vec(), decrypted_data);
     }

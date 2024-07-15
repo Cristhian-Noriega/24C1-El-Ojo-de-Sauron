@@ -52,7 +52,10 @@ impl Puback {
         fixed_header_bytes.extend(remaining_length_bytes);
 
         // Packet
-        let encrypted_bytes = encrypt(variable_header_bytes, key);
+        let encrypted_bytes = match encrypt(variable_header_bytes, key) {
+            Ok(bytes) => bytes,
+            Err(_) => return vec![],
+        };
 
         let mut packet_bytes = vec![];
 
