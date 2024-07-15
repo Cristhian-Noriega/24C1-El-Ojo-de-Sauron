@@ -307,10 +307,22 @@ impl TaskHandler {
         }
 
         let clients_retained_messages = self.offline_messages.get(&client_id);
-        let client = clients.get_mut(&client_id).unwrap();
+        let client = match clients.get_mut(&client_id){
+            Some(client) => client,
+            None => {
+                self.log_file.log_client_does_not_exist(&client_id);
+                return Ok(());
+            }
+        };
+        
         if let Some(clients_retained_messages) = clients_retained_messages {
             self.handle_retained_messages(client, clients_retained_messages);
-            self.offline_messages.get_mut(&client_id).unwrap().clear();
+            match self.offline_messages.get_mut(&client_id) {
+                Some(queue) => queue.clear(),
+                None => {
+                    self.log_file.error("Error clearing offline messages");
+                }
+            }
         }
 
         Ok(())
@@ -341,7 +353,13 @@ impl TaskHandler {
             let username = split[1].to_vec();
             let password = split[2].to_vec();
 
-            let client_manager = self.client_manager.write().unwrap();
+            let client_manager = match self.client_manager.write() {
+                Ok(client_manager) => client_manager,
+                Err(_) => {
+                    self.log_file.error("Error getting client manager for client registration");
+                    return;
+                }
+            };
             if client_manager.authenticate_client(
                 client_id.clone(),
                 username.clone(),
@@ -572,7 +590,14 @@ impl TaskHandler {
         }
 
         // Serialize clients
-        let clients_read = self.clients.read().unwrap(); // Acquiring a read lock
+        let clients_read = match self.clients.read(){
+            Ok(clients) => clients,
+            Err(_) => {
+                self.log_file.error("Error reading clients for serialization");
+                return serialized_data;
+            }
+        };
+
         for (id, client) in clients_read.iter() {
             for sub in &client.subscriptions {
                 serialized_data.push_str(&format!(

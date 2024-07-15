@@ -48,7 +48,10 @@ impl Logger {
     pub fn log(&self, level: &str, message: &str) {
         let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
         let log_entry = format!("[{}] {}: {}", timestamp, level, message);
-        self.sender.send(log_entry).unwrap();
+        match self.sender.send(log_entry) {
+            Ok(_) => {}
+            Err(e) => eprintln!("Failed to send log entry: {}", e),
+        };
     }
 
     /// Logs an info message
@@ -61,38 +64,50 @@ impl Logger {
         self.log(LOG_LEVEL_ERROR, message);
     }
 
-    /// Logs a custom message for successful subscription
+    /// Logs a custom message for successful subscriptions
     pub fn log_successful_subscription(&self, client_id: &[u8], subscribe_packet: &Subscribe) {
-        let message = format!(
-            "Client {} subscribed to topics {}",
-            std::str::from_utf8(client_id).unwrap(),
-            subscribe_packet
-                .topics()
-                .iter()
-                .fold(String::new(), |acc, (topic, _)| {
-                    acc + std::str::from_utf8(topic.to_string().as_bytes()).unwrap() + ", "
-                })
-        );
-        self.info(message.as_str());
+        let client_id_str = match std::str::from_utf8(client_id) {
+            Ok(id) => id,
+            Err(_) => {
+                self.info("Failed to convert client ID to string");
+                return;
+            }
+        };
+
+        let topics_str = subscribe_packet
+            .topics()
+            .iter()
+            .fold(String::new(), |acc, (topic, _)| {
+                match std::str::from_utf8(topic.to_string().as_bytes()) {
+                    Ok(topic_str) => acc + topic_str + ", ",
+                    Err(_) => acc + "Invalid UTF-8 topic, ",
+                }
+            });
+
+        let message = format!("Client {} subscribed to topics {}", client_id_str, topics_str);
+        self.info(&message);
     }
 
-    /// Logs a custom message for successful unsubscription
+    /// Logs a custom message for successful unsubscriptions
     pub fn log_successful_unsubscription(
         &self,
         client_id: &[u8],
         unsubscribe_packet: &Unsubscribe,
     ) {
-        let message = format!(
-            "Client {} unsubscribed to topics {}",
-            String::from_utf8_lossy(client_id),
-            unsubscribe_packet
-                .topics()
-                .iter()
-                .fold(String::new(), |acc, topic| {
-                    acc + std::str::from_utf8(topic.to_string().as_bytes()).unwrap() + ", "
-                })
-        );
-        self.info(message.as_str());
+        let client_id_str = String::from_utf8_lossy(client_id);
+
+        let topics_str = unsubscribe_packet
+            .topics()
+            .iter()
+            .fold(String::new(), |acc, topic| {
+                match std::str::from_utf8(topic.to_string().as_bytes()) {
+                    Ok(topic_str) => acc + topic_str + ", ",
+                    Err(_) => acc + "Invalid UTF-8 topic, ",
+                }
+            });
+
+        let message = format!("Client {} unsubscribed to topics {}", client_id_str, topics_str);
+        self.info(&message);
     }
 
     /// Logs a custom message for successful publish
