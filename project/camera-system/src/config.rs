@@ -13,6 +13,7 @@ pub struct Config {
     key: String,
     active_range: f64,
     images_folder: String,
+    confidence_threshold: f32,
     cameras: Vec<Coordenate>,
 }
 
@@ -99,6 +100,11 @@ impl Config {
             images_folder: config_map.remove("images_folder").ok_or_else(|| {
                 io::Error::new(io::ErrorKind::InvalidData, "Missing images folder")
             })?,
+            confidence_threshold: config_map
+                .remove("confidence_threshold")
+                .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing active range"))?
+                .parse::<f32>()
+                .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid active_range"))?,
             cameras,
         })
     }
@@ -141,5 +147,10 @@ impl Config {
     /// Returns the path of the root images folder
     pub fn get_images_folder(&self) -> String {
         self.images_folder.clone()
+    }
+
+    /// Returns the confidence threshold for the image recognition
+    pub fn get_confidence_threshold(&self) -> f32 {
+        self.confidence_threshold
     }
 }
