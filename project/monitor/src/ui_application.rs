@@ -316,7 +316,7 @@ fn display_edit_incident(
                             .clicked()
                         {
                             // Actualizar el UUID seleccionado en edit_incident
-                            edit_incident.uuid = uuid.clone();
+                            edit_incident.uuid.clone_from(uuid);
                         }
                     }
                 });
